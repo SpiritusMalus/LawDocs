@@ -8,9 +8,43 @@ import { Faq } from "@/components/landing/faq";
 import { FaqJsonLd } from "@/components/landing/faq-jsonld";
 import { LeadForm } from "@/components/landing/lead-form";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Service",
+  name: "LawDocs",
+  url: SITE_URL,
+  description:
+    "Онлайн-сервис подготовки юридических документов: претензии и жалобы для защиты прав потребителей.",
+  areaServed: { "@type": "Country", name: "RU" },
+  availableLanguage: "Russian",
+  offers: {
+    "@type": "Offer",
+    price: "500",
+    priceCurrency: "RUB",
+    description: "Составление претензии или жалобы с расчётом неустойки и инструкцией по отправке",
+  },
+  provider: {
+    "@type": "Organization",
+    name: "LawDocs",
+    url: SITE_URL,
+    contactPoint: {
+      "@type": "ContactPoint",
+      email: "hi@lawdocs.ru",
+      contactType: "customer service",
+      availableLanguage: "Russian",
+    },
+  },
+};
+
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+      />
       <FaqJsonLd />
       <Hero />
       <Situations />
