@@ -1,0 +1,34 @@
+import uuid
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, Integer, JSON, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+
+
+class Order(Base):
+    __tablename__ = "orders"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False, index=True)
+
+    situation_id: Mapped[str] = mapped_column(String, nullable=False)
+
+    # Статус: pending_payment → paid → generating → done | failed
+    status: Mapped[str] = mapped_column(String, nullable=False, default="pending_payment")
+
+    # Сумма в копейках (500 ₽ = 50000)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False, default=50000)
+
+    # ЮKassa
+    yookassa_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    # Данные из wizard-формы (вопросы + ответы пользователя)
+    form_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship("User", back_populates="orders")  # noqa: F821
+    document: Mapped["Document | None"] = relationship("Document", back_populates="order", uselist=False)  # noqa: F821

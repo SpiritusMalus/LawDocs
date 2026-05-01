@@ -1,0 +1,22 @@
+import uuid
+from datetime import datetime
+
+from sqlalchemy import DateTime, ForeignKey, String, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.core.database import Base
+
+
+class Document(Base):
+    __tablename__ = "documents"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    order_id: Mapped[str] = mapped_column(String, ForeignKey("orders.id"), nullable=False, unique=True)
+
+    # S3 ключи для файлов
+    docx_key: Mapped[str] = mapped_column(String, nullable=False)
+    pdf_key: Mapped[str] = mapped_column(String, nullable=False)
+
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    order: Mapped["Order"] = relationship("Order", back_populates="document")  # noqa: F821
