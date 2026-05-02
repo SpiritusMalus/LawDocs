@@ -102,14 +102,14 @@ export default async function SituationPage({
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
-              href="#lead-form"
+              href={`/wizard/${page.slug}`}
               className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
             >
               Получить документ — 500&nbsp;₽
               <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
             <Link
-              href="/"
+              href="/situations"
               className={
                 buttonVariants({ size: "lg", variant: "outline" }) + " h-12 px-6 text-base"
               }
