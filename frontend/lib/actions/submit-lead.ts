@@ -55,7 +55,7 @@ export async function submitLead(
 
   pruneRateLimitBuckets();
   const ip = await getClientIp();
-  const rl = rateLimit(`lead:${ip}`, { windowMs: RATE_WINDOW_MS, max: RATE_MAX });
+  const rl = rateLimit(`submit:${ip}`, { windowMs: RATE_WINDOW_MS, max: RATE_MAX });
   if (!rl.ok) {
     const minutes = Math.max(1, Math.ceil(rl.retryAfterMs / 60000));
     return {
@@ -102,8 +102,7 @@ export async function submitLead(
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    console.warn("[submitLead] Telegram env vars missing — lead not delivered");
-    console.info("[submitLead] payload:", { name, contact, situationLabel, description });
+    console.warn("[submitLead] Telegram env vars missing — lead not delivered. Situation: %s", situationLabel);
     return { status: "success" };
   }
 

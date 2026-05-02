@@ -2,7 +2,15 @@
 
 import { headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
-import type { WizardSituationId } from "@/lib/wizard-questions";
+import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPhone(value: string): boolean {
+  return /^[+\d][\d\s()\-]{6,}$/.test(value);
+}
 
 export interface WizardState {
   status: "idle" | "success" | "error";
@@ -101,7 +109,7 @@ export async function submitWizard({
 }): Promise<WizardState> {
   pruneRateLimitBuckets();
   const ip = await getClientIp();
-  const rl = rateLimit(`wizard:${ip}`, { windowMs: 60 * 60 * 1000, max: 5 });
+  const rl = rateLimit(`submit:${ip}`, { windowMs: 60 * 60 * 1000, max: 5 });
   if (!rl.ok) {
     const minutes = Math.max(1, Math.ceil(rl.retryAfterMs / 60000));
     return {
@@ -110,10 +118,25 @@ export async function submitWizard({
     };
   }
 
-  const email = answers["email"]?.trim() ?? "";
-  const fullName = answers["full_name"]?.trim() ?? "";
-  if (!fullName || !email) {
-    return { status: "error", message: "Не заполнены обязательные поля (ФИО, Email)." };
+  // Server-side validation: required fields
+  const requiredFieldIds = WIZARD_STEPS[situationId]
+    .flatMap((step) => step.fields)
+    .filter((f) => f.required)
+    .map((f) => f.id);
+
+  const missing = requiredFieldIds.filter((id) => !answers[id]?.trim());
+  if (missing.length > 0) {
+    return { status: "error", message: "Не заполнены обязательные поля." };
+  }
+
+  const email = answers["email"]!.trim();
+  const phone = answers["phone"]!.trim();
+
+  if (!isValidEmail(email)) {
+    return { status: "error", message: "Укажите корректный email-адрес (например ivan@mail.ru)." };
+  }
+  if (!isValidPhone(phone)) {
+    return { status: "error", message: "Укажите корректный номер телефона." };
   }
 
   const situationLabel = SITUATION_LABELS[situationId];
@@ -137,8 +160,7 @@ export async function submitWizard({
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    console.warn("[submitWizard] Telegram not configured — lead not delivered");
-    console.info("[submitWizard]", { situationId, answers });
+    console.warn("[submitWizard] Telegram not configured — lead not delivered. Situation: %s", situationId);
     return { status: "success" };
   }
 
