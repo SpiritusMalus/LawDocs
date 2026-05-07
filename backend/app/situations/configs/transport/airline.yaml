@@ -1,0 +1,108 @@
+id: airline
+category: transport
+title: "Задержка или отмена рейса"
+blurb: "Авиакомпания не вернула деньги за билет, задержала рейс, потеряла багаж."
+examples: "Компенсация за задержку, возврат за отменённый рейс, утрата багажа"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по транспортному праву. Составь претензию авиакомпании.
+
+  Структура документа:
+  1. Шапка: «Генеральному директору [авиакомпания]» + юридический адрес / «От: [ФИО], [адрес], [телефон], [email]»
+  2. Заголовок: ПРЕТЕНЗИЯ
+  3. Описание: рейс (flight_number), маршрут (route), дата (flight_date), что произошло (problem_desc)
+  4. Правовое обоснование:
+     - Задержка: Воздушный кодекс РФ ст. 120 (25 руб./час + штраф 50% стоимости билета), ФАП №82 (питание, гостиница)
+     - Отмена / возврат: ВК РФ ст. 107, ст. 108; ЗоЗПП ст. 28
+     - Багаж: ВК РФ ст. 119
+  5. Расчёт (используй реальные числа из формы):
+     - Если delay_hours указано и > 0: компенсация за задержку = 25 × delay_hours, штраф = 50% × ticket_price
+     - Доп. расходы = extra_expenses (если указано и > 0)
+     - Итого к выплате = компенсация + штраф + extra_expenses − received_compensation (если > 0)
+  6. Требование: выплатить конкретную сумму в течение 30 дней
+  7. При отказе — жалоба в Росавиацию + иск в суд (штраф 50% по ЗоЗПП)
+  8. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: рейс, что произошло, какой ущерб понесён.
+  Используй только данные из формы.
+
+wizard_steps:
+  - title: "Рейс"
+    fields:
+      - id: airline
+        type: text
+        label: "Авиакомпания"
+        placeholder: "Аэрофлот, S7, Победа…"
+        required: true
+      - id: flight_number
+        type: text
+        label: "Номер рейса"
+        placeholder: "SU 1234"
+      - id: route
+        type: text
+        label: "Маршрут"
+        placeholder: "Москва (SVO) → Сочи (AER)"
+        required: true
+      - id: flight_date
+        type: date
+        label: "Дата вылета"
+        required: true
+  - title: "Что случилось"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Тип нарушения"
+        required: true
+        options:
+          - value: delay
+            label: "Задержка рейса"
+          - value: cancellation
+            label: "Отмена рейса"
+          - value: luggage
+            label: "Утрата или повреждение багажа"
+          - value: refund_denied
+            label: "Отказывают вернуть деньги за билет"
+          - value: other
+            label: "Другое"
+      - id: delay_hours
+        type: number
+        label: "Задержка (часов)"
+        placeholder: "5"
+        hint: "Заполните, если была задержка"
+      - id: problem_desc
+        type: textarea
+        label: "Опишите ситуацию"
+        placeholder: "Что произошло, как реагировала авиакомпания"
+        required: true
+  - title: "Суммы и требование"
+    fields:
+      - id: ticket_price
+        type: number
+        label: "Стоимость билета(ов), ₽"
+        placeholder: "12500"
+        required: true
+      - id: extra_expenses
+        type: number
+        label: "Доп. расходы (гостиница, такси, новый билет), ₽"
+        placeholder: "8000"
+      - id: received_compensation
+        type: number
+        label: "Уже получили от авиакомпании, ₽"
+        placeholder: "0"
+        hint: "0 — если ничего не дали"
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: compensation
+            label: "Компенсацию за задержку"
+          - value: refund
+            label: "Возврат стоимости билета"
+          - value: expenses
+            label: "Возмещение доп. расходов"
+          - value: all
+            label: "Всё вместе"

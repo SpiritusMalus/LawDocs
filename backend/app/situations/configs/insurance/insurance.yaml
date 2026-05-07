@@ -1,0 +1,102 @@
+id: insurance
+category: insurance
+title: "Страховая занизила выплату"
+blurb: "ОСАГО или КАСКО — оценили ущерб ниже реального или отказали."
+examples: "Занижение по ОСАГО, отказ в страховом случае, доплата по экспертизе"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по страховому праву. Составь досудебную претензию в страховую компанию.
+
+  Структура документа:
+  1. Шапка: «Генеральному директору [страховая компания]» / «От: [ФИО], [адрес], [телефон], [email]»
+  2. Заголовок: ДОСУДЕБНАЯ ПРЕТЕНЗИЯ
+  3. Описание: тип полиса (policy_type), номер полиса (policy_number если есть), дата страхового события (incident_date), обстоятельства (incident_desc)
+  4. Правовое обоснование:
+     - ОСАГО: ФЗ «Об ОСАГО» ст. 12 (сроки), ст. 16.1 (досудебная претензия обязательна), ст. 12 п.21 (неустойка 1%/день)
+     - КАСКО: ГК РФ ст. 929, 943; ЗоЗПП ст. 28 (неустойка за просрочку)
+  5. Расчёт (используй реальные числа из формы):
+     - Если указаны actual_damage и paid_amount: недоплата = actual_damage − paid_amount
+     - Если указаны overdue_days: неустойка = недоплата × 1% × overdue_days
+     - Итого к выплате = недоплата + неустойка
+     - Если actual_damage не указан (incident_type=refusal) — требуй полную выплату по результатам независимой экспертизы
+  6. Требование: выплатить конкретную сумму в течение 10 рабочих дней
+  7. При отказе — жалоба в РСА и ЦБ + иск в суд (штраф 50% от взысканной суммы, моральный вред)
+  8. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: тип полиса, страховое событие, сумму недоплаты и основание требования.
+  Используй только данные из формы.
+
+wizard_steps:
+  - title: "Страховая и полис"
+    fields:
+      - id: insurance_company
+        type: text
+        label: "Страховая компания"
+        placeholder: "РЕСО, Согаз, Альфастрахование…"
+        required: true
+      - id: policy_type
+        type: radio
+        label: "Тип полиса"
+        required: true
+        options:
+          - value: osago
+            label: "ОСАГО"
+          - value: kasko
+            label: "КАСКО"
+          - value: other
+            label: "Другой вид страхования"
+      - id: policy_number
+        type: text
+        label: "Номер полиса"
+        placeholder: "XXX 1234567890"
+  - title: "Страховой случай"
+    fields:
+      - id: incident_type
+        type: radio
+        label: "Тип нарушения"
+        required: true
+        options:
+          - value: underestimate
+            label: "Занизили сумму выплаты"
+          - value: refusal
+            label: "Отказали в страховой выплате"
+          - value: delay
+            label: "Нарушили срок выплаты (более 20 раб. дней)"
+      - id: incident_date
+        type: date
+        label: "Дата ДТП / страхового события"
+        required: true
+      - id: incident_desc
+        type: textarea
+        label: "Опишите обстоятельства"
+        placeholder: "Что произошло, кто виновник (для ОСАГО)"
+        required: true
+  - title: "Суммы и требование"
+    fields:
+      - id: actual_damage
+        type: number
+        label: "Реальный ущерб по экспертизе, ₽"
+        placeholder: "180000"
+      - id: paid_amount
+        type: number
+        label: "Страховая выплатила, ₽"
+        placeholder: "90000"
+        hint: "0 — если отказали полностью"
+      - id: overdue_days
+        type: number
+        label: "Дней просрочки (если есть)"
+        placeholder: "45"
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: pay_difference
+            label: "Доплатить разницу и неустойку"
+          - value: full_payment
+            label: "Выплатить полную сумму (при отказе)"
+          - value: other
+            label: "Другое"

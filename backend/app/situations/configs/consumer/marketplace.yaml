@@ -1,0 +1,106 @@
+id: marketplace
+category: consumer
+title: "Проблема с маркетплейсом"
+blurb: "Wildberries или Ozon списали деньги, потеряли товар, отказались принимать возврат."
+examples: "Платный возврат, удержание за подмену, потеря на ПВЗ"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по защите прав потребителей. Составь претензию на маркетплейс (Wildberries, Ozon и т.д.).
+
+  Структура документа:
+  1. Шапка: «Генеральному директору [название маркетплейса]» + юридический адрес / «От: [ФИО], [адрес], [телефон], [email]»
+  2. Заголовок: ПРЕТЕНЗИЯ
+  3. Описание: номер заказа, товар, дата, что произошло (используй problem_desc из формы)
+  4. Правовое обоснование: ЗоЗПП ст. 26.1 (дистанционная торговля), Постановление Правительства №2463, ЗоЗПП ст. 18
+  5. Указание на незаконность действий маркетплейса со ссылками на нормы
+  6. Требование: конкретная сумма к возврату (withheld_amount или order_amount), срок 10 дней
+  7. При игнорировании — жалоба в Роспотребнадзор и иск в суд
+  8. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: что заказано, когда, что произошло (штраф, платный возврат, потеря).
+  Укажи конкретную сумму ущерба. Используй только данные из формы.
+
+wizard_steps:
+  - title: "Маркетплейс и заказ"
+    fields:
+      - id: platform
+        type: radio
+        label: "Маркетплейс"
+        required: true
+        options:
+          - value: wildberries
+            label: "Wildberries"
+          - value: ozon
+            label: "Ozon"
+          - value: yandex_market
+            label: "Яндекс.Маркет"
+          - value: other
+            label: "Другой"
+      - id: platform_other
+        type: text
+        label: "Другой маркетплейс (название)"
+        placeholder: "AliExpress, СберМегаМаркет…"
+      - id: product_name
+        type: text
+        label: "Название товара"
+        placeholder: "Кроссовки Nike Air Max"
+        required: true
+      - id: order_number
+        type: text
+        label: "Номер заказа"
+        placeholder: "12345678"
+      - id: order_amount
+        type: number
+        label: "Сумма заказа, ₽"
+        placeholder: "5990"
+        required: true
+      - id: order_date
+        type: date
+        label: "Дата заказа"
+  - title: "Что случилось"
+    fields:
+      - id: problem_type
+        type: radio
+        label: "Тип проблемы"
+        required: true
+        options:
+          - value: penalty
+            label: "Незаконный штраф за «подмену товара»"
+          - value: paid_return
+            label: "Взяли деньги за возврат качественного товара"
+          - value: lost
+            label: "Потеряли заказ на складе или ПВЗ"
+          - value: defect
+            label: "Товар пришёл с дефектом, отказывают в возврате"
+          - value: other
+            label: "Другое"
+      - id: incident_date
+        type: date
+        label: "Дата события"
+      - id: withheld_amount
+        type: number
+        label: "Спорная / удержанная сумма, ₽"
+        placeholder: "1500"
+      - id: problem_desc
+        type: textarea
+        label: "Опишите ситуацию"
+        placeholder: "Что именно произошло, что вам сказали"
+        required: true
+  - title: "Что вы хотите"
+    fields:
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: return_money
+            label: "Вернуть удержанную сумму"
+          - value: refund_order
+            label: "Вернуть деньги за весь заказ"
+          - value: cancel_penalty
+            label: "Отменить штраф"
+          - value: other
+            label: "Другое"

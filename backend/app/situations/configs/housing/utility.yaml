@@ -1,0 +1,83 @@
+id: utility
+category: housing
+title: "Управляющая компания / ЖКХ"
+blurb: "Лишние начисления, перерасчёт, невыполнение обязательств."
+examples: "Перерасчёт за некачественные услуги, оспаривание долга, протечки"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по жилищному праву. Составь претензию в управляющую компанию или ТСЖ.
+
+  Структура документа:
+  1. Шапка: «Руководителю [название УК/ТСЖ]» / «От: [ФИО], [адрес квартиры], [телефон], [email]»
+  2. Заголовок: ПРЕТЕНЗИЯ (о перерасчёте / устранении нарушений)
+  3. Описание: адрес квартиры (apartment_address), характер нарушения (problem_desc), период (violation_period если есть)
+  4. Правовое обоснование: ЖК РФ ст. 161, Постановление Правительства №491 (содержание общего имущества), №354 (коммунальные услуги и перерасчёт), КоАП ст. 7.22 (штраф для УК)
+  5. Если указана disputed_amount — рассчитай перерасчёт. Иначе — перечень нарушений.
+  6. Требование: произвести перерасчёт / устранить нарушения в течение 30 дней
+  7. При неисполнении — жалоба в ГЖИ, прокуратуру, иск в суд
+  8. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: характер нарушения УК, период, сумму переплаты или описание дефекта.
+  Используй только данные из формы.
+
+wizard_steps:
+  - title: "УК / ТСЖ и адрес"
+    fields:
+      - id: company_name
+        type: text
+        label: "Название УК или ТСЖ"
+        placeholder: "ООО «УК Комфорт»"
+        required: true
+      - id: company_address
+        type: text
+        label: "Адрес УК (офис, если знаете)"
+        placeholder: "г. Москва, ул. Ленина, 2"
+      - id: apartment_address
+        type: text
+        label: "Адрес вашей квартиры"
+        placeholder: "г. Москва, ул. Пушкина, д. 10, кв. 5"
+        required: true
+  - title: "Что случилось"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Тип нарушения"
+        required: true
+        options:
+          - value: overcharge
+            label: "Лишние начисления / завышенные тарифы"
+          - value: poor_service
+            label: "Некачественные коммунальные услуги"
+          - value: no_repair
+            label: "Отказывают делать ремонт общего имущества"
+          - value: other
+            label: "Другое"
+      - id: violation_period
+        type: text
+        label: "Период нарушения"
+        placeholder: "Январь–март 2025"
+      - id: problem_desc
+        type: textarea
+        label: "Опишите проблему"
+        placeholder: "Что именно происходит, сколько раз обращались"
+        required: true
+      - id: disputed_amount
+        type: number
+        label: "Сумма к перерасчёту, ₽ (если известна)"
+        placeholder: "3200"
+  - title: "Что вы хотите"
+    fields:
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: recalculate
+            label: "Произвести перерасчёт"
+          - value: fix
+            label: "Устранить нарушения"
+          - value: both
+            label: "И перерасчёт, и устранить нарушения"

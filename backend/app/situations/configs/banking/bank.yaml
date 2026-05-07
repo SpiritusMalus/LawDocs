@@ -1,0 +1,82 @@
+id: bank
+category: banking
+title: "Банк списал лишнее"
+blurb: "Незаконные комиссии, навязанная страховка, блокировка счёта по 115-ФЗ."
+examples: "Возврат страховки за период охлаждения, разблокировка, перерасчёт"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по банковскому праву и защите прав потребителей. Составь претензию/заявление в банк.
+
+  Структура документа:
+  1. Шапка: «Руководителю [название банка]» / «От: [ФИО], [адрес], [телефон], [email]»
+  2. Заголовок: ЗАЯВЛЕНИЕ-ПРЕТЕНЗИЯ (или ПРЕТЕНЗИЯ)
+  3. Описание: номер договора/счёта (contract_number), дата нарушения (violation_date), что произошло (problem_desc)
+  4. Правовое обоснование:
+     - При страховке (violation_type=insurance): ФЗ «О потребительском кредите» ст. 7, Указание ЦБ №3854-У (период охлаждения 30 дней), ЗоЗПП ст. 16
+     - При блокировке (violation_type=block): ФЗ-115 ст. 7-8, право на уведомление об основаниях
+     - При комиссии (violation_type=commission): ЗоЗПП ст. 16, ГК РФ ст. 168
+  5. Конкретное требование с суммой (amount) и сроком (30 дней)
+  6. При отказе — жалоба в ЦБ (cbr.ru) и Роспотребнадзор + иск в суд
+  7. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: что произошло, какую сумму незаконно взял банк и почему это нарушение закона.
+  Используй только данные из формы.
+
+wizard_steps:
+  - title: "Банк и ситуация"
+    fields:
+      - id: bank_name
+        type: text
+        label: "Название банка"
+        placeholder: "Сбербанк, ВТБ, Тинькофф…"
+        required: true
+      - id: violation_type
+        type: radio
+        label: "Тип нарушения"
+        required: true
+        options:
+          - value: insurance
+            label: "Навязали страховку к кредиту"
+          - value: block
+            label: "Заблокировали счёт или карту по 115-ФЗ"
+          - value: commission
+            label: "Незаконная комиссия или списание"
+          - value: other
+            label: "Другое"
+      - id: contract_number
+        type: text
+        label: "Номер договора или счёта"
+        placeholder: "№ 12345678"
+      - id: violation_date
+        type: date
+        label: "Дата события"
+  - title: "Детали и сумма"
+    fields:
+      - id: amount
+        type: number
+        label: "Спорная сумма, ₽"
+        placeholder: "45000"
+        required: true
+      - id: problem_desc
+        type: textarea
+        label: "Опишите ситуацию"
+        placeholder: "Что именно произошло, что говорит банк"
+        required: true
+  - title: "Что вы хотите"
+    fields:
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: return_insurance
+            label: "Вернуть страховую премию"
+          - value: unblock
+            label: "Разблокировать счёт / карту"
+          - value: return_commission
+            label: "Вернуть незаконную комиссию"
+          - value: other
+            label: "Другое"

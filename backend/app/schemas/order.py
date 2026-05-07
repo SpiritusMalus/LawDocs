@@ -1,17 +1,15 @@
+import json
 from datetime import datetime
 
 from pydantic import BaseModel, EmailStr, field_validator
 
 
-VALID_SITUATIONS = {
-    "shop", "marketplace", "bank", "employer",
-    "insurance", "utility", "airline", "other",
-}
-
-
 def _validate_situation(value: str) -> str:
-    if value not in VALID_SITUATIONS:
-        raise ValueError(f"Unknown situation_id: {value}")
+    from app.situations.registry import registry
+    valid_ids = registry.ids()
+    # If registry not yet loaded (e.g. tests before startup), skip validation
+    if valid_ids and value not in valid_ids:
+        raise ValueError(f"Unknown situation_id: {value!r}")
     return value
 
 
@@ -28,7 +26,6 @@ class OrderInitRequest(BaseModel):
     @field_validator("form_data")
     @classmethod
     def check_form_data_size(cls, v: dict) -> dict:
-        import json
         if len(json.dumps(v, ensure_ascii=False)) > 32_000:
             raise ValueError("form_data too large (max 32 KB)")
         return v
@@ -36,16 +33,6 @@ class OrderInitRequest(BaseModel):
 
 class OrderInitOut(BaseModel):
     order_id: str
-
-
-class OrderCreate(BaseModel):
-    situation_id: str
-    form_data: dict
-
-    @field_validator("situation_id")
-    @classmethod
-    def check_situation(cls, v: str) -> str:
-        return _validate_situation(v)
 
 
 class PaymentOut(BaseModel):

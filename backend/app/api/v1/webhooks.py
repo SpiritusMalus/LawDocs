@@ -70,6 +70,7 @@ async def yookassa_webhook(
             order_id=order.id,
             situation_id=order.situation_id,
             content=filled_content,
+            form_data=order.form_data,
         )
 
         doc = Document(order_id=order.id, docx_key=docx_key, pdf_key=pdf_key)

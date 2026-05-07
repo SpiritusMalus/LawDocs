@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
 import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
+import { SITUATIONS } from "@/lib/situations";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
 
 export interface WizardState {
@@ -11,15 +12,10 @@ export interface WizardState {
   orderId?: string;
 }
 
-const SITUATION_LABELS: Record<WizardSituationId, string> = {
-  shop: "Магазин не возвращает деньги",
-  marketplace: "Проблема с маркетплейсом",
-  bank: "Банк списал лишнее",
-  employer: "Работодатель не выплатил",
-  insurance: "Страховая занизила выплату",
-  utility: "УК / ЖКХ",
-  airline: "Задержка или отмена рейса",
-};
+// Derived from SITUATIONS — single source of truth for situation titles
+const SITUATION_LABELS = Object.fromEntries(
+  SITUATIONS.map((s) => [s.id, s.title])
+) as Record<WizardSituationId, string>;
 
 const FIELD_LABELS: Record<string, string> = {
   full_name: "ФИО",

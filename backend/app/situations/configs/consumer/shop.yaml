@@ -1,0 +1,99 @@
+id: shop
+category: consumer
+title: "Магазин не возвращает деньги"
+blurb: "Купили товар, он сломался или не подошёл — продавец отказывает в возврате."
+examples: "Товар ненадлежащего качества, отказ в возврате в 14 дней, навязанные услуги"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по защите прав потребителей. Составь претензию в магазин.
+
+  Структура документа:
+  1. Шапка: «Руководителю [название магазина], [адрес]» / «От: [ФИО], [адрес], [телефон], [email]»
+  2. Заголовок: ПРЕТЕНЗИЯ
+  3. Описание: когда куплен товар, что за товар, стоимость, что произошло
+  4. Если в данных есть appeal_date и store_response — добавь абзац: «[дата обращения] я обратился(ась) в магазин с требованием [demand]. Магазин [ответил: указать суть / не дал ответа / отказал, сославшись на: указать основание].» Укажи, что отказ является незаконным, со ссылкой на норму.
+  5. Правовое обоснование: ЗоЗПП ст. 18 (некачественный), ст. 25 (14 дней), ст. 23 (неустойка 1%/день), ГК РФ ст. 475
+  6. Расчёт неустойки: product_price × 1% × количество_дней (от appeal_date до даты составления). Если appeal_date не указана — пропусти расчёт.
+  7. Требование: конкретная сумма, срок исполнения 10 дней (ст. 22 ЗоЗПП)
+  8. Предупреждение: при повторном отказе — иск в суд + штраф 50% (ст. 13 ЗоЗПП) + моральный вред
+  9. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: что куплено, когда, какой обнаружен дефект или причина возврата.
+  Если указан ответ магазина — упомяни отказ и почему он незаконен.
+  Используй только данные из формы, не придумывай факты.
+
+wizard_steps:
+  - title: "Магазин и покупка"
+    fields:
+      - id: store_name
+        type: text
+        label: "Название магазина"
+        placeholder: "М.Видео, DNS, Спортмастер…"
+        required: true
+      - id: store_address
+        type: text
+        label: "Адрес магазина или сайт"
+        placeholder: "ул. Ленина, 1 или www.mvideo.ru"
+      - id: product_name
+        type: text
+        label: "Что купили"
+        placeholder: "Смартфон Samsung Galaxy S24"
+        required: true
+      - id: product_price
+        type: number
+        label: "Стоимость, ₽"
+        placeholder: "35000"
+        required: true
+      - id: purchase_date
+        type: date
+        label: "Дата покупки"
+        required: true
+  - title: "Что случилось"
+    fields:
+      - id: problem_type
+        type: radio
+        label: "Тип проблемы"
+        required: true
+        options:
+          - value: defect
+            label: "Товар оказался некачественным / сломался"
+          - value: return14
+            label: "Отказывают в возврате в 14-дневный срок"
+          - value: warranty
+            label: "Проблема с гарантийным ремонтом"
+          - value: other
+            label: "Другое"
+      - id: problem_desc
+        type: textarea
+        label: "Опишите подробнее"
+        placeholder: "Что именно сломалось или в чём отказывают"
+        required: true
+      - id: appeal_date
+        type: date
+        label: "Когда обратились в магазин"
+      - id: store_response
+        type: textarea
+        label: "Что ответил магазин"
+        placeholder: "Отказали, сославшись на…"
+  - title: "Что вы хотите"
+    fields:
+      - id: demand
+        type: radio
+        label: "Ваше требование"
+        required: true
+        options:
+          - value: refund
+            label: "Вернуть деньги"
+          - value: replace
+            label: "Заменить товар"
+          - value: repair
+            label: "Провести гарантийный ремонт"
+          - value: other
+            label: "Другое"
+      - id: penalty_start_date
+        type: date
+        label: "Дата начала неустойки"
+        hint: "Обычно — дата отказа магазина или дата обращения"

@@ -1,3 +1,5 @@
+import re
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import FileResponse
 from sqlalchemy import select
@@ -17,6 +19,8 @@ _CONTENT_TYPES = {
     "pdf": "application/pdf",
 }
 
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
+
 
 @router.get("/{order_id}/download/{fmt}")
 async def download_document(
@@ -25,6 +29,9 @@ async def download_document(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> FileResponse:
+    if not _UUID_RE.match(order_id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order_id format")
+
     if fmt not in _CONTENT_TYPES:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
 
