@@ -4,6 +4,11 @@ from typing import Literal
 from pydantic import BaseModel
 
 
+class LegalRef(BaseModel):
+    law: str
+    url: str
+
+
 class WizardFieldOption(BaseModel):
     value: str
     label: str
@@ -36,3 +41,4 @@ class SituationConfig(BaseModel):
     ai_narrative_prompt: str | None = None
     wizard_steps: list[WizardStep]
     append_contact_step: bool = True
+    legal_refs: list[LegalRef] = []

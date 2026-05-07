@@ -97,3 +97,9 @@ wizard_steps:
         type: date
         label: "Дата начала неустойки"
         hint: "Обычно — дата отказа магазина или дата обращения"
+
+legal_refs:
+  - law: "Закон о защите прав потребителей"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ГК РФ (качество товара, ст. 475)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

@@ -80,3 +80,11 @@ wizard_steps:
             label: "Вернуть незаконную комиссию"
           - value: other
             label: "Другое"
+
+legal_refs:
+  - law: "ФЗ «О потребительском кредите (займе)»"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"
+  - law: "Закон о защите прав потребителей (ст. 16 — навязанные услуги)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ФЗ «О банках и банковской деятельности»"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5842/"

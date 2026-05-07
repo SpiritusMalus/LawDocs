@@ -81,3 +81,9 @@ wizard_steps:
             label: "Устранить нарушения"
           - value: both
             label: "И перерасчёт, и устранить нарушения"
+
+legal_refs:
+  - law: "Жилищный кодекс РФ (ст. 161 — требования к УК)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+  - law: "Постановление Правительства №354 (коммунальные услуги и перерасчёт)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_123668/"

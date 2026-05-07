@@ -104,3 +104,9 @@ wizard_steps:
             label: "Отменить штраф"
           - value: other
             label: "Другое"
+
+legal_refs:
+  - law: "Закон о защите прав потребителей (дистанционная торговля, ст. 26.1)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "Постановление Правительства РФ №2463 (правила дистанционной торговли)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_374730/"

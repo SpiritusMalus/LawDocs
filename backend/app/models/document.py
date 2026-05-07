@@ -16,6 +16,7 @@ class Document(Base):
     # Имена файлов внутри DOCUMENTS_DIR/{order_id}/
     docx_key: Mapped[str] = mapped_column(String, nullable=False)
     pdf_key: Mapped[str] = mapped_column(String, nullable=False)
+    instruction_pdf_key: Mapped[str | None] = mapped_column(String, nullable=True)
 
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

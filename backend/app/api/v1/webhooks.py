@@ -13,9 +13,9 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.document import Document
 from app.models.order import Order
-from app.services.docgen import generate_document, get_document_path
+from app.services.docgen import generate_document, generate_instruction, get_document_path
 from app.services.email import send_document_failed, send_document_ready
-from app.services.llm import fill_template
+from app.services.llm import fill_instruction, fill_template
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -73,7 +73,30 @@ async def yookassa_webhook(
             form_data=order.form_data,
         )
 
-        doc = Document(order_id=order.id, docx_key=docx_key, pdf_key=pdf_key)
+        instruction_pdf_key = None
+        try:
+            from app.situations.registry import registry as _registry
+            _config = _registry.get(order.situation_id)
+            _legal_refs = [ref.model_dump() for ref in (_config.legal_refs if _config else [])]
+            instruction_content = await fill_instruction(
+                situation_id=order.situation_id,
+                form_data=order.form_data,
+            )
+            instruction_pdf_key = await generate_instruction(
+                order_id=order.id,
+                situation_id=order.situation_id,
+                content=instruction_content,
+                legal_refs=_legal_refs,
+            )
+        except Exception:
+            logger.exception("Instruction generation failed for order %s, continuing without it", order.id)
+
+        doc = Document(
+            order_id=order.id,
+            docx_key=docx_key,
+            pdf_key=pdf_key,
+            instruction_pdf_key=instruction_pdf_key,
+        )
         db.add(doc)
         order.status = "done"
         await db.commit()

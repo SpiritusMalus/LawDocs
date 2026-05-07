@@ -100,3 +100,7 @@ wizard_steps:
         type: textarea
         label: "Дополнительные обстоятельства"
         placeholder: "Что важно учесть при составлении претензии"
+
+legal_refs:
+  - law: "Трудовой кодекс РФ (ст. 136, 140, 236)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"

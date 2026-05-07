@@ -173,6 +173,17 @@ export function OrderStatus({
         </div>
       )}
 
+      {order.status === "done" && (
+        <a
+          href={`/api/documents/${orderId}/download/instruction`}
+          download
+          className="flex items-center justify-center gap-2 h-11 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm font-medium text-blue-700 transition-colors w-full"
+        >
+          <FileText className="h-4 w-4" />
+          Скачать инструкцию (куда подать и что делать дальше)
+        </a>
+      )}
+
       {order.status === "done" && SEND_INSTRUCTIONS[order.situation_id] && (
         <div className="text-left bg-blue-50 border border-blue-100 rounded-xl p-4">
           <div className="flex items-start gap-2">

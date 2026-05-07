@@ -105,6 +105,51 @@ def _build_user_prompt(situation_id: str, form_data: dict) -> str:
     return "\n".join(lines)
 
 
+_INSTRUCTION_SYSTEM_PROMPT = """Ты — помощник юриста. Составь краткую практическую инструкцию для человека, который уже написал претензию и хочет её подать.
+
+Инструкция должна содержать 4 раздела:
+1. Контакты компании (телефон для жалоб, email для претензий, почтовый адрес для заказных писем)
+2. Как подать претензию (2–3 конкретных варианта: лично, заказным письмом, через сайт)
+3. Сроки (через сколько дней ждать ответа по закону)
+4. Куда обратиться если откажут (конкретный контролирующий орган + суд)
+
+Для раздела "Контакты компании":
+- Если знаешь реальные контакты конкретной компании из данных пользователя — укажи их точно
+- Если НЕ знаешь точных контактов — напиши: "Контакты не найдены автоматически. Найдите самостоятельно: [что именно — телефон горячей линии / email для претензий / юридический адрес] на официальном сайте компании в разделе [куда смотреть: «Контакты» / «Обратная связь» / «О компании» / «Правовые документы»]"
+
+Стиль: простой и понятный, без юридического жаргона. Не более 350 слов.
+Верни ТОЛЬКО текст инструкции, без вступлений, заголовков и пояснений."""
+
+_SITUATION_TYPES = {
+    "shop": "розничный магазин",
+    "marketplace": "маркетплейс (интернет-торговля)",
+    "bank": "банк",
+    "employer": "работодатель",
+    "insurance": "страховая компания",
+    "utility": "управляющая компания / ТСЖ",
+    "airline": "авиакомпания",
+}
+
+
+def _get_company_name(situation_id: str, form_data: dict) -> str:
+    for key in ("store_name", "airline", "bank_name", "insurance_company", "company_name", "platform"):
+        if val := form_data.get(key):
+            return str(val)
+    return ""
+
+
+async def fill_instruction(situation_id: str, form_data: dict) -> str:
+    if not settings.GIGACHAT_AUTH_KEY:
+        raise RuntimeError("GigaChat not configured — set GIGACHAT_AUTH_KEY")
+
+    situation_type = _SITUATION_TYPES.get(situation_id, situation_id)
+    company = _get_company_name(situation_id, form_data)
+    company_line = f"Компания: {company}" if company else "Компания: не указана"
+
+    user_prompt = f"Тип ситуации: {situation_type}\n{company_line}"
+    return await _call_gigachat(_INSTRUCTION_SYSTEM_PROMPT, user_prompt)
+
+
 async def fill_template(situation_id: str, form_data: dict) -> str:
     from app.situations.registry import registry
 

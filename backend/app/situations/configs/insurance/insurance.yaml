@@ -100,3 +100,11 @@ wizard_steps:
             label: "Выплатить полную сумму (при отказе)"
           - value: other
             label: "Другое"
+
+legal_refs:
+  - law: "ФЗ «Об ОСАГО» (ст. 12, 16.1)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+  - law: "ГК РФ (договор страхования, ст. 929)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  - law: "Закон о защите прав потребителей (неустойка за просрочку)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"

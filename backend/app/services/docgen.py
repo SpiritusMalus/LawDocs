@@ -106,6 +106,76 @@ def get_document_path(order_id: str, filename: str) -> Path:
     return Path(settings.DOCUMENTS_DIR) / order_id / filename
 
 
+def _instruction_to_pdf(content: str, legal_refs: list[dict]) -> bytes:
+    from fpdf import FPDF
+
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.add_page()
+    pdf.add_font("FreeSans", fname="/usr/share/fonts/truetype/freefont/FreeSans.ttf")
+    pdf.add_font("FreeSans", style="B", fname="/usr/share/fonts/truetype/freefont/FreeSansBold.ttf")
+    pdf.set_margins(left=25, top=25, right=25)
+    pdf.set_auto_page_break(auto=True, margin=20)
+
+    pdf.set_font("FreeSans", style="B", size=13)
+    pdf.multi_cell(0, 8, "Инструкция по подаче претензии")
+    pdf.ln(4)
+
+    # AI-generated content
+    pdf.set_font("FreeSans", size=11)
+    for para in content.split("\n"):
+        if not para.strip():
+            pdf.ln(3)
+            continue
+        pdf.multi_cell(0, 6, para)
+        pdf.ln(1)
+
+    if legal_refs:
+        pdf.ln(6)
+        pdf.set_draw_color(200, 200, 200)
+        pdf.line(pdf.get_x(), pdf.get_y(), 185, pdf.get_y())
+        pdf.ln(5)
+
+        pdf.set_font("FreeSans", style="B", size=11)
+        pdf.multi_cell(0, 6, "Полезные ссылки на законодательство:")
+        pdf.ln(3)
+
+        pdf.set_font("FreeSans", size=10)
+        for ref in legal_refs:
+            law = ref.get("law", "")
+            url = ref.get("url", "")
+            if not law or not url:
+                continue
+            pdf.set_text_color(0, 0, 0)
+            pdf.write(6, f"• {law}:  ")
+            pdf.set_text_color(0, 80, 200)
+            pdf.write(6, "consultant.ru", link=url)
+            pdf.set_text_color(0, 0, 0)
+            pdf.ln(7)
+
+    return bytes(pdf.output())
+
+
+async def generate_instruction(
+    order_id: str,
+    situation_id: str,
+    content: str,
+    legal_refs: list[dict],
+) -> str:
+    """Build instruction PDF, save to disk. Returns filename."""
+    safe_sid = _sanitize_situation_id(situation_id)
+    safe_oid = _sanitize_order_id(order_id)
+
+    pdf_bytes = _instruction_to_pdf(content, legal_refs)
+
+    date_str = datetime.now(UTC).strftime("%Y%m%d")
+    filename = f"instrukciya_{safe_sid}_{date_str}.pdf"
+
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(None, _write_file, safe_oid, filename, pdf_bytes)
+
+    return filename
+
+
 async def generate_document(
     order_id: str,
     situation_id: str,

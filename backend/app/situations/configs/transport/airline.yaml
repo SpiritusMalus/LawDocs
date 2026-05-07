@@ -106,3 +106,9 @@ wizard_steps:
             label: "Возмещение доп. расходов"
           - value: all
             label: "Всё вместе"
+
+legal_refs:
+  - law: "Воздушный кодекс РФ (ст. 107, 108, 119, 120)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_19315/"
+  - law: "Закон о защите прав потребителей (штраф 50%, неустойка)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
