@@ -27,9 +27,6 @@ class Settings(BaseSettings):
     GIGACHAT_CLIENT_ID: str = ""
     GIGACHAT_CLIENT_SECRET: str = ""
 
-    # Claude (fallback)
-    ANTHROPIC_API_KEY: str = ""
-
     # ЮKassa
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: str = ""

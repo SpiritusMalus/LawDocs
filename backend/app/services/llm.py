@@ -1,5 +1,5 @@
 """
-LLM-сервис: GigaChat основной, Claude — fallback.
+LLM-сервис: GigaChat.
 
 GigaChat API совместим с OpenAI-форматом (chat completions).
 Авторизация: OAuth2 через RqUID + Base64(client_id:client_secret).
@@ -82,26 +82,6 @@ async def _call_gigachat(system_prompt: str, user_prompt: str) -> str:
         resp.raise_for_status()
         return resp.json()["choices"][0]["message"]["content"]
 
-
-async def _call_claude(system_prompt: str, user_prompt: str) -> str:
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": settings.ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
-            },
-            json={
-                "model": "claude-haiku-4-5-20251001",
-                "max_tokens": 4096,
-                "system": system_prompt,
-                "messages": [{"role": "user", "content": user_prompt}],
-            },
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return resp.json()["content"][0]["text"]
 
 
 BASE_RULES = """Правила:
@@ -237,13 +217,7 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
     system_prompt = SYSTEM_PROMPTS.get(situation_id, _DEFAULT_SYSTEM_PROMPT)
     user_prompt = _build_user_prompt(situation_id, form_data)
 
-    if settings.GIGACHAT_CLIENT_ID:
-        try:
-            return await _call_gigachat(system_prompt, user_prompt)
-        except Exception as exc:
-            logger.warning("GigaChat failed, falling back to Claude: %s", exc)
+    if not settings.GIGACHAT_CLIENT_ID:
+        raise RuntimeError("GigaChat not configured — set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET")
 
-    if settings.ANTHROPIC_API_KEY:
-        return await _call_claude(system_prompt, user_prompt)
-
-    raise RuntimeError("No LLM configured — set GIGACHAT_CLIENT_ID or ANTHROPIC_API_KEY")
+    return await _call_gigachat(system_prompt, user_prompt)
