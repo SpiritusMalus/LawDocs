@@ -1,21 +1,39 @@
+import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.core.security import create_access_token, generate_magic_token
 from app.models.user import User
 from app.schemas.user import MagicLinkRequest, UserOut
 from app.services.email import send_magic_link
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+class VerifyOut(BaseModel):
+    access_token: str
+    order_id: str | None = None
+    user: UserOut
+
+
+@router.get("/me", response_model=UserOut)
+async def get_me(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
+
+
 @router.post("/magic-link", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("5/minute")
 async def request_magic_link(
+    request: Request,
     body: MagicLinkRequest,
     db: AsyncSession = Depends(get_db),
 ) -> None:
@@ -34,15 +52,29 @@ async def request_magic_link(
     await db.commit()
 
     magic_url = f"{settings.FRONTEND_URL}/auth/verify?token={token}"
-    await send_magic_link(email=body.email, url=magic_url)
+    try:
+        await send_magic_link(email=body.email, url=magic_url)
+    except Exception as exc:
+        # Email send failed — token is committed, user can retry or contact support
+        logger.error("Failed to send magic link to %s: %s", body.email, exc)
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Не удалось отправить письмо. Попробуйте ещё раз.",
+        ) from exc
 
 
-@router.get("/verify")
+@router.get("/verify", response_model=VerifyOut)
+@limiter.limit("20/minute")
 async def verify_magic_link(
+    request: Request,
     token: str,
-    response: Response,
+    order: str | None = None,
     db: AsyncSession = Depends(get_db),
-) -> UserOut:
+) -> VerifyOut:
+    """
+    Verifies a magic link token. Returns JWT in body so Next.js Route Handler
+    can set the httpOnly cookie for the correct frontend domain.
+    """
     result = await db.execute(select(User).where(User.magic_token == token))
     user = result.scalar_one_or_none()
 
@@ -60,18 +92,10 @@ async def verify_magic_link(
     await db.commit()
 
     access_token = create_access_token(user.id)
-    response.set_cookie(
-        key="access_token",
-        value=access_token,
-        httponly=True,
-        secure=settings.APP_ENV == "production",
-        samesite="lax",
-        max_age=settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    return VerifyOut(
+        access_token=access_token,
+        order_id=order,
+        user=UserOut.model_validate(user),
     )
 
-    return UserOut.model_validate(user)
 
-
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-async def logout(response: Response) -> None:
-    response.delete_cookie("access_token")

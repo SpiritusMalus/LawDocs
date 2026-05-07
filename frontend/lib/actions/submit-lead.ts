@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { SITUATIONS, type SituationId } from "@/lib/situations";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
+import { isValidContact } from "@/lib/validators";
 
 export interface LeadState {
   status: "idle" | "success" | "error";
@@ -21,13 +22,6 @@ const RATE_MAX = 5;
 function clean(value: FormDataEntryValue | null, max = 200): string {
   if (typeof value !== "string") return "";
   return value.trim().slice(0, max);
-}
-
-function isValidContact(value: string): boolean {
-  if (!value) return false;
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return true;
-  if (/^[+\d][\d\s()\-]{7,}$/.test(value)) return true;
-  return false;
 }
 
 function escapeHtml(input: string): string {

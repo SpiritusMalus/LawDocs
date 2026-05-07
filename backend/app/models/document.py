@@ -13,7 +13,7 @@ class Document(Base):
     id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     order_id: Mapped[str] = mapped_column(String, ForeignKey("orders.id"), nullable=False, unique=True)
 
-    # S3 ключи для файлов
+    # Имена файлов внутри DOCUMENTS_DIR/{order_id}/
     docx_key: Mapped[str] = mapped_column(String, nullable=False)
     pdf_key: Mapped[str] = mapped_column(String, nullable=False)
 

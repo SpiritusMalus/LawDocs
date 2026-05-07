@@ -3,18 +3,12 @@
 import { headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
 import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
-
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
-function isValidPhone(value: string): boolean {
-  return /^[+\d][\d\s()\-]{6,}$/.test(value);
-}
+import { isValidEmail, isValidPhone } from "@/lib/validators";
 
 export interface WizardState {
-  status: "idle" | "success" | "error";
+  status: "idle" | "success" | "error" | "email_sent";
   message?: string;
+  orderId?: string;
 }
 
 const SITUATION_LABELS: Record<WizardSituationId, string> = {
@@ -139,6 +133,38 @@ export async function submitWizard({
     return { status: "error", message: "Укажите корректный номер телефона." };
   }
 
+  // Phase 2: route to FastAPI when backend is configured
+  const backendUrl = process.env.BACKEND_URL;
+  if (backendUrl) {
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/orders/init`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: answers["email"]!.trim(),
+          situation_id: situationId,
+          form_data: answers,
+        }),
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        return {
+          status: "error",
+          message: (body as { detail?: string }).detail ?? "Ошибка сервера. Попробуйте ещё раз.",
+        };
+      }
+      const { order_id } = (await res.json()) as { order_id: string };
+      return { status: "email_sent", orderId: order_id };
+    } catch {
+      return {
+        status: "error",
+        message: "Сервер недоступен. Попробуйте ещё раз или напишите на hi@lawdocs.ru.",
+      };
+    }
+  }
+
+  // Phase 1 fallback: send to Telegram
   const situationLabel = SITUATION_LABELS[situationId];
   const lines: string[] = [
     "📋 <b>Новая заявка [WIZARD] — LawDocs</b>",

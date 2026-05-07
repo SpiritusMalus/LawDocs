@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Scale, Menu, X } from "lucide-react";
+import { Scale, Menu, X, LayoutDashboard } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -12,7 +12,7 @@ const NAV_LINKS = [
   { href: "#lead-form", label: "Получить документ" },
 ];
 
-export function Header() {
+export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -40,12 +40,24 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2">
-          <Link
-            href="#lead-form"
-            className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
-          >
-            Получить за 500 ₽
-          </Link>
+          {isAuthenticated ? (
+            <Link
+              href="/dashboard"
+              className={cn(
+                "h-9 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+              )}
+            >
+              <LayoutDashboard className="h-4 w-4" />
+              Мои заказы
+            </Link>
+          ) : (
+            <Link
+              href="#lead-form"
+              className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
+            >
+              Получить за 500 ₽
+            </Link>
+          )}
           <button
             type="button"
             aria-label={open ? "Закрыть меню" : "Открыть меню"}
@@ -71,13 +83,24 @@ export function Header() {
                 {link.label}
               </Link>
             ))}
-            <Link
-              href="#lead-form"
-              onClick={() => setOpen(false)}
-              className={cn(buttonVariants({}), "h-10 mt-2")}
-            >
-              Получить за 500 ₽
-            </Link>
+            {isAuthenticated ? (
+              <Link
+                href="/dashboard"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Мои заказы
+              </Link>
+            ) : (
+              <Link
+                href="#lead-form"
+                onClick={() => setOpen(false)}
+                className={cn(buttonVariants({}), "h-10 mt-2")}
+              >
+                Получить за 500 ₽
+              </Link>
+            )}
           </nav>
         </div>
       )}

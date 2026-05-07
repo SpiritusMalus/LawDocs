@@ -1,20 +1,23 @@
 import hashlib
 import hmac
 import json
+import logging
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models.document import Document
 from app.models.order import Order
-from app.services.docgen import generate_document
-from app.services.email import send_document_ready
+from app.services.docgen import generate_document, get_document_path
+from app.services.email import send_document_failed, send_document_ready
 from app.services.llm import fill_template
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -44,17 +47,18 @@ async def yookassa_webhook(
 
     payment_id = event["object"]["id"]
 
-    result = await db.execute(select(Order).where(Order.yookassa_payment_id == payment_id))
+    result = await db.execute(
+        select(Order)
+        .where(Order.yookassa_payment_id == payment_id)
+        .options(selectinload(Order.user))
+    )
     order = result.scalar_one_or_none()
     if not order or order.status != "pending_payment":
         return {"received": True}
 
-    order.status = "paid"
-    order.paid_at = datetime.now(UTC)
-    await db.commit()
-
-    # Генерация документа: LLM заполняет шаблон, docgen собирает файлы
+    # Atomically transition paid → generating in one commit
     order.status = "generating"
+    order.paid_at = datetime.now(UTC)
     await db.commit()
 
     try:
@@ -73,12 +77,18 @@ async def yookassa_webhook(
         order.status = "done"
         await db.commit()
 
-        # TODO: загрузить email пользователя через joinedload(Order.user) и передать сюда
-        await send_document_ready(email="", order_id=order.id)
+        pdf_path = get_document_path(order.id, pdf_key)
+        await send_document_ready(email=order.user.email, order_id=order.id, pdf_path=pdf_path)
 
     except Exception:
+        logger.exception("Document generation failed for order %s", order.id)
         order.status = "failed"
         await db.commit()
-        raise
+        try:
+            await send_document_failed(email=order.user.email, order_id=order.id)
+        except Exception:
+            logger.exception("Failed to send failure notification for order %s", order.id)
+        # Return 200 so ЮKassa doesn't retry — failure is handled in app
+        return {"received": True, "error": "generation_failed"}
 
     return {"received": True}

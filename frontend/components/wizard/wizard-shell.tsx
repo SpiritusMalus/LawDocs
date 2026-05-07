@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,18 +10,30 @@ import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
 import type { WizardSituationId, WizardStep, WizardField } from "@/lib/wizard-questions";
 import { submitWizard } from "@/lib/actions/submit-wizard";
 
+const LS_EMAIL_KEY = "lawdocs_email";
+
 interface WizardShellProps {
   steps: WizardStep[];
   situationId: WizardSituationId;
+  hasBackend?: boolean;
 }
 
-export function WizardShell({ steps, situationId }: WizardShellProps) {
+export function WizardShell({ steps, situationId, hasBackend = false }: WizardShellProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // Pre-fill email from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_EMAIL_KEY);
+      if (saved) setAnswers((prev) => ({ ...prev, email: prev["email"] ?? saved }));
+    } catch {}
+  }, []);
 
   const step = steps[currentStep]!;
   const isFirst = currentStep === 0;
@@ -66,12 +78,37 @@ export function WizardShell({ steps, situationId }: WizardShellProps) {
     setSubmitError(null);
     startTransition(async () => {
       const result = await submitWizard({ situationId, answers });
-      if (result.status === "success") {
+      if (result.status === "email_sent") {
+        // Save email so next wizard pre-fills it
+        try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
+        setEmailSent(true);
+      } else if (result.status === "success") {
+        try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
         router.push("/thanks");
       } else {
         setSubmitError(result.message ?? "Ошибка при отправке.");
       }
     });
+  }
+
+  if (emailSent) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center space-y-4">
+        <div className="text-5xl">📧</div>
+        <h2 className="text-xl font-bold text-gray-900">Проверьте почту</h2>
+        <p className="text-gray-500 text-sm">
+          Мы отправили ссылку на{" "}
+          <span className="font-medium text-gray-700">{answers["email"]}</span>
+          . Перейдите по ней, чтобы увидеть статус заказа и оплатить.
+        </p>
+        <p className="text-xs text-gray-400">
+          Не нашли? Проверьте папку «Спам» или напишите на{" "}
+          <a href="mailto:hi@lawdocs.ru" className="text-blue-600 hover:underline">
+            hi@lawdocs.ru
+          </a>
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -154,7 +191,9 @@ export function WizardShell({ steps, situationId }: WizardShellProps) {
               )}
             </Button>
             <p className="text-xs text-gray-400">
-              Свяжемся в течение 2 часов и выставим счёт на 500&nbsp;₽
+              {hasBackend
+                ? "После оплаты документ придёт на email в течение рабочего дня"
+                : "Свяжемся в течение 2 часов и выставим счёт на 500 ₽"}
             </p>
           </div>
         ) : (

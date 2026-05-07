@@ -5,7 +5,9 @@ GigaChat API совместим с OpenAI-форматом (chat completions).
 Авторизация: OAuth2 через RqUID + Base64(client_id:client_secret).
 """
 
+import asyncio
 import base64
+import html
 import logging
 from datetime import UTC, datetime
 
@@ -17,6 +19,7 @@ logger = logging.getLogger(__name__)
 
 _gigachat_token: str | None = None
 _gigachat_token_expires_at: datetime | None = None
+_gigachat_lock = asyncio.Lock()
 
 GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
@@ -25,31 +28,38 @@ GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
 async def _get_gigachat_token() -> str:
     global _gigachat_token, _gigachat_token_expires_at
 
-    if _gigachat_token and _gigachat_token_expires_at and _gigachat_token_expires_at > datetime.now(UTC):
+    async with _gigachat_lock:
+        if (
+            _gigachat_token
+            and _gigachat_token_expires_at
+            and _gigachat_token_expires_at > datetime.now(UTC)
+        ):
+            return _gigachat_token
+
+        credentials = base64.b64encode(
+            f"{settings.GIGACHAT_CLIENT_ID}:{settings.GIGACHAT_CLIENT_SECRET}".encode()
+        ).decode()
+
+        # verify=False: GigaChat использует CA «МинЦифры России», не входящий
+        # в стандартный доверенный список. В продакшне можно добавить CA-cert
+        # через httpx.AsyncClient(verify="/path/to/mintsifry_ca.pem").
+        async with httpx.AsyncClient(verify=False) as client:
+            resp = await client.post(
+                GIGACHAT_AUTH_URL,
+                headers={
+                    "Authorization": f"Basic {credentials}",
+                    "RqUID": "lawdocs-backend",
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                data={"scope": "GIGACHAT_API_PERS"},
+                timeout=10,
+            )
+            resp.raise_for_status()
+            data = resp.json()
+
+        _gigachat_token = data["access_token"]
+        _gigachat_token_expires_at = datetime.fromtimestamp(data["expires_at"] / 1000, tz=UTC)
         return _gigachat_token
-
-    credentials = base64.b64encode(
-        f"{settings.GIGACHAT_CLIENT_ID}:{settings.GIGACHAT_CLIENT_SECRET}".encode()
-    ).decode()
-
-    async with httpx.AsyncClient(verify=False) as client:  # GigaChat использует корпоративный CA
-        resp = await client.post(
-            GIGACHAT_AUTH_URL,
-            headers={
-                "Authorization": f"Basic {credentials}",
-                "RqUID": "lawdocs-backend",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            data={"scope": "GIGACHAT_API_PERS"},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        data = resp.json()
-
-    _gigachat_token = data["access_token"]
-    # expires_at приходит в миллисекундах
-    _gigachat_token_expires_at = datetime.fromtimestamp(data["expires_at"] / 1000, tz=UTC)
-    return _gigachat_token
 
 
 async def _call_gigachat(system_prompt: str, user_prompt: str) -> str:
@@ -210,7 +220,6 @@ SYSTEM_PROMPTS: dict[str, str] = {
 {BASE_RULES}""",
 }
 
-# Если ситуация не найдена — используем общий промпт
 _DEFAULT_SYSTEM_PROMPT = f"""Ты — опытный юрист. Составь официальную претензию или жалобу.
 Используй официально-деловой стиль. Ссылайся только на реальные нормы российского права.
 {BASE_RULES}"""

@@ -243,3 +243,6 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+
+# Claude Code project settings & memory
+.claude/

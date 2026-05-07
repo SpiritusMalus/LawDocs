@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Script from "next/script";
+import { cookies } from "next/headers";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/landing/footer";
@@ -26,15 +27,18 @@ const rawYmCounterId = process.env.NEXT_PUBLIC_YM_COUNTER_ID;
 // Hard validation: must be digits only, otherwise refuse to inject into <script>.
 const ymCounterId = rawYmCounterId && /^\d+$/.test(rawYmCounterId) ? rawYmCounterId : null;
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const cookieStore = await cookies();
+  const isAuthenticated = !!cookieStore.get("access_token")?.value;
+
   return (
     <html lang="ru" className="h-full" data-scroll-behavior="smooth">
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
-        <Header />
+        <Header isAuthenticated={isAuthenticated} />
         <main className="flex-1">{children}</main>
         <Footer />
 

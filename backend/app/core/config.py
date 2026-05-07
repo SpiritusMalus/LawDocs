@@ -34,11 +34,8 @@ class Settings(BaseSettings):
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: str = ""
 
-    # S3 / file storage
-    S3_ENDPOINT: str = ""       # Selectel / Timeweb S3-совместимое хранилище
-    S3_BUCKET: str = "lawdocs-documents"
-    S3_ACCESS_KEY: str = ""
-    S3_SECRET_KEY: str = ""
+    # File storage — локальный диск (папка создаётся автоматически)
+    DOCUMENTS_DIR: str = "/var/lawdocs/documents"
 
     # Frontend URL (for magic link redirects)
     FRONTEND_URL: str = "https://lawdocs.ru"

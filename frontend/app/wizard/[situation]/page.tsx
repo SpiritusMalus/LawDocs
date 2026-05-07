@@ -73,7 +73,11 @@ export default async function WizardPage({
             </p>
           </div>
 
-          <WizardShell steps={steps} situationId={situation as WizardSituationId} />
+          <WizardShell
+            steps={steps}
+            situationId={situation as WizardSituationId}
+            hasBackend={!!process.env.BACKEND_URL}
+          />
         </div>
       </section>
     </>
