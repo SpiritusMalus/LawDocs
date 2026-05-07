@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "/situations", label: "Ситуации" },
   { href: "/#how-it-works", label: "Как работает" },
-  { href: "#lead-form", label: "Получить документ" },
+  { href: "/situations", label: "Получить документ" },
 ];
 
 export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
@@ -52,7 +52,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             </Link>
           ) : (
             <Link
-              href="#lead-form"
+              href="/situations"
               className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
             >
               Получить за 500 ₽
@@ -94,7 +94,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
               </Link>
             ) : (
               <Link
-                href="#lead-form"
+                href="/situations"
                 onClick={() => setOpen(false)}
                 className={cn(buttonVariants({}), "h-10 mt-2")}
               >

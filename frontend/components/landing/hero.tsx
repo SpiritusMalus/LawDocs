@@ -34,7 +34,7 @@ export function Hero() {
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mb-14">
           <Link
-            href="#lead-form"
+            href="/situations"
             className={buttonVariants({ size: "lg" }) + " h-12 px-6 text-base"}
           >
             <FileText className="h-5 w-5 mr-2" />

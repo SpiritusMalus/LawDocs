@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ChevronRight, FileText, Scale, Send, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SITUATION_PAGES, getSituationPage } from "@/lib/situation-pages";
-import { SituationLeadForm } from "@/components/landing/situation-lead-form";
 import type { SituationId } from "@/lib/situations";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
@@ -203,8 +202,6 @@ export default async function SituationPage({
         </div>
       </section>
 
-      {/* Lead Form */}
-      <SituationLeadForm defaultSituation={page.slug as SituationId} />
     </>
   );
 }

@@ -96,13 +96,13 @@ export default function SituationsPage() {
           <p className="text-gray-500 mb-8">
             Опишите проблему в свободной форме — посмотрим, чем можем помочь.
           </p>
-          <Link
-            href="/#lead-form"
+          <a
+            href="mailto:hi@lawdocs.ru"
             className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
           >
-            Описать ситуацию
+            Написать нам
             <ArrowRight className="h-4 w-4 ml-2" />
-          </Link>
+          </a>
         </div>
       </section>
     </>
