@@ -92,10 +92,13 @@ async def init_order(
         await send_magic_link(email=str(body.email), url=magic_url)
     except Exception as exc:
         logger.error("Failed to send magic link to %s: %s", body.email, exc)
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Не удалось отправить письмо. Попробуйте ещё раз.",
-        ) from exc
+        if settings.APP_ENV == "development":
+            logger.warning("DEV MAGIC LINK: %s", magic_url)
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Не удалось отправить письмо. Попробуйте ещё раз.",
+            ) from exc
 
     return OrderInitOut(order_id=order.id)
 

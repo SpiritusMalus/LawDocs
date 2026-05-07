@@ -103,7 +103,8 @@ export async function submitWizard({
 }): Promise<WizardState> {
   pruneRateLimitBuckets();
   const ip = await getClientIp();
-  const rl = rateLimit(`submit:${ip}`, { windowMs: 60 * 60 * 1000, max: 5 });
+  const maxRequests = process.env.APP_ENV === "development" ? 1000 : 5;
+  const rl = rateLimit(`submit:${ip}`, { windowMs: 60 * 60 * 1000, max: maxRequests });
   if (!rl.ok) {
     const minutes = Math.max(1, Math.ceil(rl.retryAfterMs / 60000));
     return {

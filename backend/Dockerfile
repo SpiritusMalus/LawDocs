@@ -2,10 +2,11 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# WeasyPrint системные зависимости
+# WeasyPrint системные зависимости + кириллические шрифты
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
     libgdk-pixbuf-xlib-2.0-0 libffi-dev libcairo2 \
+    fonts-freefont-ttf fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

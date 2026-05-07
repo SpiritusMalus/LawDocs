@@ -40,7 +40,8 @@ async def _send(to: str, subject: str, html: str, attachment_path: Path | None =
         port=settings.SMTP_PORT,
         username=settings.SMTP_USER,
         password=settings.SMTP_PASSWORD,
-        use_tls=True,
+        use_tls=settings.SMTP_TLS,
+        start_tls=settings.SMTP_STARTTLS,
     )
 
 

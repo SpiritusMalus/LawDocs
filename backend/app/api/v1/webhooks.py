@@ -38,7 +38,7 @@ async def yookassa_webhook(
     body = await request.body()
     signature = request.headers.get("X-Content-SHA256", "")
 
-    if not _verify_yookassa_signature(body, signature):
+    if settings.YOOKASSA_SECRET_KEY and not _verify_yookassa_signature(body, signature):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
 
     event = json.loads(body)

@@ -12,7 +12,7 @@ export default async function DevPaymentPage({
 }: {
   searchParams: Promise<{ order_id?: string }>;
 }) {
-  if (process.env.NODE_ENV === "production") notFound();
+  if (process.env.APP_ENV === "production") notFound();
 
   const { order_id } = await searchParams;
   if (!order_id) notFound();

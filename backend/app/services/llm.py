@@ -9,6 +9,7 @@ import asyncio
 import base64
 import html
 import logging
+import uuid
 from datetime import UTC, datetime
 
 import httpx
@@ -36,10 +37,6 @@ async def _get_gigachat_token() -> str:
         ):
             return _gigachat_token
 
-        credentials = base64.b64encode(
-            f"{settings.GIGACHAT_CLIENT_ID}:{settings.GIGACHAT_CLIENT_SECRET}".encode()
-        ).decode()
-
         # verify=False: GigaChat использует CA «МинЦифры России», не входящий
         # в стандартный доверенный список. В продакшне можно добавить CA-cert
         # через httpx.AsyncClient(verify="/path/to/mintsifry_ca.pem").
@@ -47,14 +44,16 @@ async def _get_gigachat_token() -> str:
             resp = await client.post(
                 GIGACHAT_AUTH_URL,
                 headers={
-                    "Authorization": f"Basic {credentials}",
-                    "RqUID": "lawdocs-backend",
+                    "Authorization": f"Basic {settings.GIGACHAT_AUTH_KEY}",
+                    "RqUID": str(uuid.uuid4()),
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
                 data={"scope": "GIGACHAT_API_PERS"},
                 timeout=10,
             )
-            resp.raise_for_status()
+            if not resp.is_success:
+                logger.error("GigaChat auth failed %s: %s", resp.status_code, resp.text)
+                resp.raise_for_status()
             data = resp.json()
 
         _gigachat_token = data["access_token"]
@@ -88,9 +87,11 @@ BASE_RULES = """Правила:
 - Официально-деловой стиль, без эмоций и просторечий
 - Ссылайся на конкретные статьи закона (не выдумывай несуществующие)
 - Не придумывай факты — используй только данные пользователя
-- Если данные отсутствуют — оставь плейсхолдер [УКАЖИТЕ ...]
-- Верни ТОЛЬКО текст документа, без пояснений и комментариев
-- Используй реальные даты и суммы из данных пользователя"""
+- Квадратные скобки [...] используй ТОЛЬКО для данных, которых нет в форме и которые пользователь впишет вручную
+- Все данные из формы (ФИО, адрес, даты, суммы, названия) вставляй напрямую — БЕЗ квадратных скобок
+- Даты из формы в формате ГГГГ-ММ-ДД переводи в русский формат: «1 мая 2026 года»
+- Для строки подписи в конце используй: «_________________ / _________________»
+- Верни ТОЛЬКО текст документа, без пояснений и комментариев"""
 
 SYSTEM_PROMPTS: dict[str, str] = {
     "shop": f"""Ты — юрист по защите прав потребителей. Составь претензию в магазин.
@@ -205,8 +206,14 @@ _DEFAULT_SYSTEM_PROMPT = f"""Ты — опытный юрист. Составь 
 {BASE_RULES}"""
 
 
+_MONTHS_RU = ["января","февраля","марта","апреля","мая","июня",
+              "июля","августа","сентября","октября","ноября","декабря"]
+
+
 def _build_user_prompt(situation_id: str, form_data: dict) -> str:
-    lines = [f"Ситуация: {situation_id}", "", "Данные пользователя:"]
+    now = datetime.now(UTC)
+    today = f"{now.day} {_MONTHS_RU[now.month - 1]} {now.year} года"
+    lines = [f"Ситуация: {situation_id}", f"Дата составления документа: {today}", "", "Данные пользователя:"]
     for k, v in form_data.items():
         if v:
             lines.append(f"- {k}: {v}")
@@ -217,7 +224,7 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
     system_prompt = SYSTEM_PROMPTS.get(situation_id, _DEFAULT_SYSTEM_PROMPT)
     user_prompt = _build_user_prompt(situation_id, form_data)
 
-    if not settings.GIGACHAT_CLIENT_ID:
-        raise RuntimeError("GigaChat not configured — set GIGACHAT_CLIENT_ID and GIGACHAT_CLIENT_SECRET")
+    if not settings.GIGACHAT_AUTH_KEY:
+        raise RuntimeError("GigaChat not configured — set GIGACHAT_AUTH_KEY")
 
     return await _call_gigachat(system_prompt, user_prompt)

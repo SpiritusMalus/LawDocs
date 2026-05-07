@@ -49,5 +49,5 @@ async def download_document(
     return FileResponse(
         path=path,
         media_type=_CONTENT_TYPES[fmt],
-        filename=f"document.{fmt}",
+        filename=filename,
     )

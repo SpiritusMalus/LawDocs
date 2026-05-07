@@ -156,7 +156,7 @@ export function OrderStatus({
         <div className="flex flex-col sm:flex-row gap-3">
           <a
             href={`/api/documents/${orderId}/download/docx`}
-            download="document.docx"
+            download
             className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
           >
             <Download className="h-4 w-4" />
@@ -164,7 +164,7 @@ export function OrderStatus({
           </a>
           <a
             href={`/api/documents/${orderId}/download/pdf`}
-            download="document.pdf"
+            download
             className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
           >
             <Download className="h-4 w-4" />

@@ -19,13 +19,15 @@ class Settings(BaseSettings):
     # Email (SMTP)
     SMTP_HOST: str = ""
     SMTP_PORT: int = 465
+    SMTP_TLS: bool = True
+    SMTP_STARTTLS: bool = False
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     EMAIL_FROM: str = "noreply@lawdocs.ru"
 
-    # GigaChat
-    GIGACHAT_CLIENT_ID: str = ""
-    GIGACHAT_CLIENT_SECRET: str = ""
+    # GigaChat — Authorization Key из консоли разработчика (уже готовый Base64)
+    GIGACHAT_AUTH_KEY: str = ""
+    GIGACHAT_CLIENT_ID: str = ""  # не используется, оставлен для совместимости
 
     # ЮKassa
     YOOKASSA_SHOP_ID: str = ""

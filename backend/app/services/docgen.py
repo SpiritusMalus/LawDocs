@@ -4,10 +4,10 @@
 """
 
 import asyncio
-import html
 import io
 import logging
 import re
+from datetime import datetime, UTC
 from pathlib import Path
 
 from docx import Document as DocxDocument
@@ -38,19 +38,28 @@ def _text_to_docx(text: str) -> bytes:
 
 
 def _docx_to_pdf(docx_bytes: bytes) -> bytes:
-    from weasyprint import HTML
     import io as _io
     from docx import Document as DocxDoc
+    from fpdf import FPDF
 
-    doc_html = "<html><body style='font-family:Arial;font-size:12pt;padding:40px'>"
     doc = DocxDoc(_io.BytesIO(docx_bytes))
-    for para in doc.paragraphs:
-        doc_html += f"<p>{html.escape(para.text)}</p>"
-    doc_html += "</body></html>"
 
-    pdf_buf = _io.BytesIO()
-    HTML(string=doc_html).write_pdf(pdf_buf)
-    return pdf_buf.getvalue()
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.add_page()
+    pdf.add_font("FreeSans", fname="/usr/share/fonts/truetype/freefont/FreeSans.ttf")
+    pdf.set_font("FreeSans", size=11)
+    pdf.set_margins(left=25, top=25, right=25)
+    pdf.set_auto_page_break(auto=True, margin=20)
+
+    for para in doc.paragraphs:
+        text = para.text
+        if not text.strip():
+            pdf.ln(4)
+            continue
+        pdf.multi_cell(0, 6, text)
+        pdf.ln(1)
+
+    return bytes(pdf.output())
 
 
 def _write_file(order_id: str, filename: str, data: bytes) -> None:
@@ -72,8 +81,9 @@ async def generate_document(order_id: str, situation_id: str, content: str) -> t
     docx_bytes = _text_to_docx(content)
     pdf_bytes = _docx_to_pdf(docx_bytes)
 
-    docx_filename = f"{safe_sid}.docx"
-    pdf_filename = f"{safe_sid}.pdf"
+    date_str = datetime.now(UTC).strftime("%Y%m%d")
+    docx_filename = f"pretenziya_{safe_sid}_{date_str}.docx"
+    pdf_filename = f"pretenziya_{safe_sid}_{date_str}.pdf"
 
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, _write_file, order_id, docx_filename, docx_bytes)

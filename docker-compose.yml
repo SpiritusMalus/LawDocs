@@ -43,8 +43,8 @@ services:
       - "3000:3000"
     env_file: ./frontend/.env.local
     environment:
-      # Enables Phase 2 mode — wizard routes to FastAPI instead of Telegram
       BACKEND_URL: http://backend:8000
+      APP_ENV: development
     depends_on:
       - backend
 
