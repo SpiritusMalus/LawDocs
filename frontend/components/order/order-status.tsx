@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, Info, RefreshCcw, PlusCircle } from "lucide-react";
+import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, RefreshCcw, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -62,15 +62,6 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 
 const POLL_STATUSES = new Set(["paid", "generating"]);
 
-const SEND_INSTRUCTIONS: Record<string, string> = {
-  shop: "Направьте претензию заказным письмом с уведомлением или лично под роспись в магазин. Срок ответа — 10 дней.",
-  marketplace: "Отправьте претензию через форму обратной связи маркетплейса и продублируйте заказным письмом на юридический адрес. Срок ответа — 10 дней.",
-  bank: "Подайте заявление в отделении банка под роспись или отправьте заказным письмом. Срок ответа — 30 дней.",
-  employer: "Вручите претензию лично под роспись или отправьте заказным письмом на адрес организации. Срок ответа — 3 рабочих дня.",
-  insurance: "Отправьте претензию заказным письмом или через личный кабинет страховой. По закону ответ обязателен в течение 10 рабочих дней.",
-  utility: "Подайте претензию в УК лично под роспись (получите свой экземпляр) или отправьте заказным письмом. Срок ответа — 30 дней.",
-  airline: "Направьте претензию через официальный сайт авиакомпании или заказным письмом. Срок ответа — 30 дней.",
-};
 
 export function OrderStatus({
   orderId,
@@ -184,17 +175,6 @@ export function OrderStatus({
         </a>
       )}
 
-      {order.status === "done" && SEND_INSTRUCTIONS[order.situation_id] && (
-        <div className="text-left bg-blue-50 border border-blue-100 rounded-xl p-4">
-          <div className="flex items-start gap-2">
-            <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs font-semibold text-blue-700 mb-1">Что делать дальше</p>
-              <p className="text-xs text-blue-700">{SEND_INSTRUCTIONS[order.situation_id]}</p>
-            </div>
-          </div>
-        </div>
-      )}
 
       {order.status === "done" && (
         <>

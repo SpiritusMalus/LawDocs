@@ -16,7 +16,12 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def _send(to: str, subject: str, html: str, attachment_path: Path | None = None) -> None:
+async def _send(
+    to: str,
+    subject: str,
+    html: str,
+    attachments: list[Path] | None = None,
+) -> None:
     if not settings.SMTP_HOST:
         logger.info("[EMAIL stub] To: %s | Subject: %s", to, subject)
         return
@@ -28,11 +33,12 @@ async def _send(to: str, subject: str, html: str, attachment_path: Path | None =
 
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    if attachment_path and attachment_path.exists():
-        data = attachment_path.read_bytes()
-        part = MIMEApplication(data, _subtype="pdf")
-        part.add_header("Content-Disposition", "attachment", filename=attachment_path.name)
-        msg.attach(part)
+    for path in (attachments or []):
+        if path.exists():
+            data = path.read_bytes()
+            part = MIMEApplication(data, _subtype="pdf")
+            part.add_header("Content-Disposition", "attachment", filename=path.name)
+            msg.attach(part)
 
     await aiosmtplib.send(
         msg,
@@ -57,21 +63,33 @@ async def send_magic_link(email: str, url: str) -> None:
     await _send(to=email, subject="Вход в LawDocs", html=html)
 
 
-async def send_document_ready(email: str, order_id: str, pdf_path: Path | None = None) -> None:
+async def send_document_ready(
+    email: str,
+    order_id: str,
+    pdf_path: Path | None = None,
+    instruction_path: Path | None = None,
+) -> None:
     url = f"{settings.FRONTEND_URL}/orders/{order_id}"
+    has_instruction = instruction_path and instruction_path.exists()
+    attachments_note = (
+        "К письму прикреплены претензия (PDF) и инструкция по подаче."
+        if has_instruction
+        else "К письму прикреплён PDF с претензией."
+    )
     html = f"""
     <p>Ваш документ готов!</p>
-    <p>PDF прикреплён к этому письму. Также документ доступен по ссылке:</p>
+    <p>{attachments_note} Также всё доступно по ссылке:</p>
     <p><a href="{url}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
         Открыть заказ
     </a></p>
-    <p>Там вы найдёте Word и PDF версии, а также инструкцию — куда отправить документ и что приложить.</p>
+    <p style="color:#6b7280;font-size:13px">Там же доступна версия в формате Word (.docx) для редактирования.</p>
     """
+    attachments = [p for p in [pdf_path, instruction_path] if p]
     await _send(
         to=email,
         subject="LawDocs — ваш документ готов",
         html=html,
-        attachment_path=pdf_path,
+        attachments=attachments,
     )
 
 

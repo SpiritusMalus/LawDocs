@@ -102,7 +102,13 @@ async def yookassa_webhook(
         await db.commit()
 
         pdf_path = get_document_path(order.id, pdf_key)
-        await send_document_ready(email=order.user.email, order_id=order.id, pdf_path=pdf_path)
+        instruction_path = get_document_path(order.id, instruction_pdf_key) if instruction_pdf_key else None
+        await send_document_ready(
+            email=order.user.email,
+            order_id=order.id,
+            pdf_path=pdf_path,
+            instruction_path=instruction_path,
+        )
 
     except Exception:
         logger.exception("Document generation failed for order %s", order.id)
