@@ -6,17 +6,19 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const token = searchParams.get("token");
   const rawOrderId = searchParams.get("order");
+  const host = request.headers.get("host") || "law-docs.ru";
+  const protocol = request.headers.get("x-forwarded-proto") || "https";
+  const baseUrl = `${protocol}://${host}`;
 
   if (!token) {
-    return NextResponse.redirect(new URL("/auth/error?reason=missing_token", request.url));
+    return NextResponse.redirect(new URL("/auth/error?reason=missing_token", baseUrl));
   }
 
-  // Validate orderId to prevent open-redirect / path injection
   const orderId = rawOrderId && isValidUuid(rawOrderId) ? rawOrderId : null;
 
   const backendUrl = process.env.BACKEND_URL;
   if (!backendUrl) {
-    return NextResponse.redirect(new URL("/auth/error?reason=unavailable", request.url));
+    return NextResponse.redirect(new URL("/auth/error?reason=unavailable", baseUrl));
   }
 
   try {
@@ -28,7 +30,7 @@ export async function GET(request: NextRequest) {
     });
 
     if (!res.ok) {
-      return NextResponse.redirect(new URL("/auth/error?reason=invalid_link", request.url));
+      return NextResponse.redirect(new URL("/auth/error?reason=invalid_link", baseUrl));
     }
 
     const { access_token, order_id } = (await res.json()) as {
@@ -47,8 +49,8 @@ export async function GET(request: NextRequest) {
 
     const redirectTo =
       order_id && isValidUuid(order_id) ? `/orders/${order_id}` : "/";
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    return NextResponse.redirect(new URL(redirectTo, baseUrl));
   } catch {
-    return NextResponse.redirect(new URL("/auth/error?reason=unavailable", request.url));
+    return NextResponse.redirect(new URL("/auth/error?reason=unavailable", baseUrl));
   }
 }
