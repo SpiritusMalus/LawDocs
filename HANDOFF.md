@@ -7,10 +7,15 @@ B2C AI-юрист: пользователь заполняет форму → п
 ## Что уже сделано (полностью готово)
 
 ### Инфраструктура
-- VPS Timeweb: `186.246.4.164`, Ubuntu 24
-- Docker Compose prod: `backend`, `frontend`, `postgres` — все запущены
-- Nginx reverse proxy → `127.0.0.1:3000`
+- VPS Timeweb: `186.246.4.164`, Ubuntu 24, Ubuntu 24
+- Docker Compose prod: `backend`, `frontend`, `postgres`, `nginx` — все запущены ✅
+- **Nginx reverse proxy** в Docker:
+  - Прослушивает `0.0.0.0:80` и `0.0.0.0:443`
+  - Проксирует `/api/*` → `backend:8000/api/v1/`
+  - Остальное → `frontend:3000`
+  - Конфиги в `nginx/nginx.conf` и `nginx/conf.d/default.conf`
 - Cloudflare: DNS активен, SSL mode = **Flexible**, домен **law-docs.ru** работает ✅
+- **Исходящие SMTP порты открыты** (587, 465) на VPS ✅
 
 ### Backend (FastAPI)
 - Magic link auth (POST `/api/v1/auth/magic-link`, GET `/api/v1/auth/verify`)
@@ -24,46 +29,34 @@ B2C AI-юрист: пользователь заполняет форму → п
 
 ### Frontend (Next.js 16)
 - Лендинг, страница ситуаций, wizard, order status, dashboard
-- Страница `/login` — вход по email (magic link) ✅ (готова локально, требует деплоя на сервер)
-- Кнопка "Войти" в хедере ✅ (готова локально, требует деплоя на сервер)
+- Страница `/login` — вход по email (magic link) ✅ **работает в production**
+- Кнопка "Войти" в хедере ✅
 - API route `/api/auth/magic-link` — проксирует запрос на бэк ✅
+- API route `/auth/verify` — верификация токена, установка JWT cookie ✅
 - Скачивание: docx, pdf, instruction (3 кнопки на странице заказа)
 
 ## Что НЕ сделано / нужно сделать
 
+### ✅ Решено (больше не блокеры)
+- ✅ **Nginx reverse proxy** — добавлен в Docker Compose, конфиги готовы
+- ✅ **SMTP (Gmail)** — работает, magic link письма отправляются успешно
+  - Порты 587/465 открыты на VPS firewall
+  - SMTP_HOST=smtp.gmail.com, SMTP_PORT=587, SMTP_STARTTLS=true
+  - Добавлен timeout (10s) в backend/app/services/email.py
+- ✅ **Frontend login** — работает в production
+  - Исправлена обработка 204 No Content ответа
+  - Исправлены редиректы авторизации на правильный домен
+  - Письма отправляются, верификация работает
+
 ### Срочно (Блокеры функциональности)
 
-1. **Деплой фронта на VPS** — `/login` и кнопка "Войти" требуют обновления контейнера:
-   ```bash
-   cd /opt/lawdocs && git pull origin main
-   docker compose -f docker-compose.prod.yml build frontend
-   docker compose -f docker-compose.prod.yml up -d frontend
-   ```
-   **Статус:** коммиты в гите (95ffdb8), требуется pull + rebuild на VPS.
-
-2. **SMTP (Gmail)** — без него magic link и письма не работают:
-   - На локальной машине: включить 2FA в Gmail аккаунте
-   - Создать App Password: https://myaccount.google.com/apppasswords
-   - На VPS в `/opt/lawdocs/backend/.env` заменить:
-   ```
-   SMTP_HOST=smtp.gmail.com
-   SMTP_PORT=587
-   SMTP_USER=твой_email@gmail.com
-   SMTP_PASSWORD=xxxxxxxxxxxxxxxx
-   SMTP_TLS=false
-   SMTP_STARTTLS=true
-   EMAIL_FROM=твой_email@gmail.com
-   ```
-   - Перезапустить бэк: `docker compose -f docker-compose.prod.yml restart backend`
-   **Статус:** готово к настройке, ждёт App Password от Google.
-
-3. **GigaChat API** — без него LLM заглушка, документы не генерируются:
+1. **GigaChat API** — без него LLM заглушка, документы не генерируются:
    ```
    GIGACHAT_AUTH_KEY=...      (готовый Base64 из консоли разработчика)
    ```
    **Статус:** требует ключей из Сбера.
 
-4. **ЮКасса** — после регистрации ИП:
+2. **ЮКасса** — после регистрации ИП:
    ```
    YOOKASSA_SHOP_ID=...
    YOOKASSA_SECRET_KEY=...
@@ -80,18 +73,20 @@ B2C AI-юрист: пользователь заполняет форму → п
 
 | Файл | Что делает |
 |---|---|
-| `/opt/lawdocs/backend/.env` | Все секреты прода (SMTP, GigaChat, ЮКасса) |
-| `/opt/lawdocs/docker-compose.prod.yml` | Prod compose (backend, frontend, postgres, nginx) |
-| `/etc/nginx/sites-available/lawdocs` | Nginx конфиг (reverse proxy на фронт) |
+| `docker-compose.prod.yml` | Prod compose (backend, frontend, postgres, nginx) |
+| `nginx/nginx.conf` | Основная конфигурация nginx (gzip, логирование, etc) |
+| `nginx/conf.d/default.conf` | Проксирование: `/api/*` → backend, остальное → frontend |
+| `backend/.env` | Все секреты прода (SMTP, GigaChat, ЮКасса) |
 | `backend/app/core/config.py` | Конфиг Settings (читает .env) |
-| `backend/app/services/email.py` | SMTP клиент (aiosmtplib) для письма |
-| `backend/app/api/v1/auth.py` | Endpoints: `/magic-link`, `/verify` |
+| `backend/app/services/email.py` | SMTP клиент (aiosmtplib) для письма с 10s timeout |
+| `backend/app/api/v1/auth.py` | Endpoints: `POST /magic-link`, `GET /verify` |
 | `backend/app/api/v1/webhooks.py` | ЮКасса webhook → генерация документов |
 | `backend/app/services/docgen.py` | Генерация docx/pdf/instruction |
 | `backend/app/services/llm.py` | GigaChat: fill_template + fill_instruction |
 | `backend/app/situations/` | YAML конфиги 7 ситуаций |
-| `frontend/app/login/page.tsx` | Страница входа (форма email) |
-| `frontend/app/api/auth/magic-link/route.ts` | API route проксирует на бэк |
+| `frontend/app/login/page.tsx` | Форма входа, обработка 204 No Content |
+| `frontend/app/auth/verify/route.ts` | Верификация токена, установка JWT cookie, редирект |
+| `frontend/app/api/auth/magic-link/route.ts` | API route проксирует на backend |
 | `frontend/components/layout/header.tsx` | Хедер с кнопкой "Войти" |
 
 ## Локальная разработка
