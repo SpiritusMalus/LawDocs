@@ -22,11 +22,13 @@ export default function LoginPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email.trim() }),
       });
-      const data = await res.json();
+
       if (!res.ok) {
+        const data = await res.json();
         setError(data.error ?? "Не удалось отправить письмо. Попробуйте позже.");
         return;
       }
+
       setSent(true);
     } catch {
       setError("Ошибка сети. Проверьте подключение и попробуйте снова.");
