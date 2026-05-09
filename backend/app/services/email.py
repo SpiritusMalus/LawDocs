@@ -3,6 +3,7 @@ Email-сервис: magic link и уведомления о заказе.
 Использует aiosmtplib для async SMTP.
 """
 
+import asyncio
 import logging
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
@@ -40,15 +41,26 @@ async def _send(
             part.add_header("Content-Disposition", "attachment", filename=path.name)
             msg.attach(part)
 
-    await aiosmtplib.send(
-        msg,
-        hostname=settings.SMTP_HOST,
-        port=settings.SMTP_PORT,
-        username=settings.SMTP_USER,
-        password=settings.SMTP_PASSWORD,
-        use_tls=settings.SMTP_TLS,
-        start_tls=settings.SMTP_STARTTLS,
-    )
+    try:
+        await asyncio.wait_for(
+            aiosmtplib.send(
+                msg,
+                hostname=settings.SMTP_HOST,
+                port=settings.SMTP_PORT,
+                username=settings.SMTP_USER,
+                password=settings.SMTP_PASSWORD,
+                use_tls=settings.SMTP_TLS,
+                start_tls=settings.SMTP_STARTTLS,
+            ),
+            timeout=10.0,
+        )
+        logger.info("Email sent successfully to %s", to)
+    except asyncio.TimeoutError:
+        logger.error("SMTP timeout sending to %s (10s exceeded)", to)
+        raise
+    except Exception as e:
+        logger.error("Failed to send email to %s: %s", to, str(e))
+        raise
 
 
 async def send_magic_link(email: str, url: str) -> None:
