@@ -9,7 +9,6 @@ import { cn } from "@/lib/utils";
 const NAV_LINKS = [
   { href: "/situations", label: "Ситуации" },
   { href: "/#how-it-works", label: "Как работает" },
-  { href: "/situations", label: "Получить документ" },
 ];
 
 export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean }) {
@@ -51,12 +50,20 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
               Мои заказы
             </Link>
           ) : (
-            <Link
-              href="/situations"
-              className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
-            >
-              Получить за 500 ₽
-            </Link>
+            <>
+              <Link
+                href="/login"
+                className="hidden md:inline-flex h-9 px-4 items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+              >
+                Войти
+              </Link>
+              <Link
+                href="/situations"
+                className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
+              >
+                Получить за 500 ₽
+              </Link>
+            </>
           )}
           <button
             type="button"
@@ -93,13 +100,22 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 Мои заказы
               </Link>
             ) : (
-              <Link
-                href="/situations"
-                onClick={() => setOpen(false)}
-                className={cn(buttonVariants({}), "h-10 mt-2")}
-              >
-                Получить за 500 ₽
-              </Link>
+              <>
+                <Link
+                  href="/login"
+                  onClick={() => setOpen(false)}
+                  className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+                >
+                  Войти
+                </Link>
+                <Link
+                  href="/situations"
+                  onClick={() => setOpen(false)}
+                  className={cn(buttonVariants({}), "h-10 mt-2")}
+                >
+                  Получить за 500 ₽
+                </Link>
+              </>
             )}
           </nav>
         </div>
