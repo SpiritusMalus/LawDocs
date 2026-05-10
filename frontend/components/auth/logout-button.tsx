@@ -2,17 +2,19 @@
 
 import { LogOut } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 export function LogoutButton() {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   function handleLogout() {
     startTransition(async () => {
-      try {
-        await logoutAction();
-      } catch (err) {
-        console.error("Logout error:", err);
+      const result = await logoutAction();
+      if (result.success) {
+        router.push("/");
+        router.refresh();
       }
     });
   }
