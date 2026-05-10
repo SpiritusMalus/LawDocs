@@ -1,3 +1,5 @@
+import json
+import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -10,6 +12,27 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.api.v1 import auth, documents, orders, situations, webhooks
 from app.situations.registry import registry
+
+
+class JsonFormatter(logging.Formatter):
+  def format(self, record: logging.LogRecord) -> str:
+    log_obj = {
+        "ts": self.formatTime(record, "%Y-%m-%dT%H:%M:%SZ"),
+        "level": record.levelname,
+        "logger": record.name,
+        "msg": record.getMessage(),
+    }
+    for key in ("action", "user_id", "order_id", "situation_id", "email_domain", "ip", "payment_id", "reason"):
+      if hasattr(record, key):
+        log_obj[key] = getattr(record, key)
+    if record.exc_info:
+      log_obj["exception"] = self.formatException(record.exc_info)
+    return json.dumps(log_obj, ensure_ascii=False, default=str)
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 
 
 @asynccontextmanager

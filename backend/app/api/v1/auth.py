@@ -37,6 +37,9 @@ async def request_magic_link(
     body: MagicLinkRequest,
     db: AsyncSession = Depends(get_db),
 ) -> None:
+    email_domain = body.email.split("@")[-1] if "@" in body.email else "unknown"
+    ip = request.client.host if request.client else "unknown"
+
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
@@ -52,12 +55,14 @@ async def request_magic_link(
     )
     await db.commit()
 
+    logger.info("magic_link_requested", extra={"action": "magic_link_requested", "email_domain": email_domain, "ip": ip})
+
     magic_url = f"{settings.FRONTEND_URL}/auth/verify?token={token}"
     try:
         await send_magic_link(email=body.email, url=magic_url)
+        logger.info("magic_link_sent", extra={"action": "magic_link_sent", "email_domain": email_domain})
     except Exception as exc:
-        # Email send failed — token is committed, user can retry or contact support
-        logger.error("Failed to send magic link to %s: %s", body.email, exc)
+        logger.error("magic_link_send_failed", extra={"action": "magic_link_send_failed", "email_domain": email_domain}, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Не удалось отправить письмо. Попробуйте ещё раз.",
@@ -77,6 +82,7 @@ async def verify_magic_link(
     can set the httpOnly cookie for the correct frontend domain.
     """
     if not token:
+        logger.warning("magic_link_verify_invalid", extra={"action": "magic_link_verify", "reason": "missing_token"})
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired link")
 
     token_hash = hash_magic_token(token)
@@ -84,17 +90,21 @@ async def verify_magic_link(
     user = result.scalar_one_or_none()
 
     if not user or not user.magic_token_expires_at:
+        logger.warning("magic_link_verify_invalid", extra={"action": "magic_link_verify", "reason": "invalid_token"})
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired link")
 
     expires_at = user.magic_token_expires_at
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=UTC)
     if expires_at < datetime.now(UTC):
+        logger.warning("magic_link_verify_expired", extra={"action": "magic_link_verify", "reason": "expired", "user_id": str(user.id)})
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Link expired")
 
     user.magic_token = None
     user.magic_token_expires_at = None
     await db.commit()
+
+    logger.info("magic_link_verified", extra={"action": "magic_link_verified", "user_id": str(user.id)})
 
     access_token = create_access_token(user.id)
     return VerifyOut(
