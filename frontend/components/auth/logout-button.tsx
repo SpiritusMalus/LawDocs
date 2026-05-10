@@ -6,11 +6,20 @@ import { useState } from "react";
 export function LogoutButton() {
   const [isLoading, setIsLoading] = useState(false);
 
-  function handleLogout() {
+  async function handleLogout() {
     try {
       setIsLoading(true);
-      // Delete cookie on client side, no API call needed
-      document.cookie = "access_token=; Max-Age=0; path=/; secure; samesite=lax";
+      // Call API to delete httpOnly cookie on server
+      const res = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        console.error("Logout failed:", res.status);
+        return;
+      }
+
       // Force full page reload to clear all caches
       window.location.href = "/";
     } catch (err) {
