@@ -33,8 +33,12 @@ class Settings(BaseSettings):
     YOOKASSA_SHOP_ID: str = ""
     YOOKASSA_SECRET_KEY: str = ""
 
-    # File storage — локальный диск (папка создаётся автоматически)
-    DOCUMENTS_DIR: str = "/var/lawdocs/documents"
+    # File storage — Яндекс Object Storage (S3-совместимый)
+    S3_ENDPOINT_URL: str = "https://storage.yandexcloud.net"
+    S3_ACCESS_KEY: str = ""
+    S3_SECRET_KEY: str = ""
+    S3_BUCKET: str = ""
+    S3_REGION: str = "ru-central1"
 
     # Frontend URL (for magic link redirects)
     FRONTEND_URL: str = "https://lawdocs.ru"

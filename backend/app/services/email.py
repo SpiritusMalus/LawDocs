@@ -8,7 +8,6 @@ import logging
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 
 import aiosmtplib
 
@@ -21,7 +20,7 @@ async def _send(
     to: str,
     subject: str,
     html: str,
-    attachments: list[Path] | None = None,
+    attachments: list[tuple[str, bytes]] | None = None,
 ) -> None:
     if not settings.SMTP_HOST:
         logger.info("[EMAIL stub] To: %s | Subject: %s", to, subject)
@@ -34,12 +33,10 @@ async def _send(
 
     msg.attach(MIMEText(html, "html", "utf-8"))
 
-    for path in (attachments or []):
-        if path.exists():
-            data = path.read_bytes()
-            part = MIMEApplication(data, _subtype="pdf")
-            part.add_header("Content-Disposition", "attachment", filename=path.name)
-            msg.attach(part)
+    for filename, data in (attachments or []):
+        part = MIMEApplication(data, _subtype="pdf")
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+        msg.attach(part)
 
     try:
         await asyncio.wait_for(
@@ -78,11 +75,13 @@ async def send_magic_link(email: str, url: str) -> None:
 async def send_document_ready(
     email: str,
     order_id: str,
-    pdf_path: Path | None = None,
-    instruction_path: Path | None = None,
+    pdf_bytes: bytes | None = None,
+    pdf_filename: str = "pretenziya.pdf",
+    instruction_bytes: bytes | None = None,
+    instruction_filename: str = "instrukciya.pdf",
 ) -> None:
     url = f"{settings.FRONTEND_URL}/orders/{order_id}"
-    has_instruction = instruction_path and instruction_path.exists()
+    has_instruction = bool(instruction_bytes)
     attachments_note = (
         "К письму прикреплены претензия (PDF) и инструкция по подаче."
         if has_instruction
@@ -96,7 +95,11 @@ async def send_document_ready(
     </a></p>
     <p style="color:#6b7280;font-size:13px">Там же доступна версия в формате Word (.docx) для редактирования.</p>
     """
-    attachments = [p for p in [pdf_path, instruction_path] if p]
+    attachments = []
+    if pdf_bytes:
+        attachments.append((pdf_filename, pdf_bytes))
+    if instruction_bytes:
+        attachments.append((instruction_filename, instruction_bytes))
     await _send(
         to=email,
         subject="LawDocs — ваш документ готов",

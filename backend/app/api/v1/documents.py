@@ -1,7 +1,7 @@
 import re
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.responses import FileResponse
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -10,14 +10,9 @@ from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.order import Order
 from app.models.user import User
-from app.services.docgen import get_document_path
+from app.services.storage import get_presigned_url
 
 router = APIRouter()
-
-_CONTENT_TYPES = {
-    "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "pdf": "application/pdf",
-}
 
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
@@ -47,21 +42,14 @@ async def download_instruction(
     order_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> FileResponse:
+) -> RedirectResponse:
     order = await _get_order_with_document(order_id, current_user, db)
 
     if not order.document.instruction_pdf_key:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instruction not available for this order")
 
-    path = get_document_path(order_id, order.document.instruction_pdf_key)
-    if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
-
-    return FileResponse(
-        path=path,
-        media_type="application/pdf",
-        filename=order.document.instruction_pdf_key,
-    )
+    url = await get_presigned_url(order.document.instruction_pdf_key)
+    return RedirectResponse(url=url, status_code=302)
 
 
 @router.get("/{order_id}/download/{fmt}")
@@ -70,15 +58,12 @@ async def download_document(
     fmt: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-) -> FileResponse:
-    if fmt not in _CONTENT_TYPES:
+) -> RedirectResponse:
+    if fmt not in ("docx", "pdf"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
 
     order = await _get_order_with_document(order_id, current_user, db)
-    filename = order.document.docx_key if fmt == "docx" else order.document.pdf_key
-    path = get_document_path(order_id, filename)
+    key = order.document.docx_key if fmt == "docx" else order.document.pdf_key
 
-    if not path.exists():
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found on disk")
-
-    return FileResponse(path=path, media_type=_CONTENT_TYPES[fmt], filename=filename)
+    url = await get_presigned_url(key)
+    return RedirectResponse(url=url, status_code=302)

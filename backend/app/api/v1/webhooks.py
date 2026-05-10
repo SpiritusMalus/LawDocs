@@ -13,7 +13,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.document import Document
 from app.models.order import Order
-from app.services.docgen import generate_document, generate_instruction, get_document_path
+from app.services.docgen import generate_document, generate_instruction
+from app.services.storage import download_bytes
 from app.services.email import send_document_failed, send_document_ready
 from app.services.llm import fill_instruction, fill_template
 
@@ -101,13 +102,15 @@ async def yookassa_webhook(
         order.status = "done"
         await db.commit()
 
-        pdf_path = get_document_path(order.id, pdf_key)
-        instruction_path = get_document_path(order.id, instruction_pdf_key) if instruction_pdf_key else None
+        pdf_bytes = await download_bytes(pdf_key)
+        instruction_bytes = await download_bytes(instruction_pdf_key) if instruction_pdf_key else None
         await send_document_ready(
             email=order.user.email,
             order_id=order.id,
-            pdf_path=pdf_path,
-            instruction_path=instruction_path,
+            pdf_bytes=pdf_bytes,
+            pdf_filename=pdf_key.split("/")[-1],
+            instruction_bytes=instruction_bytes,
+            instruction_filename=instruction_pdf_key.split("/")[-1] if instruction_pdf_key else "instrukciya.pdf",
         )
 
     except Exception:

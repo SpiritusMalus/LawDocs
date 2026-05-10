@@ -1,6 +1,6 @@
 """
 Генерация документов: .docx из python-docx (или docxtpl для шаблонов), .pdf через fpdf2.
-Файлы сохраняются на локальный диск в DOCUMENTS_DIR/{order_id}/.
+Файлы загружаются в Яндекс Object Storage (S3) по ключу {order_id}/{filename}.
 """
 
 import asyncio
@@ -12,7 +12,7 @@ from pathlib import Path
 
 from docx import Document as DocxDocument
 
-from app.core.config import settings
+from app.services.storage import upload_bytes
 
 logger = logging.getLogger(__name__)
 
@@ -96,14 +96,8 @@ def _docx_to_pdf(docx_bytes: bytes) -> bytes:
     return bytes(pdf.output())
 
 
-def _write_file(order_id: str, filename: str, data: bytes) -> None:
-    docs_dir = Path(settings.DOCUMENTS_DIR) / order_id
-    docs_dir.mkdir(parents=True, exist_ok=True)
-    (docs_dir / filename).write_bytes(data)
-
-
-def get_document_path(order_id: str, filename: str) -> Path:
-    return Path(settings.DOCUMENTS_DIR) / order_id / filename
+def s3_key(order_id: str, filename: str) -> str:
+    return f"{order_id}/{filename}"
 
 
 def _instruction_to_pdf(content: str, legal_refs: list[dict]) -> bytes:
@@ -161,19 +155,20 @@ async def generate_instruction(
     content: str,
     legal_refs: list[dict],
 ) -> str:
-    """Build instruction PDF, save to disk. Returns filename."""
+    """Build instruction PDF, upload to S3. Returns S3 key."""
     safe_sid = _sanitize_situation_id(situation_id)
     safe_oid = _sanitize_order_id(order_id)
 
-    pdf_bytes = _instruction_to_pdf(content, legal_refs)
+    pdf_bytes = await asyncio.get_running_loop().run_in_executor(
+        None, _instruction_to_pdf, content, legal_refs
+    )
 
     date_str = datetime.now(UTC).strftime("%Y%m%d")
     filename = f"instrukciya_{safe_sid}_{date_str}.pdf"
+    key = s3_key(safe_oid, filename)
 
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _write_file, safe_oid, filename, pdf_bytes)
-
-    return filename
+    await upload_bytes(key, pdf_bytes)
+    return key
 
 
 async def generate_document(
@@ -183,16 +178,15 @@ async def generate_document(
     form_data: dict | None = None,
 ) -> tuple[str, str]:
     """
-    Builds .docx and .pdf, saves to local disk.
-    If a .docx template exists for the situation, renders it via docxtpl (content = ai_narrative).
-    Otherwise falls back to plain text → docx conversion.
-    Returns (docx_filename, pdf_filename).
+    Builds .docx and .pdf, uploads to S3.
+    Returns (docx_key, pdf_key).
     """
     safe_sid = _sanitize_situation_id(situation_id)
     safe_oid = _sanitize_order_id(order_id)
 
     fd = form_data or {}
     template_path = _find_template(safe_sid, fd)
+    loop = asyncio.get_running_loop()
 
     if template_path:
         now = datetime.now(UTC)
@@ -201,19 +195,20 @@ async def generate_document(
             "ai_narrative": content,
             "today": f"{now.day} {['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.month - 1]} {now.year} года",
         }
-        docx_bytes = _render_template(template_path, context)
+        docx_bytes = await loop.run_in_executor(None, _render_template, template_path, context)
         logger.info("Rendered template %s for order %s", template_path.name, safe_oid)
     else:
-        docx_bytes = _text_to_docx(content)
+        docx_bytes = await loop.run_in_executor(None, _text_to_docx, content)
 
-    pdf_bytes = _docx_to_pdf(docx_bytes)
+    pdf_bytes = await loop.run_in_executor(None, _docx_to_pdf, docx_bytes)
 
     date_str = datetime.now(UTC).strftime("%Y%m%d")
-    docx_filename = f"pretenziya_{safe_sid}_{date_str}.docx"
-    pdf_filename = f"pretenziya_{safe_sid}_{date_str}.pdf"
+    docx_key = s3_key(safe_oid, f"pretenziya_{safe_sid}_{date_str}.docx")
+    pdf_key = s3_key(safe_oid, f"pretenziya_{safe_sid}_{date_str}.pdf")
 
-    loop = asyncio.get_running_loop()
-    await loop.run_in_executor(None, _write_file, safe_oid, docx_filename, docx_bytes)
-    await loop.run_in_executor(None, _write_file, safe_oid, pdf_filename, pdf_bytes)
+    await asyncio.gather(
+        upload_bytes(docx_key, docx_bytes),
+        upload_bytes(pdf_key, pdf_bytes),
+    )
 
-    return docx_filename, pdf_filename
+    return docx_key, pdf_key
