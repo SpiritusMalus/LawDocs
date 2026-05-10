@@ -24,7 +24,7 @@ const ERROR_CONFIG: Record<string, ErrorConfig> = {
       "Магические ссылки действуют 15 минут. Эта уже истекла или была использована ранее.",
     primaryHref: "/",
     primaryLabel: "Оформить заново",
-    secondaryHref: "mailto:hi@lawdocs.ru",
+    secondaryHref: "mailto:lawdocsru@gmail.com",
     secondaryLabel: "Написать в поддержку",
   },
   missing_token: {
@@ -33,7 +33,7 @@ const ERROR_CONFIG: Record<string, ErrorConfig> = {
       "В ссылке отсутствует токен — возможно, письмо было обрезано почтовым клиентом.",
     primaryHref: "/",
     primaryLabel: "Попробовать снова",
-    secondaryHref: "mailto:hi@lawdocs.ru",
+    secondaryHref: "mailto:lawdocsru@gmail.com",
     secondaryLabel: "Написать нам",
   },
   unavailable: {
@@ -41,7 +41,7 @@ const ERROR_CONFIG: Record<string, ErrorConfig> = {
     message: "Что-то пошло не так на нашей стороне. Попробуйте через пару минут.",
     primaryHref: "/",
     primaryLabel: "На главную",
-    secondaryHref: "mailto:hi@lawdocs.ru",
+    secondaryHref: "mailto:lawdocsru@gmail.com",
     secondaryLabel: "Сообщить об ошибке",
   },
   unauthorized: {

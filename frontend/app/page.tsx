@@ -29,7 +29,7 @@ const organizationJsonLd = {
     url: SITE_URL,
     contactPoint: {
       "@type": "ContactPoint",
-      email: "hi@lawdocs.ru",
+      email: "lawdocsru@gmail.com",
       contactType: "customer service",
       availableLanguage: "Russian",
     },

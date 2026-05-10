@@ -51,7 +51,7 @@ export default function PrivacyPage() {
       <h2 className="text-xl font-semibold mt-8 mb-3">6. Ваши права</h2>
       <p className="text-gray-700 leading-relaxed">
         Вы вправе запросить удаление своих данных, написав на{" "}
-        <a href="mailto:hi@lawdocs.ru" className="underline">hi@lawdocs.ru</a>.
+        <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>.
       </p>
     </article>
   );

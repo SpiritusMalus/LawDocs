@@ -66,10 +66,10 @@ export function Footer() {
               </li>
               <li>
                 <a
-                  href="mailto:hi@lawdocs.ru"
+                  href="mailto:lawdocsru@gmail.com"
                   className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
-                  hi@lawdocs.ru
+                  lawdocsru@gmail.com
                 </a>
               </li>
             </ul>

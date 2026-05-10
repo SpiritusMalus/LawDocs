@@ -97,7 +97,7 @@ export default function SituationsPage() {
             Опишите проблему в свободной форме — посмотрим, чем можем помочь.
           </p>
           <a
-            href="mailto:hi@lawdocs.ru"
+            href="mailto:lawdocsru@gmail.com"
             className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
           >
             Написать нам

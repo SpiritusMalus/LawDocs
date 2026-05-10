@@ -103,8 +103,8 @@ export function WizardShell({ steps, situationId, hasBackend = false }: WizardSh
         </p>
         <p className="text-xs text-gray-400">
           Не нашли? Проверьте папку «Спам» или напишите на{" "}
-          <a href="mailto:hi@lawdocs.ru" className="text-blue-600 hover:underline">
-            hi@lawdocs.ru
+          <a href="mailto:lawdocsru@gmail.com" className="text-blue-600 hover:underline">
+            lawdocsru@gmail.com
           </a>
         </p>
       </div>

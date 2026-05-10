@@ -110,7 +110,7 @@ export async function submitWizard({
     const minutes = Math.max(1, Math.ceil(rl.retryAfterMs / 60000));
     return {
       status: "error",
-      message: `Слишком много заявок. Попробуйте через ${minutes} мин или напишите на hi@lawdocs.ru.`,
+      message: `Слишком много заявок. Попробуйте через ${minutes} мин или напишите на lawdocsru@gmail.com.`,
     };
   }
 
@@ -169,7 +169,7 @@ export async function submitWizard({
     } catch {
       return {
         status: "error",
-        message: "Сервер недоступен. Попробуйте ещё раз или напишите на hi@lawdocs.ru.",
+        message: "Сервер недоступен. Попробуйте ещё раз или напишите на lawdocsru@gmail.com.",
       };
     }
   }
@@ -218,14 +218,14 @@ export async function submitWizard({
       console.error("[submitWizard] Telegram error:", res.status, body);
       return {
         status: "error",
-        message: "Не получилось отправить заявку. Напишите на hi@lawdocs.ru.",
+        message: "Не получилось отправить заявку. Напишите на lawdocsru@gmail.com.",
       };
     }
   } catch (err) {
     console.error("[submitWizard] fetch failed:", err);
     return {
       status: "error",
-      message: "Не получилось отправить заявку. Напишите на hi@lawdocs.ru.",
+      message: "Не получилось отправить заявку. Напишите на lawdocsru@gmail.com.",
     };
   }
 

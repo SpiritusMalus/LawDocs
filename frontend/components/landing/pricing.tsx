@@ -50,7 +50,7 @@ export function Pricing() {
         <p className="text-center text-xs text-gray-400 mt-6 max-w-md mx-auto">
           Сложный случай и нужна личная консультация?{" "}
           <a
-            href="mailto:hi@lawdocs.ru?subject=Консультация юриста"
+            href="mailto:lawdocsru@gmail.com?subject=Консультация юриста"
             className="text-blue-500 hover:underline"
           >
             Напишите нам

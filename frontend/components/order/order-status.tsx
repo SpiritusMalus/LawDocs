@@ -106,7 +106,7 @@ export function OrderStatus({
       }
       window.location.href = data.payment_url;
     } catch {
-      setPayError("Не удалось создать платёж. Попробуйте позже или напишите на hi@lawdocs.ru.");
+      setPayError("Не удалось создать платёж. Попробуйте позже или напишите на lawdocsru@gmail.com.");
     } finally {
       setIsPaying(false);
     }
@@ -180,7 +180,7 @@ export function OrderStatus({
         <>
           <p className="text-xs text-gray-400">
             PDF также отправлен на вашу почту.{" "}
-            <a href="mailto:hi@lawdocs.ru" className="text-blue-600 hover:underline">
+            <a href="mailto:lawdocsru@gmail.com" className="text-blue-600 hover:underline">
               Не получили?
             </a>
           </p>
@@ -204,7 +204,7 @@ export function OrderStatus({
             Заполнить заново
           </Link>
           <a
-            href="mailto:hi@lawdocs.ru"
+            href="mailto:lawdocsru@gmail.com"
             className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
           >
             Написать в поддержку

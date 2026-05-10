@@ -22,8 +22,8 @@ export default function GlobalError({
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Что-то пошло не так</h1>
         <p className="text-gray-500 mb-8">
           Ошибка на нашей стороне. Попробуйте ещё раз или напишите на{" "}
-          <a href="mailto:hi@lawdocs.ru" className="text-blue-600 hover:underline">
-            hi@lawdocs.ru
+          <a href="mailto:lawdocsru@gmail.com" className="text-blue-600 hover:underline">
+            lawdocsru@gmail.com
           </a>
         </p>
         <div className="flex gap-3 justify-center">

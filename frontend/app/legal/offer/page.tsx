@@ -11,7 +11,7 @@ export default function OfferPage() {
       <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-3 text-sm mb-8">
         <strong>Черновик.</strong> Финальная редакция готовится юристом-партнёром.
         Если вам нужны юридические условия для конкретной сделки — напишите на{" "}
-        <a href="mailto:hi@lawdocs.ru" className="underline">hi@lawdocs.ru</a>.
+        <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>.
       </div>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">1. Общие положения</h2>

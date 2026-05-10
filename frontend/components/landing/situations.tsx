@@ -12,7 +12,7 @@ export function Situations() {
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto">
             Семь типовых случаев, которые покрывают большинство обращений.
-            Не нашли свою — напишите на hi@lawdocs.ru.
+            Не нашли свою — напишите на lawdocsru@gmail.com.
           </p>
         </div>
 
