@@ -5,6 +5,7 @@ import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
 import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
 import { SITUATIONS } from "@/lib/situations";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
+import { validateOrderInitResponse } from "@/lib/api-schemas";
 
 export interface WizardState {
   status: "idle" | "success" | "error" | "email_sent";
@@ -86,8 +87,12 @@ function escapeHtml(input: string): string {
 async function getClientIp(): Promise<string> {
   const h = await headers();
   const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]!.trim();
-  return h.get("x-real-ip") ?? "unknown";
+
+  if (forwarded) {
+    const ips = forwarded.split(",").map((ip) => ip.trim());
+    return ips[0] ?? "unknown";
+  }
+  return h.get("x-real-ip") ?? h.get("cf-connecting-ip") ?? "unknown";
 }
 
 export async function submitWizard({
@@ -151,8 +156,16 @@ export async function submitWizard({
           message: (body as { detail?: string }).detail ?? "Ошибка сервера. Попробуйте ещё раз.",
         };
       }
-      const { order_id } = (await res.json()) as { order_id: string };
-      return { status: "email_sent", orderId: order_id };
+      try {
+        const jsonData = await res.json();
+        const validated = validateOrderInitResponse(jsonData);
+        return { status: "email_sent", orderId: validated.order_id };
+      } catch (err) {
+        return {
+          status: "error",
+          message: "Неверный ответ от сервера. Попробуйте ещё раз.",
+        };
+      }
     } catch {
       return {
         status: "error",

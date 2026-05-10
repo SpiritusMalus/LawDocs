@@ -10,7 +10,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.core.security import create_access_token, generate_magic_token
+from app.core.security import create_access_token, generate_magic_token, hash_magic_token, verify_magic_token
 from app.models.user import User
 from app.schemas.user import MagicLinkRequest, UserOut
 from app.services.email import send_magic_link
@@ -40,12 +40,13 @@ async def request_magic_link(
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
+    # Always create or update user (don't reveal if user exists)
     if not user:
         user = User(email=body.email)
         db.add(user)
 
     token = generate_magic_token()
-    user.magic_token = token
+    user.magic_token = hash_magic_token(token)
     user.magic_token_expires_at = datetime.now(UTC) + timedelta(
         minutes=settings.MAGIC_LINK_EXPIRE_MINUTES
     )
@@ -75,7 +76,11 @@ async def verify_magic_link(
     Verifies a magic link token. Returns JWT in body so Next.js Route Handler
     can set the httpOnly cookie for the correct frontend domain.
     """
-    result = await db.execute(select(User).where(User.magic_token == token))
+    if not token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid or expired link")
+
+    token_hash = hash_magic_token(token)
+    result = await db.execute(select(User).where(User.magic_token == token_hash))
     user = result.scalar_one_or_none()
 
     if not user or not user.magic_token_expires_at:

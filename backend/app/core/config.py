@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str  # postgresql+asyncpg://user:pass@host:5432/lawdocs
 
     # Auth
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60  # 1 hour
     MAGIC_LINK_EXPIRE_MINUTES: int = 15
 
     # Email (SMTP)

@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -20,10 +21,22 @@ def create_access_token(user_id: str) -> str:
 def decode_access_token(token: str) -> str | None:
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        return payload.get("sub")
+        user_id = payload.get("sub")
+        exp = payload.get("exp")
+        if not user_id or not exp:
+            return None
+        return user_id
     except JWTError:
         return None
 
 
 def generate_magic_token() -> str:
     return secrets.token_urlsafe(32)
+
+
+def hash_magic_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def verify_magic_token(token: str, stored_hash: str) -> bool:
+    return hashlib.sha256(token.encode()).hexdigest() == stored_hash
