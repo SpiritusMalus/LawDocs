@@ -48,8 +48,14 @@ export function Pricing() {
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-6 max-w-md mx-auto">
-          Сложный случай и нужна личная консультация юриста? Запросите её через форму ниже —
-          подключим партнёра, от 1500&nbsp;₽.
+          Сложный случай и нужна личная консультация?{" "}
+          <a
+            href="mailto:hi@lawdocs.ru?subject=Консультация юриста"
+            className="text-blue-500 hover:underline"
+          >
+            Напишите нам
+          </a>{" "}
+          — подключим партнёра, от 1500&nbsp;₽.
         </p>
       </div>
     </section>

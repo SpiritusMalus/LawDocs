@@ -1,5 +1,4 @@
 import logging
-import uuid
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -61,7 +60,7 @@ async def init_order(
     user = result.scalar_one_or_none()
 
     if not user:
-        user = User(id=str(uuid.uuid4()), email=str(body.email))
+        user = User(email=str(body.email))
         db.add(user)
         try:
             await db.flush()
@@ -131,7 +130,9 @@ async def pay_order(
 
 
 @router.get("/{order_id}", response_model=OrderOut)
+@limiter.limit("30/minute")
 async def get_order(
+    request: Request,
     order_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

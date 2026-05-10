@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Scale, FileText, PlusCircle } from "lucide-react";
 import { OrderCard } from "@/components/order/order-card";
 import { LogoutButton } from "@/components/auth/logout-button";
+import { DashboardPoller } from "@/components/dashboard/dashboard-poller";
 
 export const metadata: Metadata = {
   title: "Мои заказы — LawDocs",
@@ -42,9 +43,11 @@ export default async function DashboardPage() {
   if (!token) redirect("/auth/error?reason=unauthorized");
 
   const orders = await fetchOrders(token);
+  const hasGenerating = orders.some((o) => o.status === "generating");
 
   return (
     <main className="min-h-screen bg-gray-50 py-12 px-4">
+      <DashboardPoller hasGenerating={hasGenerating} />
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -65,13 +68,17 @@ export default async function DashboardPage() {
 
         {orders.length === 0 ? (
           <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-            <FileText className="h-10 w-10 text-gray-200 mx-auto mb-4" />
-            <p className="text-gray-500 text-sm">У вас пока нет заказов.</p>
+            <FileText className="h-12 w-12 text-gray-200 mx-auto mb-5" />
+            <h2 className="text-lg font-semibold text-gray-900 mb-2">Заказов пока нет</h2>
+            <p className="text-gray-400 text-sm mb-6 max-w-xs mx-auto">
+              Выберите ситуацию, ответьте на несколько вопросов — и получите готовый документ.
+            </p>
             <Link
-              href="/"
-              className="mt-4 inline-block text-sm text-blue-600 hover:underline"
+              href="/situations"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
             >
-              Перейти на главную
+              <PlusCircle className="h-4 w-4" />
+              Создать первый документ
             </Link>
           </div>
         ) : (

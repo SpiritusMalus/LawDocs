@@ -49,12 +49,36 @@ export function Hero() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-400">
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-400 mb-10">
           <span>✓ Word + PDF</span>
           <span>✓ Инструкция куда отправить</span>
           <span>✓ Возврат денег, если шаблон не подойдёт</span>
         </div>
+
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-xs text-gray-400">Оплата через ЮKassa — безопасно и быстро</p>
+          <div className="flex items-center gap-3">
+            <PaymentBadge label="Visa" />
+            <PaymentBadge label="Мир" />
+            <PaymentBadge label="Mastercard" />
+            <PaymentBadge label="СБП" accent />
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+function PaymentBadge({ label, accent = false }: { label: string; accent?: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center justify-center px-2.5 py-1 rounded-md text-xs font-semibold border ${
+        accent
+          ? "bg-green-50 border-green-200 text-green-700"
+          : "bg-gray-50 border-gray-200 text-gray-500"
+      }`}
+    >
+      {label}
+    </span>
   );
 }

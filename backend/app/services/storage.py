@@ -19,15 +19,20 @@ _CONTENT_TYPES = {
     "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+_s3_client = None
+
 
 def _client():
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.S3_ENDPOINT_URL,
-        aws_access_key_id=settings.S3_ACCESS_KEY,
-        aws_secret_access_key=settings.S3_SECRET_KEY,
-        region_name=settings.S3_REGION,
-    )
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client(
+            "s3",
+            endpoint_url=settings.S3_ENDPOINT_URL,
+            aws_access_key_id=settings.S3_ACCESS_KEY,
+            aws_secret_access_key=settings.S3_SECRET_KEY,
+            region_name=settings.S3_REGION,
+        )
+    return _s3_client
 
 
 def _ext(filename: str) -> str:

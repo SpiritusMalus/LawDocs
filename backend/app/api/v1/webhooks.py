@@ -1,9 +1,8 @@
-import hashlib
-import hmac
 import json
 import logging
 from datetime import UTC, datetime
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,14 +20,24 @@ from app.services.llm import fill_instruction, fill_template
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+YOOKASSA_API = "https://api.yookassa.ru/v3"
 
-def _verify_yookassa_signature(body: bytes, signature: str) -> bool:
-    expected = hmac.new(
-        settings.YOOKASSA_SECRET_KEY.encode(),
-        body,
-        hashlib.sha256,
-    ).hexdigest()
-    return hmac.compare_digest(expected, signature)
+
+async def _verify_payment(payment_id: str) -> bool:
+    """Verify payment status by calling back to YooKassa API."""
+    if not settings.YOOKASSA_SHOP_ID or not settings.YOOKASSA_SECRET_KEY:
+        # Dev mode: skip verification
+        return True
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.get(
+            f"{YOOKASSA_API}/payments/{payment_id}",
+            auth=(settings.YOOKASSA_SHOP_ID, settings.YOOKASSA_SECRET_KEY),
+        )
+        if not resp.is_success:
+            logger.error("YooKassa payment verify failed: %s %s", resp.status_code, payment_id)
+            return False
+        data = resp.json()
+        return data.get("status") == "succeeded"
 
 
 @router.post("/yookassa", status_code=status.HTTP_200_OK)
@@ -37,16 +46,16 @@ async def yookassa_webhook(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     body = await request.body()
-    signature = request.headers.get("X-Content-SHA256", "")
-
-    if settings.YOOKASSA_SECRET_KEY and not _verify_yookassa_signature(body, signature):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid signature")
-
     event = json.loads(body)
     if event.get("event") != "payment.succeeded":
         return {"received": True}
 
     payment_id = event["object"]["id"]
+
+    # Verify payment status via YooKassa API (prevents fake webhook attacks)
+    if not await _verify_payment(payment_id):
+        logger.warning("Webhook payment verification failed for payment_id=%s", payment_id)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
 
     result = await db.execute(
         select(Order)

@@ -6,9 +6,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const token = searchParams.get("token");
   const rawOrderId = searchParams.get("order");
-  const host = request.headers.get("host") || "law-docs.ru";
-  const protocol = request.headers.get("x-forwarded-proto") || "https";
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
   if (!token) {
     return NextResponse.redirect(new URL("/auth/error?reason=missing_token", baseUrl));
@@ -44,7 +42,7 @@ export async function GET(request: NextRequest) {
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: 60 * 60, // 1 hour, matches ACCESS_TOKEN_EXPIRE_MINUTES
     });
 
     const redirectTo =
