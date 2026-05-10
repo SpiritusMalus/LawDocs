@@ -21,11 +21,10 @@ export function LogoutButton() {
         return;
       }
 
-      router.push("/");
-      router.refresh();
+      // Force full page reload to clear all caches and cookies
+      window.location.href = "/";
     } catch (err) {
       console.error("Logout error:", err);
-    } finally {
       setIsLoading(false);
     }
   }
@@ -35,7 +34,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleLogout}
       disabled={isLoading}
-      className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 active:bg-red-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       <LogOut className="h-4 w-4" />
       {isLoading ? "Выходим..." : "Выйти"}
