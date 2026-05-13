@@ -16,6 +16,36 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+_MAX_FIELD_VALUE_LEN = 1000
+
+
+def _get_verify() -> str | bool:
+    """Возвращает параметр verify для httpx.
+
+    Если задан GIGACHAT_CA_CERT — использует его как путь к CA-bundle.
+    Иначе TLS-верификация отключена (допустимо только в dev-среде).
+    """
+    if settings.GIGACHAT_CA_CERT:
+        return settings.GIGACHAT_CA_CERT
+    if settings.APP_ENV == "production":
+        logger.warning(
+            "gigachat_tls_unverified",
+            extra={
+                "action": "gigachat_tls_unverified",
+                "reason": "GIGACHAT_CA_CERT не задан; скачайте CA Минцифры и укажите путь в .env",
+            },
+        )
+    return False
+
+
+def _sanitize_value(value: str) -> str:
+    """Обрезает значение и нормализует whitespace перед вставкой в LLM-промпт."""
+    value = value[:_MAX_FIELD_VALUE_LEN]
+    # Заменяем переносы строк пробелом — иначе пользователь может сломать
+    # структуру промпта и вставить ложные поля.
+    return " ".join(value.split())
+
+
 _gigachat_token: str | None = None
 _gigachat_token_expires_at: datetime | None = None
 _gigachat_lock = asyncio.Lock()
@@ -38,7 +68,7 @@ async def _get_gigachat_token() -> str:
         # verify=False: GigaChat использует CA «МинЦифры России», не входящий
         # в стандартный доверенный список. В продакшне можно добавить CA-cert
         # через httpx.AsyncClient(verify="/path/to/mintsifry_ca.pem").
-        async with httpx.AsyncClient(verify=False) as client:
+        async with httpx.AsyncClient(verify=_get_verify()) as client:
             resp = await client.post(
                 GIGACHAT_AUTH_URL,
                 headers={
@@ -61,7 +91,7 @@ async def _get_gigachat_token() -> str:
 
 async def _call_gigachat(system_prompt: str, user_prompt: str) -> str:
     token = await _get_gigachat_token()
-    async with httpx.AsyncClient(verify=False) as client:
+    async with httpx.AsyncClient(verify=_get_verify()) as client:
         resp = await client.post(
             f"{GIGACHAT_API_URL}/chat/completions",
             headers={"Authorization": f"Bearer {token}"},
@@ -101,7 +131,7 @@ def _build_user_prompt(situation_id: str, form_data: dict) -> str:
     lines = [f"Ситуация: {situation_id}", f"Дата составления документа: {today}", "", "Данные пользователя:"]
     for k, v in form_data.items():
         if v:
-            lines.append(f"- {k}: {v}")
+            lines.append(f"- {k}: {_sanitize_value(str(v))}")
     return "\n".join(lines)
 
 

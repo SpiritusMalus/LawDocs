@@ -1,16 +1,22 @@
+import asyncio
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import delete, not_, select
 
 from app.core.config import settings
+from app.core.database import AsyncSessionLocal
 from app.core.limiter import limiter
 from app.api.v1 import auth, documents, orders, situations, webhooks
+from app.models.order import Order
+from app.models.user import User
 from app.situations.registry import registry
 
 
@@ -35,11 +41,64 @@ _handler.setFormatter(JsonFormatter())
 logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 
 
+_cleanup_logger = logging.getLogger("cleanup")
+
+
+async def _cleanup_draft_orders() -> None:
+    """Каждый час удаляет draft-заказы старше 24 часов и осиротевших пользователей.
+
+    Черновик создаётся до того, как пользователь кликает magic link. Если он
+    не завершил авторизацию — ПДн из form_data остаются в БД навсегда.
+    Удаляем их через 24 часа, чтобы не копить чувствительные данные.
+    """
+    while True:
+        await asyncio.sleep(60 * 60)  # первый запуск через час после старта
+        try:
+            cutoff = datetime.now(UTC) - timedelta(hours=24)
+            async with AsyncSessionLocal() as db:
+                # 1. Удаляем старые черновики
+                result = await db.execute(
+                    delete(Order)
+                    .where(Order.status == "draft", Order.created_at < cutoff)
+                    .returning(Order.id)
+                )
+                deleted_orders = result.rowcount
+
+                # 2. Удаляем пользователей без заказов с истёкшим magic-токеном
+                #    (так и не прошедших авторизацию)
+                subq = select(Order.user_id).distinct()
+                result = await db.execute(
+                    delete(User)
+                    .where(
+                        not_(User.id.in_(subq)),
+                        User.magic_token_expires_at < datetime.now(UTC),
+                    )
+                    .returning(User.id)
+                )
+                deleted_users = result.rowcount
+
+                await db.commit()
+
+            if deleted_orders or deleted_users:
+                _cleanup_logger.info(
+                    "draft_cleanup_done",
+                    extra={
+                        "action": "draft_cleanup_done",
+                        "deleted_orders": deleted_orders,
+                        "deleted_users": deleted_users,
+                    },
+                )
+        except Exception:
+            _cleanup_logger.exception("draft_cleanup_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     configs_dir = Path(__file__).parent / "situations" / "configs"
     registry.load(configs_dir)
+    task = asyncio.create_task(_cleanup_draft_orders())
     yield
+    task.cancel()
 
 
 app = FastAPI(
