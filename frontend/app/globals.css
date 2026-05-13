@@ -130,3 +130,20 @@
     scroll-behavior: smooth;
   }
 }
+
+@keyframes hero-fade-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-hero {
+  animation: hero-fade-up 0.7s ease-out both;
+}
+.animate-hero-1 { animation-delay: 0ms; }
+.animate-hero-2 { animation-delay: 120ms; }
+.animate-hero-3 { animation-delay: 240ms; }
+.animate-hero-4 { animation-delay: 360ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero { animation: none; }
+}

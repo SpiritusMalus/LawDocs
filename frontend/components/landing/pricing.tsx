@@ -1,4 +1,5 @@
 import { CheckCircle } from "lucide-react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 const INCLUDED = [
   "Претензия в форматах .docx и .pdf",
@@ -12,6 +13,7 @@ export function Pricing() {
   return (
     <section className="bg-white py-24 px-4">
       <div className="max-w-3xl mx-auto">
+        <ScrollReveal>
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Прозрачная цена
@@ -20,7 +22,9 @@ export function Pricing() {
             Платите один раз за результат, без подписок и скрытых комиссий.
           </p>
         </div>
+        </ScrollReveal>
 
+        <ScrollReveal delay={100}>
         <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl border-2 border-blue-100 p-8 md:p-10">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 pb-8 border-b border-gray-100">
             <div>
@@ -46,6 +50,7 @@ export function Pricing() {
             ))}
           </ul>
         </div>
+        </ScrollReveal>
 
         <p className="text-center text-xs text-gray-400 mt-6 max-w-md mx-auto">
           Сложный случай и нужна личная консультация?{" "}

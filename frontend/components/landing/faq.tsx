@@ -3,11 +3,13 @@
 import { Accordion } from "@base-ui/react/accordion";
 import { ChevronDown } from "lucide-react";
 import { FAQ_ITEMS } from "@/lib/faq";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export function Faq() {
   return (
-    <section className="bg-gray-50 border-y border-gray-100 py-24 px-4">
+    <section className="bg-gray-50 border-y border-gray-100 py-24 px-4 sm:px-6">
       <div className="max-w-3xl mx-auto">
+        <ScrollReveal>
         <div className="mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Частые вопросы
@@ -16,7 +18,9 @@ export function Faq() {
             Если что-то осталось непонятным — спросите в форме ниже.
           </p>
         </div>
+        </ScrollReveal>
 
+        <ScrollReveal delay={80}>
         <Accordion.Root className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
           {FAQ_ITEMS.map((item) => (
             <Accordion.Item key={item.q} className="group">
@@ -32,6 +36,7 @@ export function Faq() {
             </Accordion.Item>
           ))}
         </Accordion.Root>
+        </ScrollReveal>
       </div>
     </section>
   );

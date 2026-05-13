@@ -17,6 +17,8 @@ const STEPS = [
   },
 ];
 
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="bg-white py-24 px-4 scroll-mt-16">
@@ -32,7 +34,8 @@ export function HowItWorks() {
 
         <div className="grid md:grid-cols-4 gap-6">
           {STEPS.map(({ title, desc }, i) => (
-            <div key={title} className="relative">
+            <ScrollReveal key={title} delay={i * 80}>
+            <div className="relative">
               <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 h-full">
                 <div className="text-5xl font-bold text-blue-100 leading-none mb-4 select-none">
                   0{i + 1}
@@ -41,6 +44,7 @@ export function HowItWorks() {
                 <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
               </div>
             </div>
+            </ScrollReveal>
           ))}
         </div>
       </div>

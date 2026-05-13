@@ -15,24 +15,24 @@ export function Hero() {
       <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-500/10 rounded-full blur-3xl" />
 
       <div className="relative max-w-5xl mx-auto px-4 py-24 md:py-28 text-center">
-        <div className="inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-8 tracking-wide uppercase">
+        <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-8 tracking-wide uppercase">
           <ShieldCheck className="h-3.5 w-3.5" />
           Шаблоны проверены практикующим юристом
         </div>
 
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-[1.1]">
+        <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-[1.1]">
           Готовый юридический документ{" "}
           <span className="text-blue-600">за 5 минут</span>
           <br />— 100&nbsp;₽
         </h1>
 
-        <p className="text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+        <p className="animate-hero animate-hero-3 text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
           Опишите проблему — получите претензию или жалобу,
           оформленную по всем правилам. С формулой расчёта неустойки,
           ссылками на статьи закона и инструкцией «куда нести».
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-5">
+        <div className="animate-hero animate-hero-4 flex flex-col sm:flex-row gap-3 justify-center mb-5">
           <Link
             href="/situations"
             className={buttonVariants({ size: "lg" }) + " h-12 px-6 text-base"}

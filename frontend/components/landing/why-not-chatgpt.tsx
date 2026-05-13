@@ -1,4 +1,5 @@
 import { CheckCircle, XCircle } from "lucide-react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 const POINTS = [
   {
@@ -23,6 +24,7 @@ export function WhyNotChatGPT() {
   return (
     <section className="bg-gray-50 border-y border-gray-100 py-24 px-4">
       <div className="max-w-5xl mx-auto">
+        <ScrollReveal>
         <div className="mb-14">
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full mb-6">
             Главный вопрос
@@ -35,7 +37,9 @@ export function WhyNotChatGPT() {
             готовый к отправке.
           </p>
         </div>
+        </ScrollReveal>
 
+        <ScrollReveal delay={100}>
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
           <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
             <div className="p-6 md:p-8">
@@ -69,6 +73,7 @@ export function WhyNotChatGPT() {
             </div>
           </div>
         </div>
+        </ScrollReveal>
       </div>
     </section>
   );
