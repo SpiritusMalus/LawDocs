@@ -21,11 +21,11 @@ export function HowItWorks() {
   return (
     <section id="how-it-works" className="bg-white py-24 px-4 scroll-mt-16">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
+        <div className="mb-14">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Как это работает
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl">
             5 минут от вопроса до готового документа на руках.
           </p>
         </div>

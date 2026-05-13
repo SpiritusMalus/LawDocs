@@ -12,11 +12,11 @@ export function Pricing() {
   return (
     <section className="bg-white py-24 px-4">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-12">
+        <div className="mb-12">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Прозрачная цена
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl">
             Платите один раз за результат, без подписок и скрытых комиссий.
           </p>
         </div>
