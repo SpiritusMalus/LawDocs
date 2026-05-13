@@ -6,7 +6,7 @@ import { SITUATIONS } from "@/lib/situations";
 import { getSituationPage } from "@/lib/situation-pages";
 
 export const metadata: Metadata = {
-  title: "Все ситуации — юридические документы за 500 ₽ | LawDocs",
+  title: "Все ситуации — юридические документы за 100 ₽ | LawDocs",
   description:
     "Претензии и жалобы для 7 типовых ситуаций: магазин, маркетплейс, банк, работодатель, страховая, УК, авиакомпания. Готовый документ со ссылками на законы.",
 };
@@ -45,7 +45,7 @@ export default function SituationsPage() {
           <p className="text-lg text-gray-500 max-w-xl mx-auto">
             Семь типовых случаев, которые покрывают большинство обращений.
             Каждый документ — со ссылками на конкретные статьи законов.{" "}
-            <span className="font-medium text-gray-700">500&nbsp;₽.</span>
+            <span className="font-medium text-gray-700">100&nbsp;₽.</span>
           </p>
         </div>
       </section>

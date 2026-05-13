@@ -19,7 +19,7 @@ const organizationJsonLd = {
   availableLanguage: "Russian",
   offers: {
     "@type": "Offer",
-    price: "500",
+    price: "100",
     priceCurrency: "RUB",
     description: "Составление претензии или жалобы с расчётом неустойки и инструкцией по отправке",
   },

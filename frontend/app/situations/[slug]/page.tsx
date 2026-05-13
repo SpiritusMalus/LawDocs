@@ -104,7 +104,7 @@ export default async function SituationPage({
               href={`/wizard/${page.slug}`}
               className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
             >
-              Получить документ — 500&nbsp;₽
+              Получить документ — 100&nbsp;₽
               <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
             <Link
@@ -127,7 +127,7 @@ export default async function SituationPage({
         <div className="max-w-5xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Что вы получите</h2>
           <p className="text-gray-500 mb-8">
-            Комплект документов, готовых к отправке, — за 500&nbsp;₽.
+            Комплект документов, готовых к отправке, — за 100&nbsp;₽.
           </p>
           <div className="grid md:grid-cols-3 gap-5">
             {page.deliverables.map(({ title, desc }) => (
