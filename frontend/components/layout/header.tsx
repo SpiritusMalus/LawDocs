@@ -31,7 +31,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             <Link
               key={link.href}
               href={link.href}
-              className="hover:text-foreground transition-colors"
+              className="hover:text-foreground transition-colors py-2 px-1"
             >
               {link.label}
             </Link>
