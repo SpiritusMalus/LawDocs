@@ -32,7 +32,7 @@ export function Hero() {
           ссылками на статьи закона и инструкцией «куда нести».
         </p>
 
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-14">
+        <div className="flex flex-col sm:flex-row gap-3 justify-center mb-5">
           <Link
             href="/situations"
             className={buttonVariants({ size: "lg" }) + " h-12 px-6 text-base"}
@@ -49,10 +49,14 @@ export function Hero() {
           </Link>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-400 mb-10">
-          <span>✓ Word + PDF</span>
-          <span>✓ Инструкция куда отправить</span>
-          <span>✓ Возврат денег, если шаблон не подойдёт</span>
+        <p className="text-xs text-gray-400 mb-10">
+          Если документ не подойдёт — вернём деньги без вопросов
+        </p>
+
+        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500 mb-10">
+          <span className="flex items-center gap-1.5"><span className="text-blue-500">✓</span> Word + PDF</span>
+          <span className="flex items-center gap-1.5"><span className="text-blue-500">✓</span> Инструкция куда отправить</span>
+          <span className="flex items-center gap-1.5"><span className="text-blue-500">✓</span> Шаблоны проверены юристом</span>
         </div>
 
         <div className="flex flex-col items-center gap-2">
