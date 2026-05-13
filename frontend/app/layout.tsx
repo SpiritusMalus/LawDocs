@@ -1,7 +1,14 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { cookies } from "next/headers";
+import { Manrope } from "next/font/google";
 import "./globals.css";
+
+const manrope = Manrope({
+  subsets: ["latin", "cyrillic"],
+  variable: "--font-manrope",
+  display: "swap",
+});
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/landing/footer";
 
@@ -36,7 +43,7 @@ export default async function RootLayout({
   const isAuthenticated = !!cookieStore.get("access_token")?.value;
 
   return (
-    <html lang="ru" className="h-full" data-scroll-behavior="smooth">
+    <html lang="ru" className={`h-full ${manrope.variable}`} data-scroll-behavior="smooth">
       <body className="min-h-full flex flex-col bg-background text-foreground antialiased">
         <Header isAuthenticated={isAuthenticated} />
         <main className="flex-1">{children}</main>
