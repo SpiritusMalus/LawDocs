@@ -6,22 +6,26 @@ export function Situations() {
   return (
     <section id="situations" className="bg-gray-50 border-y border-gray-100 py-24 px-4 scroll-mt-16">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-14">
+        <div className="mb-14">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             С какими ситуациями работаем
           </h2>
-          <p className="text-gray-500 max-w-xl mx-auto">
+          <p className="text-gray-500 max-w-xl">
             Семь типовых случаев, которые покрывают большинство обращений.
             Не нашли свою — напишите на lawdocsru@gmail.com.
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SITUATIONS.map((s) => (
+          {SITUATIONS.map((s, i) => (
             <Link
               key={s.id}
               href={`/situations/${s.id}`}
-              className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all"
+              className={`group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all${
+                i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1
+                  ? " lg:col-span-2"
+                  : ""
+              }`}
             >
               <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                 {s.title}
