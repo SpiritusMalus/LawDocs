@@ -78,7 +78,14 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
       </div>
 
       {open && (
-        <div className="md:hidden border-t border-gray-100 bg-white">
+        <div
+          className="md:hidden fixed inset-0 bg-black/20 z-40"
+          aria-hidden="true"
+          onClick={() => setOpen(false)}
+        />
+      )}
+      {open && (
+        <div className="md:hidden border-t border-gray-100 bg-white relative z-50">
           <nav className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <Link
