@@ -246,3 +246,4 @@ Thumbs.db
 
 # Claude Code project settings & memory
 .claude/
+.gstack/
