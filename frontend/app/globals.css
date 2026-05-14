@@ -1,3 +1,4 @@
+@import "@fontsource-variable/manrope";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
@@ -49,6 +50,7 @@
 }
 
 :root {
+  --font-manrope: 'Manrope Variable', sans-serif;
   --font-sans: var(--font-manrope), "Helvetica Neue", Arial, sans-serif;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
