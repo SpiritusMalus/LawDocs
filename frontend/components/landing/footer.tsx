@@ -50,6 +50,14 @@ export function Footer() {
             <ul className="space-y-2">
               <li>
                 <Link
+                  href="/about"
+                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                >
+                  О сервисе
+                </Link>
+              </li>
+              <li>
+                <Link
                   href="/legal/offer"
                   className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
