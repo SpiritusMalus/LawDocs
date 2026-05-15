@@ -66,6 +66,8 @@ class OrderInitRequest(BaseModel):
 
 class OrderInitOut(BaseModel):
     order_id: str
+    requires_verification: bool = True
+    redirect_to: str | None = None
 
 
 class PaymentOut(BaseModel):
@@ -80,6 +82,7 @@ class OrderOut(BaseModel):
     amount: int
     created_at: datetime
     paid_at: datetime | None
+    payment_url: str | None = None
 
     model_config = {"from_attributes": True}
 

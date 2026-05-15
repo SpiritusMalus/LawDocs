@@ -11,6 +11,7 @@ import type { WizardSituationId, WizardStep, WizardField } from "@/lib/wizard-qu
 import { submitWizard } from "@/lib/actions/submit-wizard";
 
 const LS_EMAIL_KEY = "lawdocs_email";
+const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as const;
 
 interface WizardShellProps {
   steps: WizardStep[];
@@ -27,12 +28,30 @@ export function WizardShell({ steps, situationId, hasBackend = false }: WizardSh
   const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
 
-  // Pre-fill email from localStorage on mount
+  // Pre-fill contact fields from last order (if authenticated) + localStorage email
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(LS_EMAIL_KEY);
-      if (saved) setAnswers((prev) => ({ ...prev, email: prev["email"] ?? saved }));
-    } catch {}
+    async function prefill() {
+      try {
+        const res = await fetch("/api/user/contact", { cache: "no-store" });
+        if (res.ok) {
+          const data: Record<string, string> = await res.json();
+          setAnswers((prev) => {
+            const updates: Record<string, string> = {};
+            for (const key of CONTACT_FIELDS) {
+              if (data[key] && !prev[key]) updates[key] = data[key];
+            }
+            return Object.keys(updates).length ? { ...prev, ...updates } : prev;
+          });
+          return;
+        }
+      } catch {}
+      // Fallback: pre-fill email from localStorage
+      try {
+        const saved = localStorage.getItem(LS_EMAIL_KEY);
+        if (saved) setAnswers((prev) => ({ ...prev, email: prev["email"] ?? saved }));
+      } catch {}
+    }
+    prefill();
   }, []);
 
   const step = steps[currentStep]!;
@@ -78,8 +97,10 @@ export function WizardShell({ steps, situationId, hasBackend = false }: WizardSh
     setSubmitError(null);
     startTransition(async () => {
       const result = await submitWizard({ situationId, answers });
-      if (result.status === "email_sent") {
-        // Save email so next wizard pre-fills it
+      if (result.status === "redirect" && result.orderId) {
+        try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
+        router.push(`/orders/${result.orderId}`);
+      } else if (result.status === "email_sent") {
         try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
         setEmailSent(true);
       } else if (result.status === "success") {

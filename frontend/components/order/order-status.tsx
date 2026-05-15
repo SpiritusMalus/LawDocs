@@ -12,6 +12,7 @@ interface Order {
   amount: number;
   created_at: string;
   paid_at: string | null;
+  payment_url: string | null;
 }
 
 type StatusConfig = {
@@ -31,7 +32,7 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
   pending_payment: {
     icon: <Clock className="h-8 w-8 text-yellow-500" />,
     label: "Ожидание оплаты",
-    description: "Ожидаем подтверждения платежа от банка.",
+    description: "Платёж создан. Если вы закрыли страницу оплаты — нажмите кнопку ниже.",
     terminal: false,
   },
   paid: {
@@ -123,22 +124,40 @@ export function OrderStatus({
         <p className="text-gray-500 text-sm mt-1">{cfg.description}</p>
       </div>
 
-      {order.status === "draft" && (
+      {(order.status === "draft" || order.status === "pending_payment") && (
         <div className="space-y-3">
-          <Button
-            onClick={handlePay}
-            disabled={isPaying}
-            className="w-full h-12 text-base"
-          >
-            {isPaying ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Перенаправляем…
-              </>
-            ) : (
-              `Оплатить ${(order.amount / 100).toFixed(0)} ₽`
-            )}
-          </Button>
+          {order.status === "pending_payment" && order.payment_url ? (
+            <Button
+              asChild
+              className="w-full h-12 text-base"
+            >
+              <a href={order.payment_url}>Перейти к оплате →</a>
+            </Button>
+          ) : (
+            <Button
+              onClick={handlePay}
+              disabled={isPaying}
+              className="w-full h-12 text-base"
+            >
+              {isPaying ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Перенаправляем…
+                </>
+              ) : (
+                `Оплатить ${(order.amount / 100).toFixed(0)} ₽`
+              )}
+            </Button>
+          )}
+          {order.status === "pending_payment" && (
+            <button
+              onClick={handlePay}
+              disabled={isPaying}
+              className="text-xs text-gray-400 hover:text-gray-600 underline w-full text-center"
+            >
+              {isPaying ? "Создаём новый платёж…" : "Ссылка устарела? Создать новый платёж"}
+            </button>
+          )}
           {payError && <p className="text-sm text-red-600">{payError}</p>}
         </div>
       )}

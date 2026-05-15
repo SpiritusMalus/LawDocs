@@ -11,6 +11,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
 from app.core.security import create_access_token, generate_magic_token, hash_magic_token, verify_magic_token
+from app.models.order import Order
 from app.models.user import User
 from app.schemas.user import MagicLinkRequest, UserOut
 from app.services.email import send_magic_link
@@ -28,6 +29,38 @@ class VerifyOut(BaseModel):
 @router.get("/me", response_model=UserOut)
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
     return current_user
+
+
+class ContactOut(BaseModel):
+    full_name: str = ""
+    phone: str = ""
+    contact_address: str = ""
+    email: str = ""
+
+
+@router.get("/me/contact", response_model=ContactOut)
+async def get_my_contact(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> ContactOut:
+    result = await db.execute(
+        select(Order)
+        .where(Order.user_id == current_user.id)
+        .order_by(Order.created_at.desc())
+        .limit(10)
+    )
+    orders = result.scalars().all()
+    form_data: dict = {}
+    for order in orders:
+        if order.form_data and isinstance(order.form_data, dict):
+            form_data = order.form_data
+            break
+    return ContactOut(
+        full_name=form_data.get("full_name", ""),
+        phone=form_data.get("phone", ""),
+        contact_address=form_data.get("contact_address", ""),
+        email=str(current_user.email),
+    )
 
 
 @router.post("/magic-link", status_code=status.HTTP_204_NO_CONTENT)

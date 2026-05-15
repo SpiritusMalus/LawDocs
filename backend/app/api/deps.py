@@ -34,3 +34,22 @@ async def get_current_user(
         response.headers["X-Refresh-Token"] = create_access_token(str(user.id))
 
     return user
+
+
+async def get_optional_user(
+    request: Request,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> User | None:
+    auth_header = request.headers.get("Authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.removeprefix("Bearer ")
+    user_id = decode_access_token(token)
+    if not user_id:
+        return None
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user and get_token_remaining_seconds(token) < _SLIDING_THRESHOLD_SECONDS:
+        response.headers["X-Refresh-Token"] = create_access_token(str(user.id))
+    return user

@@ -23,6 +23,7 @@ class Order(Base):
 
     # ЮKassa
     yookassa_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    payment_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
     # Данные из wizard-формы (вопросы + ответы пользователя)
     form_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)

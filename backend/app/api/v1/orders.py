@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user
+from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
@@ -54,8 +54,26 @@ async def init_order(
     request: Request,
     body: OrderInitRequest,
     db: AsyncSession = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
 ) -> OrderInitOut:
-    # Upsert user: handle concurrent requests via IntegrityError retry
+    # Authenticated flow: skip magic link
+    if optional_user:
+        order = Order(
+            user_id=optional_user.id,
+            situation_id=body.situation_id,
+            form_data=body.form_data,
+            status="draft",
+        )
+        db.add(order)
+        await db.commit()
+        logger.info("order_created_auth", extra={"action": "order_created_auth", "order_id": str(order.id), "situation_id": body.situation_id, "user_id": str(optional_user.id)})
+        return OrderInitOut(
+            order_id=order.id,
+            requires_verification=False,
+            redirect_to=f"/orders/{order.id}",
+        )
+
+    # Unauthenticated flow: upsert user and send magic link
     result = await db.execute(select(User).where(User.email == body.email))
     user = result.scalar_one_or_none()
 
@@ -65,7 +83,6 @@ async def init_order(
         try:
             await db.flush()
         except IntegrityError:
-            # Concurrent request already created this user — roll back and re-fetch
             await db.rollback()
             result = await db.execute(select(User).where(User.email == body.email))
             user = result.scalar_one()
@@ -126,6 +143,7 @@ async def pay_order(
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Не удалось создать платёж. Попробуйте позже.") from exc
 
     order.yookassa_payment_id = payment_data["payment_id"]
+    order.payment_url = payment_data["confirmation_url"]
     order.status = "pending_payment"
     await db.commit()
 

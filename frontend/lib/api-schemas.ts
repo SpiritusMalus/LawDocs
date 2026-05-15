@@ -1,6 +1,8 @@
 // API Response Types - validated at runtime
 export type OrderInitResponse = {
   order_id: string;
+  requires_verification: boolean;
+  redirect_to: string | null;
 };
 
 export type VerifyMagicLinkResponse = {
@@ -49,7 +51,11 @@ export function validateOrderInitResponse(data: unknown): OrderInitResponse {
   if (!isValidUUID(obj.order_id)) {
     throw new Error("Invalid order_id format");
   }
-  return { order_id: obj.order_id };
+  return {
+    order_id: obj.order_id,
+    requires_verification: obj.requires_verification !== false,
+    redirect_to: typeof obj.redirect_to === "string" ? obj.redirect_to : null,
+  };
 }
 
 export function validateVerifyMagicLinkResponse(data: unknown): VerifyMagicLinkResponse {

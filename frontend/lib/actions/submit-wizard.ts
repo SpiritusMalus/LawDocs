@@ -1,6 +1,6 @@
 "use server";
 
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
 import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
 import { SITUATIONS } from "@/lib/situations";
@@ -8,7 +8,7 @@ import { isValidEmail, isValidPhone } from "@/lib/validators";
 import { validateOrderInitResponse } from "@/lib/api-schemas";
 
 export interface WizardState {
-  status: "idle" | "success" | "error" | "email_sent";
+  status: "idle" | "success" | "error" | "email_sent" | "redirect";
   message?: string;
   orderId?: string;
 }
@@ -139,9 +139,15 @@ export async function submitWizard({
   const backendUrl = process.env.BACKEND_URL;
   if (backendUrl) {
     try {
+      const cookieStore = await cookies();
+      const accessToken = cookieStore.get("access_token")?.value;
+
+      const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      if (accessToken) reqHeaders["Authorization"] = `Bearer ${accessToken}`;
+
       const res = await fetch(`${backendUrl}/api/v1/orders/init`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: reqHeaders,
         body: JSON.stringify({
           email: answers["email"]!.trim(),
           situation_id: situationId,
@@ -159,8 +165,11 @@ export async function submitWizard({
       try {
         const jsonData = await res.json();
         const validated = validateOrderInitResponse(jsonData);
+        if (!validated.requires_verification && validated.redirect_to) {
+          return { status: "redirect", orderId: validated.order_id };
+        }
         return { status: "email_sent", orderId: validated.order_id };
-      } catch (err) {
+      } catch {
         return {
           status: "error",
           message: "Неверный ответ от сервера. Попробуйте ещё раз.",
