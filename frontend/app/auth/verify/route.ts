@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { isValidUuid } from "@/lib/validators";
 
@@ -36,18 +35,17 @@ export async function GET(request: NextRequest) {
       order_id: string | null;
     };
 
-    const cookieStore = await cookies();
-    cookieStore.set("access_token", access_token, {
+    const redirectTo =
+      order_id && isValidUuid(order_id) ? `/orders/${order_id}` : "/";
+    const response = NextResponse.redirect(new URL(redirectTo, baseUrl));
+    response.cookies.set("access_token", access_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60, // 1 hour, matches ACCESS_TOKEN_EXPIRE_MINUTES
+      maxAge: 60 * 60,
     });
-
-    const redirectTo =
-      order_id && isValidUuid(order_id) ? `/orders/${order_id}` : "/";
-    return NextResponse.redirect(new URL(redirectTo, baseUrl));
+    return response;
   } catch {
     return NextResponse.redirect(new URL("/auth/error?reason=unavailable", baseUrl));
   }
