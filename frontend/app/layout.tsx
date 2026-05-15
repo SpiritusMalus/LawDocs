@@ -9,7 +9,7 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: "LawDocs — готовый юридический документ за 5 минут, 100 ₽",
+  title: "LawDocs — готовый юридический документ за 5 минут, 199 ₽",
   description:
     "Претензия в магазин, банк, к работодателю или страховой — оформленная по всем правилам. Шаблоны проверены практикующим юристом.",
   keywords:
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "LawDocs — готовый юридический документ за 5 минут",
     description:
-      "Опишите проблему — получите претензию или жалобу с расчётом неустойки и инструкцией. От 100 ₽.",
+      "Опишите проблему — получите претензию или жалобу с расчётом неустойки и инструкцией. От 199 ₽.",
     type: "website",
     locale: "ru_RU",
   },

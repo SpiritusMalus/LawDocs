@@ -18,8 +18,8 @@ class Order(Base):
     # Статус: draft → pending_payment → paid → generating → done | failed
     status: Mapped[str] = mapped_column(String, nullable=False, default="draft")
 
-    # Сумма в копейках (500 ₽ = 50000)
-    amount: Mapped[int] = mapped_column(Integer, nullable=False, default=50000)
+    # Сумма в копейках (199 ₽ = 19900)
+    amount: Mapped[int] = mapped_column(Integer, nullable=False, default=19900)
 
     # ЮKassa
     yookassa_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)

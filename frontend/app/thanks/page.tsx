@@ -38,7 +38,7 @@ export default function ThanksPage() {
             <li className="flex items-start gap-3">
               <MessageCircle className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
               <span className="text-sm text-gray-600">
-                Пришлём счёт на 100 ₽ — оплата картой или СБП.
+                Пришлём счёт на 199 ₽ — оплата картой или СБП.
               </span>
             </li>
             <li className="flex items-start gap-3">

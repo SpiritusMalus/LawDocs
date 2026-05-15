@@ -34,7 +34,7 @@ export default function AboutPage() {
       </ul>
       <p className="text-gray-700 leading-relaxed">
         Файлы доступны для скачивания в личном кабинете сразу после формирования.
-        Стоимость одного документа — <strong>100 рублей</strong>.
+        Стоимость одного документа — <strong>199 рублей</strong>.
       </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">Реквизиты</h2>

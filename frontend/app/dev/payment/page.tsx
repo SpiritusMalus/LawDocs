@@ -29,7 +29,7 @@ export default async function DevPaymentPage({
         <div className="bg-gray-50 rounded-xl p-4 text-left space-y-1">
           <p className="text-xs text-gray-400 uppercase tracking-wide">Заказ</p>
           <p className="font-mono text-sm text-gray-700">{order_id}</p>
-          <p className="text-lg font-bold text-gray-900 mt-2">100 ₽</p>
+          <p className="text-lg font-bold text-gray-900 mt-2">199 ₽</p>
         </div>
 
         <DevPaymentForm orderId={order_id} />

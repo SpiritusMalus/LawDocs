@@ -61,7 +61,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 href="/situations"
                 className={cn(buttonVariants({}), "h-9 px-4 hidden md:inline-flex")}
               >
-                Получить за 100 ₽
+                Получить за 199 ₽
               </Link>
             </>
           )}
@@ -120,7 +120,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                   onClick={() => setOpen(false)}
                   className={cn(buttonVariants({}), "h-10 mt-2")}
                 >
-                  Получить за 100 ₽
+                  Получить за 199 ₽
                 </Link>
               </>
             )}

@@ -136,7 +136,7 @@ export function OrderStatus({
                 Перенаправляем…
               </>
             ) : (
-              "Оплатить 100 ₽"
+              `Оплатить ${(order.amount / 100).toFixed(0)} ₽`
             )}
           </Button>
           {payError && <p className="text-sm text-red-600">{payError}</p>}

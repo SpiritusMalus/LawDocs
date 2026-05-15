@@ -36,7 +36,7 @@ export function Pricing() {
               </p>
             </div>
             <div className="text-right">
-              <div className="text-4xl font-bold text-gray-900">100&nbsp;₽</div>
+              <div className="text-4xl font-bold text-gray-900">199&nbsp;₽</div>
               <div className="text-xs text-gray-400">разовая оплата</div>
             </div>
           </div>

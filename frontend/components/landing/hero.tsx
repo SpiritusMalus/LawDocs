@@ -23,7 +23,7 @@ export function Hero() {
         <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-[1.1]">
           Готовый юридический документ{" "}
           <span className="text-blue-600">за 5 минут</span>
-          <br />— 100&nbsp;₽
+          <br />— 199&nbsp;₽
         </h1>
 
         <p className="animate-hero animate-hero-3 text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
