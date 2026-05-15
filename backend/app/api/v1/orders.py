@@ -120,7 +120,7 @@ async def pay_order(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
     try:
-        payment_data = await create_payment(order_id=order.id, amount=order.amount)
+        payment_data = await create_payment(order_id=order.id, amount=order.amount, customer_email=current_user.email)
     except Exception as exc:
         logger.error("payment_create_failed", extra={"action": "payment_create_failed", "order_id": str(order.id), "user_id": str(current_user.id)}, exc_info=True)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Не удалось создать платёж. Попробуйте позже.") from exc
