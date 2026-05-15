@@ -30,6 +30,17 @@ def decode_access_token(token: str) -> str | None:
         return None
 
 
+def get_token_remaining_seconds(token: str) -> float:
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        exp = payload.get("exp")
+        if not exp:
+            return 0
+        return max(0.0, exp - datetime.now(UTC).timestamp())
+    except JWTError:
+        return 0
+
+
 def generate_magic_token() -> str:
     return secrets.token_urlsafe(32)
 

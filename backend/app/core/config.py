@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,13 @@ class Settings(BaseSettings):
     # App
     APP_ENV: str = "development"
     SECRET_KEY: str  # openssl rand -hex 32
+
+    @field_validator("SECRET_KEY")
+    @classmethod
+    def check_secret_key(cls, v: str) -> str:
+        if len(v) < 32:
+            raise ValueError("SECRET_KEY must be at least 32 characters (run: openssl rand -hex 32)")
+        return v
     ALLOWED_ORIGINS: list[str] = ["http://localhost:3000"]
 
     # Database

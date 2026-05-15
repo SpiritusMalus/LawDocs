@@ -1,5 +1,5 @@
-import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import { authFetch } from "@/lib/proxy-fetch";
 
 export async function GET(
   _request: NextRequest,
@@ -11,33 +11,21 @@ export async function GET(
     return new Response(JSON.stringify({ error: "invalid_format" }), { status: 400 });
   }
 
-  const backendUrl = process.env.BACKEND_URL;
-  if (!backendUrl) {
-    return new Response(JSON.stringify({ error: "unavailable" }), { status: 503 });
-  }
-
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
-  if (!token) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
-
   try {
-    const res = await fetch(`${backendUrl}/api/v1/documents/${id}/download/${format}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
+    const result = await authFetch(`/api/v1/documents/${id}/download/${format}`);
+    if (!result.ok) return result.error;
 
-    if (!res.ok) {
-      return new Response(JSON.stringify({ error: "not_ready" }), { status: res.status });
+    if (!result.res.ok) {
+      return new Response(JSON.stringify({ error: "not_ready" }), { status: result.res.status });
     }
 
     const contentType =
-      res.headers.get("content-type") ?? "application/octet-stream";
+      result.res.headers.get("content-type") ?? "application/octet-stream";
     const disposition =
-      res.headers.get("content-disposition") ??
+      result.res.headers.get("content-disposition") ??
       `attachment; filename="document.${format}"`;
 
-    return new Response(res.body, {
+    return new Response(result.res.body, {
       status: 200,
       headers: {
         "Content-Type": contentType,
