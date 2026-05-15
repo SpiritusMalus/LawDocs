@@ -127,12 +127,12 @@ export function OrderStatus({
       {(order.status === "draft" || order.status === "pending_payment") && (
         <div className="space-y-3">
           {order.status === "pending_payment" && order.payment_url ? (
-            <Button
-              asChild
-              className="w-full h-12 text-base"
+            <a
+              href={order.payment_url}
+              className="w-full h-12 text-base inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/80 font-medium transition-colors"
             >
-              <a href={order.payment_url}>Перейти к оплате →</a>
-            </Button>
+              Перейти к оплате →
+            </a>
           ) : (
             <Button
               onClick={handlePay}
