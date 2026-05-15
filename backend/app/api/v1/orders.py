@@ -119,7 +119,12 @@ async def pay_order(
     if order.status not in ("draft", "pending_payment"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
-    payment_data = await create_payment(order_id=order.id, amount=order.amount)
+    try:
+        payment_data = await create_payment(order_id=order.id, amount=order.amount)
+    except Exception as exc:
+        logger.error("payment_create_failed", extra={"action": "payment_create_failed", "order_id": str(order.id), "user_id": str(current_user.id)}, exc_info=True)
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Не удалось создать платёж. Попробуйте позже.") from exc
+
     order.yookassa_payment_id = payment_data["payment_id"]
     order.status = "pending_payment"
     await db.commit()

@@ -48,7 +48,8 @@ async def create_payment(order_id: str, amount: int) -> dict:
             },
             timeout=15,
         )
-        resp.raise_for_status()
+        if not resp.is_success:
+            raise ValueError(f"YooKassa error {resp.status_code}: {resp.text}")
         data = resp.json()
 
     return {
