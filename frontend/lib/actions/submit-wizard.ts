@@ -166,9 +166,10 @@ export async function submitWizard({
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
+        const detail = (body as { detail?: unknown }).detail;
         return {
           status: "error",
-          message: (body as { detail?: string }).detail ?? "Ошибка сервера. Попробуйте ещё раз.",
+          message: typeof detail === "string" ? detail : "Ошибка сервера. Попробуйте ещё раз.",
         };
       }
       try {
