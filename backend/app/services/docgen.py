@@ -41,9 +41,9 @@ def _find_template(situation_id: str, form_data: dict) -> Path | None:
         or form_data.get("violation_type")
         or form_data.get("incident_type")
     )
-    if subtype:
+    if subtype and _SAFE_SITUATION_ID.match(str(subtype)):
         path = TEMPLATES_DIR / situation_id / f"{subtype}.docx"
-        if path.exists():
+        if path.resolve().is_relative_to(TEMPLATES_DIR.resolve()) and path.exists():
             return path
     path = TEMPLATES_DIR / f"{situation_id}.docx"
     if path.exists():

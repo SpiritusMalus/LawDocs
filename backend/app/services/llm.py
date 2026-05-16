@@ -23,17 +23,14 @@ def _get_verify() -> str | bool:
     """Возвращает параметр verify для httpx.
 
     Если задан GIGACHAT_CA_CERT — использует его как путь к CA-bundle.
-    Иначе TLS-верификация отключена (допустимо только в dev-среде).
+    В продакшне без CA — RuntimeError: тихое отключение TLS недопустимо.
     """
     if settings.GIGACHAT_CA_CERT:
         return settings.GIGACHAT_CA_CERT
     if settings.APP_ENV == "production":
-        logger.warning(
-            "gigachat_tls_unverified",
-            extra={
-                "action": "gigachat_tls_unverified",
-                "reason": "GIGACHAT_CA_CERT не задан; скачайте CA Минцифры и укажите путь в .env",
-            },
+        raise RuntimeError(
+            "GIGACHAT_CA_CERT не задан в production. "
+            "Скачайте CA Минцифры и укажите путь к .pem в .env."
         )
     return False
 

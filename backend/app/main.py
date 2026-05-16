@@ -9,7 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-from sqlalchemy import delete, not_, select, update
+from sqlalchemy import delete, func, not_, select, update
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -77,11 +77,15 @@ async def _cleanup_draft_orders() -> None:
                 )
                 deleted_users = result.rowcount
 
-                # 3. Обнуляем form_data в завершённых заказах старше 30 дней (152-ФЗ)
+                # 3. Обнуляем form_data в done/failed-заказах старше 30 дней (152-ФЗ).
+                #    failed-заказы не имеют paid_at — используем created_at как fallback.
                 pii_cutoff = datetime.now(UTC) - timedelta(days=30)
                 result = await db.execute(
                     update(Order)
-                    .where(Order.status == "done", Order.paid_at < pii_cutoff)
+                    .where(
+                        Order.status.in_(["done", "failed"]),
+                        func.coalesce(Order.paid_at, Order.created_at) < pii_cutoff,
+                    )
                     .values(form_data={})
                     .returning(Order.id)
                 )
