@@ -14,4 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
+RUN addgroup --system lawdocs && adduser --system --ingroup lawdocs lawdocs \
+    && chown -R lawdocs:lawdocs /app
+USER lawdocs
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

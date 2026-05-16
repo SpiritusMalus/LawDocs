@@ -86,13 +86,19 @@ function escapeHtml(input: string): string {
 
 async function getClientIp(): Promise<string> {
   const h = await headers();
+  // X-Real-IP: nginx sets this to $remote_addr — cannot be spoofed by the client
+  const realIp = h.get("x-real-ip");
+  if (realIp) return realIp.trim();
+  // CF-Connecting-IP: Cloudflare sets this (trusted at edge level)
+  const cfIp = h.get("cf-connecting-ip");
+  if (cfIp) return cfIp.trim();
+  // X-Forwarded-For: nginx appends real IP at the end — take last entry, not first
   const forwarded = h.get("x-forwarded-for");
-
   if (forwarded) {
     const ips = forwarded.split(",").map((ip) => ip.trim());
-    return ips[0] ?? "unknown";
+    return ips[ips.length - 1] ?? "unknown";
   }
-  return h.get("x-real-ip") ?? h.get("cf-connecting-ip") ?? "unknown";
+  return "unknown";
 }
 
 export async function submitWizard({
@@ -142,7 +148,10 @@ export async function submitWizard({
       const cookieStore = await cookies();
       const accessToken = cookieStore.get("access_token")?.value;
 
-      const reqHeaders: Record<string, string> = { "Content-Type": "application/json" };
+      const reqHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Real-IP": ip,
+      };
       if (accessToken) reqHeaders["Authorization"] = `Bearer ${accessToken}`;
 
       const res = await fetch(`${backendUrl}/api/v1/orders/init`, {
