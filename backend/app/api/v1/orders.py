@@ -111,7 +111,7 @@ async def init_order(
     except Exception as exc:
         logger.error("order_magic_link_send_failed", extra={"action": "magic_link_send_failed", "order_id": str(order.id)}, exc_info=True)
         if settings.APP_ENV == "development":
-            logger.warning("DEV MAGIC LINK: %s", magic_url)
+            logger.warning("DEV magic link send failed: order=%s token_hash=%s", order.id, hash_magic_token(token))
         else:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

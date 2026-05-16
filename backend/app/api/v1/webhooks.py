@@ -1,3 +1,4 @@
+import ipaddress
 import json
 import logging
 from datetime import UTC, datetime
@@ -10,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.limiter import limiter
 from app.models.document import Document
 from app.models.order import Order
 from app.services.docgen import generate_document, generate_instruction
@@ -21,6 +23,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 YOOKASSA_API = "https://api.yookassa.ru/v3"
+
+_YOOKASSA_CIDRS = [
+    ipaddress.ip_network("185.71.76.0/27"),
+    ipaddress.ip_network("185.71.77.0/27"),
+    ipaddress.ip_network("77.75.153.0/25"),
+    ipaddress.ip_network("77.75.156.11/32"),
+    ipaddress.ip_network("77.75.156.35/32"),
+    ipaddress.ip_network("2a02:5180::/32"),
+]
+
+
+def _is_yookassa_ip(request: Request) -> bool:
+    client_host = request.client.host if request.client else ""
+    try:
+        if ipaddress.ip_address(client_host).is_private:
+            ip_str = request.headers.get("x-real-ip", client_host)
+        else:
+            ip_str = client_host
+        ip = ipaddress.ip_address(ip_str.strip())
+    except ValueError:
+        return False
+    return any(ip in cidr for cidr in _YOOKASSA_CIDRS)
 
 
 async def _verify_payment(payment_id: str) -> bool:
@@ -41,10 +65,16 @@ async def _verify_payment(payment_id: str) -> bool:
 
 
 @router.post("/yookassa", status_code=status.HTTP_200_OK)
+@limiter.limit("60/minute")
 async def yookassa_webhook(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
+    if settings.APP_ENV != "development" and not _is_yookassa_ip(request):
+        real_ip = request.headers.get("x-real-ip", request.client.host if request.client else "unknown")
+        logger.warning("webhook_ip_rejected", extra={"action": "webhook_ip_rejected", "ip": real_ip})
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Forbidden")
+
     body = await request.body()
     try:
         event = json.loads(body)
@@ -115,6 +145,7 @@ async def yookassa_webhook(
         )
         db.add(doc)
         order.status = "done"
+        order.payment_url = None
         await db.commit()
 
         pdf_bytes = await download_bytes(pdf_key)
