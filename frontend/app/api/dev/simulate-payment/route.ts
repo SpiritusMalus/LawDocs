@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Dev-only endpoint: simulates ЮKassa payment.succeeded webhook
 export async function POST(request: NextRequest) {
-  if (process.env.APP_ENV === "production") {
+  if (process.env.NODE_ENV === "production") {
     return NextResponse.json({ error: "not_found" }, { status: 404 });
   }
 

@@ -46,7 +46,12 @@ async def yookassa_webhook(
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     body = await request.body()
-    event = json.loads(body)
+    try:
+        event = json.loads(body)
+    except json.JSONDecodeError:
+        logger.warning("Webhook received invalid JSON")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
+
     if event.get("event") != "payment.succeeded":
         return {"received": True}
 
@@ -57,16 +62,17 @@ async def yookassa_webhook(
         logger.warning("Webhook payment verification failed for payment_id=%s", payment_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
 
+    # SELECT FOR UPDATE SKIP LOCKED — атомарный захват строки, второй retry не получит её
     result = await db.execute(
         select(Order)
-        .where(Order.yookassa_payment_id == payment_id)
+        .where(Order.yookassa_payment_id == payment_id, Order.status == "pending_payment")
+        .with_for_update(skip_locked=True)
         .options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
-    if not order or order.status != "pending_payment":
+    if not order:
         return {"received": True}
 
-    # Atomically transition paid → generating in one commit
     order.status = "generating"
     order.paid_at = datetime.now(UTC)
     await db.commit()
