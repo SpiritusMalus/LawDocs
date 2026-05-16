@@ -87,7 +87,20 @@ export default function LoginPage() {
                     required
                     autoFocus
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      e.target.setCustomValidity("");
+                    }}
+                    onInvalid={(e) => {
+                      const input = e.target as HTMLInputElement;
+                      if (input.validity.valueMissing) {
+                        input.setCustomValidity("Введите email-адрес");
+                      } else if (input.validity.typeMismatch) {
+                        input.setCustomValidity("Введите корректный email-адрес (например ivan@mail.ru)");
+                      } else {
+                        input.setCustomValidity("Некорректный email-адрес");
+                      }
+                    }}
                     placeholder="you@example.com"
                     className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
                   />

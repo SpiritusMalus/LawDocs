@@ -141,7 +141,6 @@ export async function submitWizard({
     return { status: "error", message: "Укажите корректный номер телефона." };
   }
 
-  // Phase 2: route to FastAPI when backend is configured
   const backendUrl = process.env.BACKEND_URL;
   if (backendUrl) {
     try {
@@ -215,7 +214,6 @@ export async function submitWizard({
   const chatId = process.env.TELEGRAM_CHAT_ID;
 
   if (!token || !chatId) {
-    console.warn("[submitWizard] Telegram not configured — lead not delivered. Situation: %s", situationId);
     return { status: "success" };
   }
 
@@ -233,15 +231,12 @@ export async function submitWizard({
     });
 
     if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      console.error("[submitWizard] Telegram error:", res.status, body);
       return {
         status: "error",
         message: "Не получилось отправить заявку. Напишите на lawdocsru@gmail.com.",
       };
     }
-  } catch (err) {
-    console.error("[submitWizard] fetch failed:", err);
+  } catch {
     return {
       status: "error",
       message: "Не получилось отправить заявку. Напишите на lawdocsru@gmail.com.",

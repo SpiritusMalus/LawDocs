@@ -61,8 +61,8 @@ class SituationRegistry:
             try:
                 config = _load_yaml(yaml_file)
                 self._configs[config.id] = config
-            except Exception:
-                logger.exception("Failed to load situation config: %s", yaml_file)
+            except Exception as exc:
+                raise ValueError(f"Invalid situation config {yaml_file.name}: {exc}") from exc
         logger.info("Loaded %d situation configs from %s", len(self._configs), configs_dir)
 
     def get(self, situation_id: str) -> SituationConfig | None:

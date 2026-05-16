@@ -10,7 +10,7 @@ from app.api.deps import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.core.security import create_access_token, generate_magic_token, hash_magic_token, verify_magic_token
+from app.core.security import create_access_token, generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.user import MagicLinkRequest, UserOut
@@ -139,7 +139,7 @@ async def verify_magic_link(
 
     logger.info("magic_link_verified", extra={"action": "magic_link_verified", "user_id": str(user.id)})
 
-    access_token = create_access_token(user.id)
+    access_token = create_access_token(str(user.id))
     return VerifyOut(
         access_token=access_token,
         order_id=order,

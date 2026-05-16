@@ -17,9 +17,10 @@ interface WizardShellProps {
   steps: WizardStep[];
   situationId: WizardSituationId;
   hasBackend?: boolean;
+  isAuthenticated?: boolean;
 }
 
-export function WizardShell({ steps, situationId, hasBackend = false }: WizardShellProps) {
+export function WizardShell({ steps, situationId, hasBackend = false, isAuthenticated = false }: WizardShellProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -31,20 +32,22 @@ export function WizardShell({ steps, situationId, hasBackend = false }: WizardSh
   // Pre-fill contact fields from last order (if authenticated) + localStorage email
   useEffect(() => {
     async function prefill() {
-      try {
-        const res = await fetch("/api/user/contact", { cache: "no-store" });
-        if (res.ok) {
-          const data: Record<string, string> = await res.json();
-          setAnswers((prev) => {
-            const updates: Record<string, string> = {};
-            for (const key of CONTACT_FIELDS) {
-              if (data[key] && !prev[key]) updates[key] = data[key];
-            }
-            return Object.keys(updates).length ? { ...prev, ...updates } : prev;
-          });
-          return;
-        }
-      } catch {}
+      if (isAuthenticated) {
+        try {
+          const res = await fetch("/api/user/contact", { cache: "no-store" });
+          if (res.ok) {
+            const data: Record<string, string> = await res.json();
+            setAnswers((prev) => {
+              const updates: Record<string, string> = {};
+              for (const key of CONTACT_FIELDS) {
+                if (data[key] && !prev[key]) updates[key] = data[key];
+              }
+              return Object.keys(updates).length ? { ...prev, ...updates } : prev;
+            });
+            return;
+          }
+        } catch {}
+      }
       // Fallback: pre-fill email from localStorage
       try {
         const saved = localStorage.getItem(LS_EMAIL_KEY);
@@ -52,7 +55,7 @@ export function WizardShell({ steps, situationId, hasBackend = false }: WizardSh
       } catch {}
     }
     prefill();
-  }, []);
+  }, [isAuthenticated]);
 
   const step = steps[currentStep]!;
   const isFirst = currentStep === 0;

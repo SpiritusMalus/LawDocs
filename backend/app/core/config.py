@@ -35,7 +35,6 @@ class Settings(BaseSettings):
 
     # GigaChat — Authorization Key из консоли разработчика (уже готовый Base64)
     GIGACHAT_AUTH_KEY: str = ""
-    GIGACHAT_CLIENT_ID: str = ""  # не используется, оставлен для совместимости
     # Путь к PEM-файлу с CA Минцифры России для верификации TLS GigaChat.
     # Скачать: https://www.gosuslugi.ru/crt  → «Корневой сертификат»
     # Если пусто — TLS-верификация отключена (не рекомендуется для production).

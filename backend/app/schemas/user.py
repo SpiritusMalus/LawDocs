@@ -5,10 +5,6 @@ class MagicLinkRequest(BaseModel):
     email: EmailStr
 
 
-class MagicLinkVerify(BaseModel):
-    token: str
-
-
 class UserOut(BaseModel):
     id: str
     email: str

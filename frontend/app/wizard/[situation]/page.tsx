@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { ChevronRight } from "lucide-react";
 import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
 import { getSituationPage } from "@/lib/situation-pages";
@@ -37,6 +38,8 @@ export default async function WizardPage({
   if (!steps) notFound();
 
   const page = getSituationPage(situation);
+  const cookieStore = await cookies();
+  const isAuthenticated = !!cookieStore.get("access_token")?.value;
 
   return (
     <>
@@ -77,6 +80,7 @@ export default async function WizardPage({
             steps={steps}
             situationId={situation as WizardSituationId}
             hasBackend={!!process.env.BACKEND_URL}
+            isAuthenticated={isAuthenticated}
           />
         </div>
       </section>
