@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
-import type { WizardSituationId, WizardStep, WizardField } from "@/lib/wizard-questions";
+import type { WizardStep, WizardField } from "@/lib/wizard-types";
 import { submitWizard } from "@/lib/actions/submit-wizard";
 
 const LS_EMAIL_KEY = "lawdocs_email";
@@ -15,7 +15,7 @@ const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as con
 
 interface WizardShellProps {
   steps: WizardStep[];
-  situationId: WizardSituationId;
+  situationId: string;
   hasBackend?: boolean;
   isAuthenticated?: boolean;
 }

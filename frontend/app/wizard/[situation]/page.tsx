@@ -3,15 +3,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { ChevronRight } from "lucide-react";
-import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
+import type { WizardStep } from "@/lib/wizard-types";
 import { getSituationPage } from "@/lib/situation-pages";
 import { WizardShell } from "@/components/wizard/wizard-shell";
-
-export function generateStaticParams() {
-  return (Object.keys(WIZARD_STEPS) as WizardSituationId[]).map((situation) => ({
-    situation,
-  }));
-}
 
 export async function generateMetadata({
   params,
@@ -34,8 +28,17 @@ export default async function WizardPage({
   params: Promise<{ situation: string }>;
 }) {
   const { situation } = await params;
-  const steps = WIZARD_STEPS[situation as WizardSituationId];
-  if (!steps) notFound();
+
+  const backendUrl = process.env.BACKEND_URL;
+  if (!backendUrl) notFound();
+
+  const res = await fetch(`${backendUrl}/api/v1/situations/${situation}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) notFound();
+
+  const data: { wizard_steps: WizardStep[] } = await res.json();
+  const steps = data.wizard_steps;
 
   const page = getSituationPage(situation);
   const cookieStore = await cookies();
@@ -78,8 +81,8 @@ export default async function WizardPage({
 
           <WizardShell
             steps={steps}
-            situationId={situation as WizardSituationId}
-            hasBackend={!!process.env.BACKEND_URL}
+            situationId={situation}
+            hasBackend={true}
             isAuthenticated={isAuthenticated}
           />
         </div>

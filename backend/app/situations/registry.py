@@ -74,6 +74,14 @@ class SituationRegistry:
     def ids(self) -> set[str]:
         return set(self._configs.keys())
 
+    def all_field_ids(self) -> frozenset[str]:
+        return frozenset(
+            field.id
+            for config in self._configs.values()
+            for step in config.wizard_steps
+            for field in step.fields
+        )
+
     def __len__(self) -> int:
         return len(self._configs)
 

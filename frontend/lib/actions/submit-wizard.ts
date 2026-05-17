@@ -2,7 +2,6 @@
 
 import { cookies, headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
-import { WIZARD_STEPS, type WizardSituationId } from "@/lib/wizard-questions";
 import { SITUATIONS } from "@/lib/situations";
 import { isValidEmail, isValidPhone } from "@/lib/validators";
 import { validateOrderInitResponse } from "@/lib/api-schemas";
@@ -13,10 +12,9 @@ export interface WizardState {
   orderId?: string;
 }
 
-// Derived from SITUATIONS — single source of truth for situation titles
-const SITUATION_LABELS = Object.fromEntries(
+const SITUATION_LABELS: Record<string, string> = Object.fromEntries(
   SITUATIONS.map((s) => [s.id, s.title])
-) as Record<WizardSituationId, string>;
+);
 
 const FIELD_LABELS: Record<string, string> = {
   full_name: "ФИО",
@@ -105,7 +103,7 @@ export async function submitWizard({
   situationId,
   answers,
 }: {
-  situationId: WizardSituationId;
+  situationId: string;
   answers: Record<string, string>;
 }): Promise<WizardState> {
   pruneRateLimitBuckets();
@@ -118,17 +116,6 @@ export async function submitWizard({
       status: "error",
       message: `Слишком много заявок. Попробуйте через ${minutes} мин или напишите на lawdocsru@gmail.com.`,
     };
-  }
-
-  // Server-side validation: required fields
-  const requiredFieldIds = WIZARD_STEPS[situationId]
-    .flatMap((step) => step.fields)
-    .filter((f) => f.required)
-    .map((f) => f.id);
-
-  const missing = requiredFieldIds.filter((id) => !answers[id]?.trim());
-  if (missing.length > 0) {
-    return { status: "error", message: "Не заполнены обязательные поля." };
   }
 
   const email = answers["email"]!.trim();
