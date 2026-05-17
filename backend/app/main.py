@@ -111,6 +111,11 @@ async def _cleanup_draft_orders() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    if settings.APP_ENV == "production" and not settings.FERNET_KEY:
+        raise RuntimeError(
+            "FERNET_KEY не задан в production. "
+            "Сгенерируйте: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
+        )
     configs_dir = Path(__file__).parent / "situations" / "configs"
     registry.load(configs_dir)
     task = asyncio.create_task(_cleanup_draft_orders())

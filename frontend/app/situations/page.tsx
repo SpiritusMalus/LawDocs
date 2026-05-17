@@ -61,10 +61,10 @@ export default function SituationsPage() {
                 <Link
                   key={s.id}
                   href={`/situations/${s.id}`}
-                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all flex flex-col"
+                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
                 >
                   <div className="text-3xl mb-4">{emoji}</div>
-                  <h2 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                  <h2 className="font-semibold text-gray-900 mb-2 group-hover:text-primary transition-colors">
                     {s.title}
                   </h2>
                   <p className="text-sm text-gray-500 leading-relaxed mb-4 flex-1">{s.blurb}</p>
@@ -76,7 +76,7 @@ export default function SituationsPage() {
                         .join(" · ")}
                     </p>
                   )}
-                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600">
+                  <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
                     Оформить документ
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
                   </span>

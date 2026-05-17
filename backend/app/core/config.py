@@ -54,5 +54,9 @@ class Settings(BaseSettings):
     # Frontend URL (for magic link redirects)
     FRONTEND_URL: str = "https://lawdocs.ru"
 
+    # Шифрование ПДн в form_data (152-ФЗ)
+    # Генерация: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    FERNET_KEY: str = ""
+
 
 settings = Settings()  # type: ignore[call-arg]

@@ -42,7 +42,7 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     terminal: false,
   },
   generating: {
-    icon: <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />,
+    icon: <Loader2 className="h-8 w-8 text-primary animate-spin" />,
     label: "Создаём документ",
     description: "Документ готовится — обычно это занимает меньше минуты.",
     terminal: false,
@@ -263,7 +263,7 @@ export function OrderStatus({
             </Link>
             <a
               href="mailto:lawdocsru@gmail.com"
-              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
             >
               Написать в поддержку
             </a>
