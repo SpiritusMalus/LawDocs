@@ -51,13 +51,13 @@ export default async function DashboardPage() {
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Scale className="h-6 w-6 text-blue-600" />
+            <Scale className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold text-gray-900">Мои заказы</h1>
           </div>
           <div className="flex items-center gap-3">
             <Link
               href="/situations"
-              className="flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+              className="flex items-center gap-1.5 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
             >
               <PlusCircle className="h-4 w-4" />
               Новый документ
@@ -75,7 +75,7 @@ export default async function DashboardPage() {
             </p>
             <Link
               href="/situations"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors"
             >
               <PlusCircle className="h-4 w-4" />
               Создать первый документ

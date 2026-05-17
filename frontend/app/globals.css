@@ -52,13 +52,20 @@
 :root {
   --font-manrope: 'Manrope Variable', sans-serif;
   --font-sans: var(--font-manrope), "Helvetica Neue", Arial, sans-serif;
+  /* Layout container widths — use via max-w-(--l-*) (FINDING-007) */
+  --l-content: 64rem;        /* 1024px — wide card grids (max-w-5xl) */
+  --l-content-narrow: 48rem; /* 768px  — single-column text (max-w-3xl) */
+  --l-content-wide: 72rem;   /* 1152px — footer / nav bars (max-w-6xl) */
+  /* Section heading bottom margin */
+  --l-section-heading: 3.5rem;        /* mb-14 — wide sections */
+  --l-section-heading-narrow: 3rem;   /* mb-12 — narrow sections */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.546 0.245 262.881);
+  --primary: oklch(0.546 0.245 264.05); /* = Tailwind blue-600 */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -130,6 +137,10 @@
   html {
     @apply font-sans;
     scroll-behavior: smooth;
+  }
+  /* Consistent keyboard focus ring on all interactive elements (FINDING-005) */
+  a:focus-visible {
+    @apply outline-2 outline-offset-2 outline-ring rounded-sm;
   }
 }
 

@@ -12,17 +12,17 @@ export function Hero() {
           backgroundSize: "28px 28px",
         }}
       />
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-blue-500/10 rounded-full blur-3xl" />
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/10 rounded-full blur-3xl" />
 
-      <div className="relative max-w-5xl mx-auto px-4 py-24 md:py-28 text-center">
-        <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-blue-50 border border-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-8 tracking-wide uppercase">
+      <div className="relative max-w-(--l-content) mx-auto px-4 py-24 md:py-28 text-center">
+        <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-primary/8 border border-primary/20 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-8 tracking-wide uppercase">
           <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
           Шаблоны проверены практикующим юристом
         </div>
 
         <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-[1.1]">
           Готовый юридический документ{" "}
-          <span className="text-blue-600">за 5 минут</span>
+          <span className="text-primary">за 5 минут</span>
           <br />— 199&nbsp;₽
         </h1>
 
@@ -54,9 +54,9 @@ export function Hero() {
         </p>
 
         <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500 mb-10">
-          <span className="flex items-center gap-1.5"><span className="text-blue-500" aria-hidden="true">✓</span> Word + PDF</span>
-          <span className="flex items-center gap-1.5"><span className="text-blue-500" aria-hidden="true">✓</span> Инструкция куда отправить</span>
-          <span className="flex items-center gap-1.5"><span className="text-blue-500" aria-hidden="true">✓</span> Шаблоны проверены юристом</span>
+          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Word + PDF</span>
+          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Инструкция куда отправить</span>
+          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Шаблоны проверены юристом</span>
         </div>
 
         <div className="flex flex-col items-center gap-2">

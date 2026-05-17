@@ -23,9 +23,9 @@ const POINTS = [
 export function WhyNotChatGPT() {
   return (
     <section className="bg-gray-50 border-y border-gray-100 py-24 px-4">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-(--l-content) mx-auto">
         <ScrollReveal>
-        <div className="mb-14">
+        <div className="mb-(--l-section-heading)">
           <div className="inline-flex items-center gap-2 text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full mb-6">
             Главный вопрос
           </div>

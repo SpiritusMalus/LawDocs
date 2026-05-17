@@ -32,13 +32,22 @@ export default async function WizardPage({
   const backendUrl = process.env.BACKEND_URL;
   if (!backendUrl) notFound();
 
-  const res = await fetch(`${backendUrl}/api/v1/situations/${situation}`, {
-    cache: "no-store",
-  });
-  if (!res.ok) notFound();
-
-  const data: { wizard_steps: WizardStep[] } = await res.json();
-  const steps = data.wizard_steps;
+  let steps: WizardStep[] = [];
+  let fetchError = false;
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/situations/${situation}`, {
+      cache: "no-store",
+    });
+    if (res.status === 404) notFound();
+    if (!res.ok) {
+      fetchError = true;
+    } else {
+      const data: { wizard_steps: WizardStep[] } = await res.json();
+      steps = data.wizard_steps;
+    }
+  } catch {
+    fetchError = true;
+  }
 
   const page = getSituationPage(situation);
   const cookieStore = await cookies();
@@ -84,6 +93,7 @@ export default async function WizardPage({
             situationId={situation}
             hasBackend={true}
             isAuthenticated={isAuthenticated}
+            error={fetchError}
           />
         </div>
       </section>

@@ -12,9 +12,9 @@ const INCLUDED = [
 export function Pricing() {
   return (
     <section className="bg-white py-24 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-(--l-content-narrow) mx-auto">
         <ScrollReveal>
-        <div className="mb-12">
+        <div className="mb-(--l-section-heading-narrow)">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Прозрачная цена
           </h2>
@@ -25,7 +25,7 @@ export function Pricing() {
         </ScrollReveal>
 
         <ScrollReveal delay={100}>
-        <div className="bg-gradient-to-br from-blue-50 to-white rounded-3xl border-2 border-blue-100 p-8 md:p-10">
+        <div className="bg-gradient-to-br from-primary/5 to-white rounded-3xl border-2 border-primary/15 p-8 md:p-10">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 pb-8 border-b border-gray-100">
             <div>
               <h3 className="text-xl font-semibold text-gray-900 mb-1">
@@ -44,7 +44,7 @@ export function Pricing() {
           <ul className="space-y-3">
             {INCLUDED.map((item) => (
               <li key={item} className="flex items-start gap-3">
-                <CheckCircle className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+                <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
                 <span className="text-sm text-gray-700">{item}</span>
               </li>
             ))}
@@ -56,7 +56,7 @@ export function Pricing() {
           Сложный случай и нужна личная консультация?{" "}
           <a
             href="mailto:lawdocsru@gmail.com?subject=Консультация юриста"
-            className="text-blue-500 hover:underline"
+            className="text-primary hover:underline"
           >
             Напишите нам
           </a>{" "}

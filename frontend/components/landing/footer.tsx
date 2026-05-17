@@ -5,7 +5,7 @@ import { SITUATIONS } from "@/lib/situations";
 export function Footer() {
   return (
     <footer className="border-t border-gray-100 bg-white">
-      <div className="max-w-6xl mx-auto px-4 py-12">
+      <div className="max-w-(--l-content-wide) mx-auto px-4 py-12">
         <div className="grid md:grid-cols-3 gap-10 mb-10">
           {/* Brand + disclaimer */}
           <div>

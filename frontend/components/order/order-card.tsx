@@ -70,7 +70,7 @@ export function OrderCard({ order }: { order: OrderItem }) {
       <div className="flex items-center justify-between gap-3 pt-1 border-t border-gray-50">
         <Link
           href={`/orders/${order.id}`}
-          className="text-sm text-blue-600 hover:underline"
+          className="text-sm text-primary hover:underline"
         >
           Открыть заказ
         </Link>
@@ -88,7 +88,7 @@ export function OrderCard({ order }: { order: OrderItem }) {
             <a
               href={`/api/documents/${order.id}/download/pdf`}
               download="document.pdf"
-              className="flex items-center gap-1 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg px-2.5 py-1.5 transition-colors"
+              className="flex items-center gap-1 text-xs font-medium text-primary-foreground bg-primary hover:bg-primary/90 rounded-lg px-2.5 py-1.5 transition-colors"
             >
               <Download className="h-3.5 w-3.5" />
               PDF

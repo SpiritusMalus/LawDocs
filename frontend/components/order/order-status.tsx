@@ -74,6 +74,8 @@ export function OrderStatus({
   const [order, setOrder] = useState<Order>(initialOrder);
   const [payError, setPayError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
 
   // Poll status while processing
   useEffect(() => {
@@ -94,6 +96,24 @@ export function OrderStatus({
 
     return () => clearInterval(interval);
   }, [orderId, order.status]);
+
+  async function handleRetry() {
+    setIsRetrying(true);
+    setRetryError(null);
+    try {
+      const res = await fetch(`/api/orders/${orderId}/retry`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setRetryError(data.error ?? "Не удалось запустить повторную генерацию.");
+        return;
+      }
+      setOrder((prev) => ({ ...prev, status: "generating" }));
+    } catch {
+      setRetryError("Не удалось связаться с сервером. Попробуйте позже.");
+    } finally {
+      setIsRetrying(false);
+    }
+  }
 
   async function handlePay() {
     setIsPaying(true);
@@ -175,7 +195,7 @@ export function OrderStatus({
           <a
             href={`/api/documents/${orderId}/download/pdf`}
             download
-            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
           >
             <Download className="h-4 w-4" />
             Скачать PDF
@@ -187,7 +207,7 @@ export function OrderStatus({
         <a
           href={`/api/documents/${orderId}/download/instruction`}
           download
-          className="flex items-center justify-center gap-2 h-11 rounded-lg border border-blue-200 bg-blue-50 hover:bg-blue-100 text-sm font-medium text-blue-700 transition-colors w-full"
+          className="flex items-center justify-center gap-2 h-11 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-sm font-medium text-primary transition-colors w-full"
         >
           <FileText className="h-4 w-4" />
           Скачать инструкцию (куда подать и что делать дальше)
@@ -199,13 +219,13 @@ export function OrderStatus({
         <>
           <p className="text-xs text-gray-400">
             PDF также отправлен на вашу почту.{" "}
-            <a href="mailto:lawdocsru@gmail.com" className="text-blue-600 hover:underline">
+            <a href="mailto:lawdocsru@gmail.com" className="text-primary hover:underline">
               Не получили?
             </a>
           </p>
           <Link
             href="/situations"
-            className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
           >
             <PlusCircle className="h-4 w-4" />
             Создать ещё один документ
@@ -214,20 +234,40 @@ export function OrderStatus({
       )}
 
       {order.status === "failed" && (
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Link
-            href={`/wizard/${order.situation_id}`}
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+        <div className="flex flex-col gap-3">
+          <Button
+            onClick={handleRetry}
+            disabled={isRetrying}
+            className="w-full h-11 text-base"
           >
-            <RefreshCcw className="h-4 w-4" />
-            Заполнить заново
-          </Link>
-          <a
-            href="mailto:lawdocsru@gmail.com"
-            className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
-          >
-            Написать в поддержку
-          </a>
+            {isRetrying ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Запускаем…
+              </>
+            ) : (
+              <>
+                <RefreshCcw className="h-4 w-4 mr-2" />
+                Попробовать ещё раз
+              </>
+            )}
+          </Button>
+          {retryError && <p className="text-sm text-red-600">{retryError}</p>}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href={`/wizard/${order.situation_id}`}
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Заполнить заново
+            </Link>
+            <a
+              href="mailto:lawdocsru@gmail.com"
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-blue-600 hover:bg-blue-700 text-sm font-medium text-white transition-colors"
+            >
+              Написать в поддержку
+            </a>
+          </div>
         </div>
       )}
 

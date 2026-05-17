@@ -6,9 +6,9 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 export function Situations() {
   return (
     <section id="situations" className="bg-gray-50 border-y border-gray-100 py-24 px-4 scroll-mt-16">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-(--l-content) mx-auto">
         <ScrollReveal>
-          <div className="mb-14">
+          <div className="mb-(--l-section-heading)">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">
               С какими ситуациями работаем
             </h2>
@@ -24,9 +24,9 @@ export function Situations() {
             <ScrollReveal key={s.id} delay={i * 60} className={i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? "lg:col-span-2" : ""}>
             <Link
               href={`/situations/${s.id}`}
-              className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all h-full flex flex-col"
+              className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all h-full flex flex-col"
             >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary transition-colors">
                 {s.title}
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">
@@ -35,7 +35,7 @@ export function Situations() {
               <p className="text-xs text-gray-400 mb-4">
                 {s.examples}
               </p>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600">
+              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
                 Оформить документ
                 <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>

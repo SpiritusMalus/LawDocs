@@ -22,8 +22,8 @@ import { ScrollReveal } from "@/components/ui/scroll-reveal";
 export function HowItWorks() {
   return (
     <section id="how-it-works" className="bg-white py-24 px-4 scroll-mt-16">
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-14">
+      <div className="max-w-(--l-content) mx-auto">
+        <div className="mb-(--l-section-heading)">
           <h2 className="text-3xl font-bold text-gray-900 mb-3">
             Как это работает
           </h2>

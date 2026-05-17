@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, AlertCircle, ServerCrash } from "lucide-react";
 import type { WizardStep, WizardField } from "@/lib/wizard-types";
 import { submitWizard } from "@/lib/actions/submit-wizard";
 
@@ -18,9 +18,10 @@ interface WizardShellProps {
   situationId: string;
   hasBackend?: boolean;
   isAuthenticated?: boolean;
+  error?: boolean;
 }
 
-export function WizardShell({ steps, situationId, hasBackend = false, isAuthenticated = false }: WizardShellProps) {
+export function WizardShell({ steps, situationId, hasBackend = false, isAuthenticated = false, error = false }: WizardShellProps) {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -113,6 +114,26 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
         setSubmitError(result.message ?? "Ошибка при отправке.");
       }
     });
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 p-8 text-center space-y-4">
+        <div className="flex justify-center">
+          <ServerCrash className="h-10 w-10 text-red-400" aria-hidden="true" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Не удалось загрузить форму</h2>
+        <p className="text-gray-500 text-sm">
+          Сервис временно недоступен. Попробуйте обновить страницу или зайдите позже.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 underline underline-offset-2 transition-colors"
+        >
+          Обновить страницу
+        </button>
+      </div>
+    );
   }
 
   if (emailSent) {
