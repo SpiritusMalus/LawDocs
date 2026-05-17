@@ -39,7 +39,7 @@ def calculate_ddu_delay(form_data: dict) -> dict:
         price = Decimal(str(data["contract_price"]))
         rate = Decimal(str(data["cb_rate"]))
         neustoyka = _ddu_neustoyka(price, rate, delay_days)
-    except (KeyError, Exception):
+    except Exception:
         return data
     data["calculated_delay_days"] = str(delay_days)
     data["calculated_neustoyka"] = _fmt(neustoyka)
@@ -58,7 +58,7 @@ def calculate_ddu_termination(form_data: dict) -> dict:
         rate = Decimal(str(data["cb_rate"]))
         interest = _ddu_neustoyka(price, rate, days_used)
         total = price + interest
-    except (KeyError, Exception):
+    except Exception:
         return data
     data["calculated_days_used"] = str(days_used)
     data["calculated_interest"] = _fmt(interest)
