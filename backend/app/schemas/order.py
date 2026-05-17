@@ -29,6 +29,15 @@ _ALLOWED_FORM_FIELDS: frozenset[str] = frozenset({
     # T14: gibdd (штраф ГИБДД)
     "violation_place", "fine_number", "vehicle", "violation_article",
     "appeal_to", "gibdd_unit",
+    # rental_deposit (залог за аренду)
+    "landlord_name", "landlord_address", "move_in_date", "move_out_date",
+    "deposit_amount", "deposit_reason",
+    # tour_operator (туроператор)
+    "tour_operator", "agency_name", "trip_destination", "departure_date",
+    "tour_price", "refunded_amount",
+    # online_course (онлайн-школа)
+    "school_name", "course_name", "contract_date", "course_price",
+    "refund_request_date", "claimed_amount",
 })
 
 _MAX_FIELD_VALUE_LEN = 5_000

@@ -882,6 +882,238 @@ export const WIZARD_STEPS: Record<WizardSituationId, WizardStep[]> = {
     CONTACT_STEP,
   ],
 
+  rental_deposit: [
+    {
+      title: "Арендодатель и квартира",
+      fields: [
+        {
+          id: "landlord_name",
+          type: "text",
+          label: "ФИО арендодателя (хозяина)",
+          placeholder: "Петров Пётр Петрович",
+          required: true,
+        },
+        {
+          id: "landlord_address",
+          type: "text",
+          label: "Адрес арендодателя для направления претензии",
+          placeholder: "г. Москва, ул. Ленина, д. 1, кв. 2",
+          hint: "Если не знаете — укажите адрес сданной квартиры",
+        },
+        {
+          id: "apartment_address",
+          type: "text",
+          label: "Адрес арендованной квартиры",
+          placeholder: "г. Москва, ул. Пушкина, д. 10, кв. 5",
+          required: true,
+        },
+        {
+          id: "contract_number",
+          type: "text",
+          label: "Номер договора аренды (если есть)",
+          placeholder: "№ 12/2024",
+        },
+      ],
+    },
+    {
+      title: "Период аренды и залог",
+      fields: [
+        {
+          id: "move_in_date",
+          type: "date",
+          label: "Дата въезда (начало аренды)",
+          required: true,
+        },
+        {
+          id: "move_out_date",
+          type: "date",
+          label: "Дата выезда (конец аренды)",
+          required: true,
+        },
+        {
+          id: "deposit_amount",
+          type: "number",
+          label: "Сумма залога, ₽",
+          placeholder: "50000",
+          required: true,
+        },
+        {
+          id: "deposit_reason",
+          type: "radio",
+          label: "Почему арендодатель не возвращает залог",
+          required: true,
+          options: [
+            { value: "no_reason", label: "Молчит, не объясняет причину" },
+            { value: "damages_fake", label: "Придумал ущерб, которого нет" },
+            { value: "wear_normal", label: "Ссылается на обычный износ квартиры" },
+            { value: "debt_claimed", label: "Говорит о задолженности по ЖКХ или аренде" },
+            { value: "other", label: "Другое" },
+          ],
+        },
+        {
+          id: "problem_desc",
+          type: "textarea",
+          label: "Опишите ситуацию",
+          placeholder: "Что говорит арендодатель, в каком состоянии была сдана квартира при выезде",
+          required: true,
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
+  tour_operator: [
+    {
+      title: "Туроператор и тур",
+      fields: [
+        {
+          id: "tour_operator",
+          type: "text",
+          label: "Название туроператора",
+          placeholder: "TUI, Coral Travel, Pegas Touristik…",
+          required: true,
+        },
+        {
+          id: "agency_name",
+          type: "text",
+          label: "Турагентство (если покупали через посредника)",
+          placeholder: "Агентство «Путешествие мечты»",
+        },
+        {
+          id: "trip_destination",
+          type: "text",
+          label: "Направление / страна",
+          placeholder: "Турция, Анталья",
+          required: true,
+        },
+        {
+          id: "departure_date",
+          type: "date",
+          label: "Дата вылета по договору",
+          required: true,
+        },
+        {
+          id: "contract_number",
+          type: "text",
+          label: "Номер договора (если есть)",
+          placeholder: "ТУР-2025/456",
+        },
+      ],
+    },
+    {
+      title: "Стоимость и ситуация",
+      fields: [
+        {
+          id: "tour_price",
+          type: "number",
+          label: "Стоимость тура, ₽",
+          placeholder: "120000",
+          required: true,
+        },
+        {
+          id: "refunded_amount",
+          type: "number",
+          label: "Уже вернули, ₽ (0 — если ничего)",
+          placeholder: "0",
+          hint: "Введите 0, если деньги ещё не возвращали",
+        },
+        {
+          id: "violation_type",
+          type: "radio",
+          label: "Что произошло",
+          required: true,
+          options: [
+            { value: "operator_cancelled", label: "Туроператор отменил тур" },
+            { value: "changed_conditions", label: "Существенно изменили условия (гостиница, сроки, маршрут)" },
+            { value: "refund_denied", label: "Отказываются возвращать деньги" },
+            { value: "voluntary_refusal", label: "Я сам отказался от тура" },
+            { value: "other", label: "Другое" },
+          ],
+        },
+        {
+          id: "problem_desc",
+          type: "textarea",
+          label: "Опишите ситуацию",
+          placeholder: "Что именно произошло, что говорит туроператор или агентство",
+          required: true,
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
+  online_course: [
+    {
+      title: "Школа и курс",
+      fields: [
+        {
+          id: "school_name",
+          type: "text",
+          label: "Название онлайн-школы",
+          placeholder: "Skillbox, Нетология, GeekBrains, Яндекс Практикум…",
+          required: true,
+        },
+        {
+          id: "course_name",
+          type: "text",
+          label: "Название курса",
+          placeholder: "Веб-дизайн с нуля",
+          required: true,
+        },
+        {
+          id: "contract_date",
+          type: "date",
+          label: "Дата оплаты / заключения договора",
+        },
+        {
+          id: "course_price",
+          type: "number",
+          label: "Стоимость курса, ₽",
+          placeholder: "90000",
+          required: true,
+        },
+      ],
+    },
+    {
+      title: "Что случилось",
+      fields: [
+        {
+          id: "problem_type",
+          type: "radio",
+          label: "Ситуация",
+          required: true,
+          options: [
+            { value: "not_started", label: "Обучение ещё не началось" },
+            { value: "partial", label: "Прошёл часть курса, хочу вернуть за оставшееся" },
+            { value: "quality", label: "Курс не соответствует описанию / плохое качество" },
+            { value: "other", label: "Другое" },
+          ],
+        },
+        {
+          id: "refund_request_date",
+          type: "date",
+          label: "Когда обратились в школу с запросом на возврат",
+          hint: "С этой даты считается неустойка 3%/день при просрочке",
+        },
+        {
+          id: "claimed_amount",
+          type: "number",
+          label: "Сумма к возврату, ₽",
+          placeholder: "60000",
+          hint: "Оставьте пустым, если хотите вернуть полную стоимость курса",
+        },
+        {
+          id: "problem_desc",
+          type: "textarea",
+          label: "Опишите ситуацию",
+          placeholder: "Что произошло, что ответила школа на ваш запрос о возврате",
+          required: true,
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
   airline: [
     {
       title: "Рейс",
