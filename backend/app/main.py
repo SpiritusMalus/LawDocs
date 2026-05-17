@@ -44,6 +44,7 @@ logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 
 
 _cleanup_logger = logging.getLogger("cleanup")
+_law_monitor_logger = logging.getLogger("law_monitor")
 
 
 async def _cleanup_draft_orders() -> None:
@@ -109,6 +110,23 @@ async def _cleanup_draft_orders() -> None:
             _cleanup_logger.exception("draft_cleanup_failed")
 
 
+async def _law_monitor_loop() -> None:
+    """Запускает мониторинг законодательства 1-го числа каждого месяца в 09:00 UTC."""
+    while True:
+        now = datetime.now(UTC)
+        if now.month == 12:
+            next_run = datetime(now.year + 1, 1, 1, 9, 0, tzinfo=UTC)
+        else:
+            next_run = datetime(now.year, now.month + 1, 1, 9, 0, tzinfo=UTC)
+        delay = (next_run - now).total_seconds()
+        await asyncio.sleep(delay)
+        try:
+            from app.services.law_monitor import run_law_monitor
+            await run_law_monitor()
+        except Exception:
+            _law_monitor_logger.exception("law_monitor_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.APP_ENV == "production" and not settings.FERNET_KEY:
@@ -119,8 +137,10 @@ async def lifespan(app: FastAPI):
     configs_dir = Path(__file__).parent / "situations" / "configs"
     registry.load(configs_dir)
     task = asyncio.create_task(_cleanup_draft_orders())
+    law_task = asyncio.create_task(_law_monitor_loop())
     yield
     task.cancel()
+    law_task.cancel()
 
 
 app = FastAPI(

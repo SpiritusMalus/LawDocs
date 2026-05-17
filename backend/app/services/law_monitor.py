@@ -1,0 +1,172 @@
+"""
+Мониторинг изменений законодательства.
+
+Запускается 1-го числа каждого месяца. Получает перечень новых
+федеральных законов с pravo.gov.ru за прошедший месяц, анализирует
+их через GigaChat на предмет влияния на шаблоны LawDocs,
+отправляет email-отчёт администратору.
+"""
+
+import logging
+import re
+from datetime import UTC, datetime, timedelta
+
+import httpx
+
+from app.core.config import settings
+from app.services.email import _send
+
+logger = logging.getLogger(__name__)
+
+ADMIN_EMAIL = "lawdocsru@gmail.com"
+
+_TEMPLATE_CATEGORIES = """
+- Защита прав потребителей: магазин, маркетплейс, онлайн-курс, туроператор, ремонт, телеком, медицина
+- Жилищные отношения: ЖКХ, управляющая компания, аренда жилья, залив квартиры
+- Трудовые отношения: зарплата, увольнение, работодатель
+- Банки и финансы: кредит, блокировка счёта по 115-ФЗ
+- Страхование: ОСАГО, КАСКО, страховые выплаты
+- Транспорт: авиаперевозки, ГИБДД, штрафы
+- Гражданское судопроизводство: судебный приказ, возражение
+"""
+
+
+async def _fetch_recent_laws(from_date: str, to_date: str) -> list[str]:
+    """Забирает заголовки новых ФЗ с pravo.gov.ru за указанный период."""
+    try:
+        async with httpx.AsyncClient(timeout=20, follow_redirects=True) as client:
+            resp = await client.get(
+                "https://pravo.gov.ru/proxy/ips/",
+                params={
+                    "searchserv": "1",
+                    "text": "",
+                    "DBi": "4",       # Федеральные законы
+                    "sortby": "3",    # По дате (новые первые)
+                    "count": "40",
+                    "pfrom": from_date,
+                    "pto": to_date,
+                },
+                headers={"User-Agent": "LawDocs-Monitor/1.0 (lawdocsru@gmail.com)"},
+            )
+        if not resp.is_success:
+            logger.warning("pravo.gov.ru responded %s", resp.status_code)
+            return []
+
+        # Извлекаем заголовки документов из HTML
+        titles = re.findall(
+            r'<a[^>]+href="[^"]*"[^>]*>\s*([^<]{25,300}?)\s*</a>',
+            resp.text,
+        )
+        seen: set[str] = set()
+        result: list[str] = []
+        for t in titles:
+            t = t.strip()
+            if t and t not in seen and len(t) > 20:
+                seen.add(t)
+                result.append(t)
+            if len(result) >= 30:
+                break
+        return result
+    except Exception as exc:
+        logger.warning("pravo.gov.ru fetch failed: %s", exc)
+        return []
+
+
+async def _analyze_with_gigachat(laws: list[str], period: str) -> str:
+    from app.services.llm import _call_gigachat
+
+    laws_block = "\n".join(f"- {law}" for law in laws) if laws else "(список документов недоступен)"
+
+    system_prompt = (
+        "Ты — юрисконсульт, специализирующийся на потребительском, жилищном, "
+        "трудовом и финансовом праве. Ты отслеживаешь изменения российского "
+        "законодательства, которые влияют на юридические документы: претензии, "
+        "заявления, жалобы."
+    )
+
+    user_prompt = f"""Период мониторинга: {period}
+
+Новые документы за период (из pravo.gov.ru):
+{laws_block}
+
+Шаблоны документов LawDocs охватывают:
+{_TEMPLATE_CATEGORIES}
+
+Задача:
+1. Выдели из перечисленных законы/изменения, которые могут затронуть наши шаблоны.
+2. Для каждого релевантного — кратко опиши суть и что именно может потребовать обновления.
+3. Если список документов пуст — укажи принятые изменения из своих знаний, которые вступают в силу в ближайшие 3 месяца.
+
+Структура ответа (строго):
+
+### Требуют обновления шаблонов
+(по одному пункту на каждый релевантный закон, или «нет» если ничего)
+
+### Вступают в силу в ближайшие 3 месяца
+(важные изменения, которые нужно отследить)
+
+### Итог для администратора
+(1–3 предложения: что делать сейчас)
+"""
+
+    return await _call_gigachat(system_prompt, user_prompt)
+
+
+async def run_law_monitor() -> None:
+    now = datetime.now(UTC)
+
+    # Период — прошедший месяц
+    first_of_this_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    last_month_last = first_of_this_month - timedelta(days=1)
+    last_month_first = last_month_last.replace(day=1)
+
+    from_date = last_month_first.strftime("%d.%m.%Y")
+    to_date = last_month_last.strftime("%d.%m.%Y")
+    period = f"{from_date} — {to_date}"
+
+    logger.info("law_monitor_start", extra={"action": "law_monitor_start", "period": period})
+
+    laws = await _fetch_recent_laws(from_date, to_date)
+    analysis = await _analyze_with_gigachat(laws, period)
+
+    if laws:
+        laws_html = "".join(f"<li style='margin-bottom:4px'>{law}</li>" for law in laws)
+        laws_section = f"<ul style='font-size:13px'>{laws_html}</ul>"
+    else:
+        laws_section = "<p style='color:#9ca3af;font-size:13px'>pravo.gov.ru недоступен — используется анализ на основе знаний GigaChat</p>"
+
+    analysis_html = analysis.replace("\n", "<br>").replace("###", "<strong>").replace("</strong>", "</strong>")
+    # Правим заголовки: ### ... → <strong>...</strong>
+    analysis_html = re.sub(r"<strong>([^<\n]+)", r"<br><strong>\1</strong>", analysis_html)
+
+    html = f"""
+    <div style="font-family:sans-serif;max-width:700px">
+      <h2 style="color:#1e293b">Мониторинг законодательства</h2>
+      <p style="color:#64748b">{period}</p>
+
+      <h3 style="color:#374151">Новые документы ({len(laws)} из pravo.gov.ru)</h3>
+      {laws_section}
+
+      <h3 style="color:#374151">Анализ GigaChat</h3>
+      <div style="background:#f8fafc;border-left:3px solid #2563eb;padding:16px;border-radius:4px;font-size:14px;line-height:1.7">
+        {analysis_html}
+      </div>
+
+      <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb">
+      <p style="color:#9ca3af;font-size:12px">
+        Автоматический отчёт LawDocs · {now.strftime("%d.%m.%Y")}<br>
+        Следующий отчёт — 1-го числа следующего месяца.
+      </p>
+    </div>
+    """
+
+    await _send(
+        to=ADMIN_EMAIL,
+        subject=f"LawDocs — мониторинг законодательства за {period}",
+        html=html,
+    )
+
+    logger.info(
+        "law_monitor_done",
+        extra={"action": "law_monitor_done", "period": period, "laws_found": len(laws)},
+    )

@@ -1,0 +1,132 @@
+id: neighbor_flood
+category: housing
+title: "Сосед затопил квартиру"
+blurb: "Из-за соседей квартира пострадала от залива — они отказываются возмещать ущерб."
+examples: "Прорвало трубу у соседей, оставили кран, протечка кровли через верхнего соседа"
+document_type: pretenziya
+template_file: null
+
+system_prompt: |
+  Ты — юрист по жилищному и гражданскому праву. Составь претензию виновнику залива квартиры.
+
+  Структура документа:
+  1. Шапка: «[neighbor_name], [neighbor_address_full]» / «От: [ФИО], [contact_address], [телефон], [email]»
+  2. Заголовок: ПРЕТЕНЗИЯ о возмещении ущерба, причинённого заливом квартиры
+  3. Описание факта залива:
+     — дата происшествия (incident_date в формате «ДД месяца ГГГГ года»)
+     — адрес пострадавшей квартиры (apartment_address)
+     — откуда пришла вода (flood_source): из квартиры виновника / управляющей компании / иное
+     — причина залива (flood_cause)
+  4. Если has_act = "yes": указать, что факт залива зафиксирован актом управляющей компании.
+     Если has_act = "no": указать, что ущерб зафиксирован фотоматериалами и очевиден.
+  5. Описание ущерба (damage_desc): что именно пострадало.
+  6. Правовое обоснование:
+     — ГК РФ ст. 1064: лицо, причинившее вред, обязано возместить его в полном объёме
+     — ГК РФ ст. 1082: возмещение вреда в натуре или убытков
+     — ЖК РФ ст. 30 ч. 4: собственник помещения обязан поддерживать его в надлежащем состоянии
+     — Если flood_source = "management_company": добавить ст. 161 ЖК РФ об ответственности УК за содержание общего имущества
+  7. Сумма ущерба: damage_amount руб. (оценка по рыночным ценам восстановительного ремонта).
+     Если has_estimate = "yes": на основании заключения независимого оценщика.
+  8. Требование: возместить ущерб в размере damage_amount руб. в течение 10 дней.
+  9. При отказе — иск в суд; взыскание суммы ущерба, морального вреда (ГК РФ ст. 151), судебных расходов.
+  10. Дата и подпись
+
+ai_narrative_prompt: |
+  Опиши на юридическом языке: дату и адрес залива, что именно произошло (откуда вода),
+  какой ущерб причинён имуществу. Если был составлен акт — упомяни это.
+  Если виновник уже отказывается возмещать — укажи это как основание для претензии.
+  Используй только данные из формы.
+
+wizard_steps:
+  - title: "Залив — когда и где"
+    fields:
+      - id: apartment_address
+        type: text
+        label: "Адрес пострадавшей квартиры"
+        placeholder: "г. Москва, ул. Ленина, д. 5, кв. 12"
+        required: true
+      - id: incident_date
+        type: date
+        label: "Дата залива"
+        required: true
+      - id: flood_source
+        type: radio
+        label: "Откуда пришла вода"
+        required: true
+        options:
+          - value: upper_neighbor
+            label: "Из квартиры соседа сверху"
+          - value: same_floor
+            label: "Из квартиры на том же этаже"
+          - value: management_company
+            label: "Общедомовые коммуникации (ответственность УК)"
+          - value: roof
+            label: "Протечка кровли"
+      - id: flood_cause
+        type: textarea
+        label: "Причина залива"
+        placeholder: "Лопнул шланг стиральной машины, не закрыли кран, течь кровли…"
+        required: true
+  - title: "Виновная сторона"
+    fields:
+      - id: neighbor_name
+        type: text
+        label: "ФИО виновника (или название УК)"
+        placeholder: "Сидоров Пётр Иванович"
+        required: true
+      - id: neighbor_apartment
+        type: text
+        label: "Квартира виновника"
+        placeholder: "кв. 24 (этажом выше)"
+      - id: neighbor_address_full
+        type: text
+        label: "Адрес для направления претензии"
+        placeholder: "тот же дом, кв. 24 — или другой адрес"
+        hint: "Если виновник живёт в той же квартире — укажите тот же адрес + номер квартиры"
+      - id: has_act
+        type: radio
+        label: "Составлен ли акт о заливе"
+        required: true
+        options:
+          - value: "yes"
+            label: "Да, УК составила акт"
+          - value: "no"
+            label: "Нет, только фотографии"
+      - id: neighbor_reaction
+        type: radio
+        label: "Позиция виновника"
+        options:
+          - value: denies
+            label: "Отрицает вину"
+          - value: ignores
+            label: "Игнорирует"
+          - value: admits_no_pay
+            label: "Признаёт, но платить отказывается"
+          - value: unknown
+            label: "Ещё не обращался(ась)"
+  - title: "Ущерб"
+    fields:
+      - id: damage_desc
+        type: textarea
+        label: "Что пострадало"
+        placeholder: "Залит потолок и стены в кухне, вздулся паркет, испорчена мебель…"
+        required: true
+      - id: damage_amount
+        type: number
+        label: "Оценка ущерба, ₽"
+        placeholder: "150000"
+        required: true
+      - id: has_estimate
+        type: radio
+        label: "Есть независимая оценка ущерба"
+        options:
+          - value: "yes"
+            label: "Да, есть заключение оценщика"
+          - value: "no"
+            label: "Нет, оцениваю самостоятельно"
+
+legal_refs:
+  - law: "ГК РФ ст. 1064 — обязанность возмещения вреда"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  - law: "ЖК РФ ст. 30 — обязанности собственника помещения"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
