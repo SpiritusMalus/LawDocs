@@ -40,7 +40,7 @@ export function HowItWorks() {
                 <div className="text-5xl font-bold text-blue-100 leading-none mb-4 select-none">
                   0{i + 1}
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-2">{title}</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{desc}</p>
               </div>
             </div>

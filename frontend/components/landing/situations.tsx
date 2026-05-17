@@ -26,7 +26,7 @@ export function Situations() {
               href={`/situations/${s.id}`}
               className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-blue-200 transition-all h-full flex flex-col"
             >
-              <h3 className="font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                 {s.title}
               </h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-4">
