@@ -671,8 +671,8 @@ export const WIZARD_STEPS: Record<WizardSituationId, WizardStep[]> = {
           label: "Банк уведомил вас о блокировке письменно?",
           required: true,
           options: [
-            { value: "yes", label: "Да, прислали уведомление" },
-            { value: "no", label: "Нет, не уведомили" },
+            { value: "yes_notified", label: "Да, прислали уведомление" },
+            { value: "not_notified", label: "Нет, не уведомили" },
             { value: "verbal", label: "Только устно или через приложение/чат" },
           ],
         },
