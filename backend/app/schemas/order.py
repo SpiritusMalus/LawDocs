@@ -21,6 +21,14 @@ _ALLOWED_FORM_FIELDS: frozenset[str] = frozenset({
     "apartment_address", "violation_period", "disputed_amount",
     "airline", "flight_number", "route", "flight_date",
     "delay_hours", "ticket_price", "extra_expenses", "received_compensation",
+    # T08: bank_block (115-ФЗ)
+    "account_number", "block_reason", "bank_notification",
+    # T10: court_order (судебный приказ)
+    "court_name", "case_number", "order_date", "receive_date",
+    "objection_reason", "creditor_name", "creditor_type",
+    # T14: gibdd (штраф ГИБДД)
+    "violation_place", "fine_number", "vehicle", "violation_article",
+    "appeal_to", "gibdd_unit",
 })
 
 _MAX_FIELD_VALUE_LEN = 5_000

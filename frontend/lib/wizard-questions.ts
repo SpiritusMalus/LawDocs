@@ -618,6 +618,270 @@ export const WIZARD_STEPS: Record<WizardSituationId, WizardStep[]> = {
     CONTACT_STEP,
   ],
 
+  bank_block: [
+    {
+      title: "Банк и счёт",
+      fields: [
+        {
+          id: "bank_name",
+          type: "text",
+          label: "Название банка",
+          placeholder: "Сбербанк, ВТБ, Тинькофф…",
+          required: true,
+        },
+        {
+          id: "account_number",
+          type: "text",
+          label: "Номер счёта или последние цифры карты",
+          placeholder: "40817810… или **** 1234",
+        },
+        {
+          id: "violation_date",
+          type: "date",
+          label: "Дата блокировки",
+          required: true,
+        },
+        {
+          id: "amount",
+          type: "number",
+          label: "Сумма заблокированных средств, ₽",
+          placeholder: "150000",
+          hint: "Укажите, если знаете точную сумму",
+        },
+      ],
+    },
+    {
+      title: "Позиция банка",
+      fields: [
+        {
+          id: "block_reason",
+          type: "radio",
+          label: "Причина блокировки (по версии банка)",
+          required: true,
+          options: [
+            { value: "suspicious_operations", label: "Подозрительные операции (без конкретики)" },
+            { value: "source_of_funds", label: "Не подтверждено происхождение средств" },
+            { value: "115fz_monitoring", label: "Финансовый мониторинг / 115-ФЗ (общая формулировка)" },
+            { value: "other", label: "Другое / не объяснили" },
+          ],
+        },
+        {
+          id: "bank_notification",
+          type: "radio",
+          label: "Банк уведомил вас о блокировке письменно?",
+          required: true,
+          options: [
+            { value: "yes", label: "Да, прислали уведомление" },
+            { value: "no", label: "Нет, не уведомили" },
+            { value: "verbal", label: "Только устно или через приложение/чат" },
+          ],
+        },
+        {
+          id: "problem_desc",
+          type: "textarea",
+          label: "Опишите ситуацию подробнее",
+          placeholder: "Что именно произошло, какие операции вызвали вопросы, что говорит банк",
+          required: true,
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
+  court_order: [
+    {
+      title: "Суд и приказ",
+      fields: [
+        {
+          id: "court_name",
+          type: "text",
+          label: "Мировой суд (название или номер участка)",
+          placeholder: "Судебный участок №5 Пресненского района г. Москвы",
+          required: true,
+        },
+        {
+          id: "case_number",
+          type: "text",
+          label: "Номер дела / судебного приказа",
+          placeholder: "2-1234/2025",
+          required: true,
+        },
+        {
+          id: "order_date",
+          type: "date",
+          label: "Дата вынесения приказа",
+          hint: "Указана в тексте приказа",
+        },
+        {
+          id: "receive_date",
+          type: "date",
+          label: "Дата получения приказа вами",
+          required: true,
+          hint: "Срок возражения — 10 дней с этой даты. Действуйте быстро!",
+        },
+      ],
+    },
+    {
+      title: "Взыскатель и сумма",
+      fields: [
+        {
+          id: "creditor_name",
+          type: "text",
+          label: "Кто взыскивает (взыскатель)",
+          placeholder: "ПАО Сбербанк, ООО «МФК Займ Плюс»",
+          required: true,
+        },
+        {
+          id: "creditor_type",
+          type: "radio",
+          label: "Тип взыскателя",
+          required: true,
+          options: [
+            { value: "bank", label: "Банк" },
+            { value: "mfo", label: "МФО / коллектор" },
+            { value: "housing", label: "ЖКХ / управляющая компания" },
+            { value: "tax", label: "ФНС / налоговая" },
+            { value: "other", label: "Другое" },
+          ],
+        },
+        {
+          id: "debt_amount",
+          type: "number",
+          label: "Сумма по приказу, ₽",
+          placeholder: "85000",
+          required: true,
+        },
+      ],
+    },
+    {
+      title: "Ваши возражения",
+      fields: [
+        {
+          id: "objection_reason",
+          type: "radio",
+          label: "Основание возражения",
+          required: true,
+          options: [
+            { value: "dispute_debt", label: "Оспариваем сам долг (ничего не должны)" },
+            { value: "dispute_amount", label: "Оспариваем сумму (завышена, ошибка в расчёте)" },
+            { value: "already_paid", label: "Долг уже оплачен (полностью или частично)" },
+            { value: "procedural", label: "Нарушения при выдаче приказа / истёк срок давности" },
+            { value: "other", label: "Другое" },
+          ],
+        },
+        {
+          id: "additional_desc",
+          type: "textarea",
+          label: "Дополнительные обстоятельства",
+          placeholder: "Что важно знать суду: внесённые платежи, срок давности, ошибки в расчёте",
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
+  gibdd: [
+    {
+      title: "Постановление",
+      fields: [
+        {
+          id: "fine_number",
+          type: "text",
+          label: "Номер постановления",
+          placeholder: "18810177240512345678",
+          hint: "Указан на квитанции или в письме",
+        },
+        {
+          id: "violation_date",
+          type: "date",
+          label: "Дата нарушения по постановлению",
+          required: true,
+        },
+        {
+          id: "violation_place",
+          type: "text",
+          label: "Место нарушения",
+          placeholder: "г. Москва, ул. Тверская, 1",
+          required: true,
+        },
+        {
+          id: "vehicle",
+          type: "text",
+          label: "Транспортное средство / гос. номер",
+          placeholder: "Toyota Camry, А123БВ 777",
+          required: true,
+        },
+        {
+          id: "violation_article",
+          type: "text",
+          label: "Статья КоАП (если указана в постановлении)",
+          placeholder: "ч. 2 ст. 12.9 КоАП РФ",
+        },
+        {
+          id: "amount",
+          type: "number",
+          label: "Сумма штрафа, ₽",
+          placeholder: "3000",
+          required: true,
+        },
+      ],
+    },
+    {
+      title: "Почему не согласны",
+      fields: [
+        {
+          id: "objection_reason",
+          type: "radio",
+          label: "Основание жалобы",
+          required: true,
+          options: [
+            { value: "not_driving", label: "За рулём был другой человек" },
+            { value: "no_violation", label: "Нарушения не было" },
+            { value: "camera_error", label: "Ошибка камеры или радара" },
+            { value: "procedural", label: "Нарушен порядок оформления / истёк срок давности" },
+            { value: "other", label: "Другое основание" },
+          ],
+        },
+        {
+          id: "problem_desc",
+          type: "textarea",
+          label: "Опишите ситуацию",
+          placeholder: "Что произошло, почему считаете постановление незаконным",
+          required: true,
+        },
+        {
+          id: "additional_desc",
+          type: "textarea",
+          label: "Доказательства и обстоятельства",
+          placeholder: "Свидетели, видеозапись, другие доказательства",
+        },
+      ],
+    },
+    {
+      title: "Куда подаём жалобу",
+      fields: [
+        {
+          id: "appeal_to",
+          type: "radio",
+          label: "Куда направить жалобу",
+          required: true,
+          options: [
+            { value: "gibdd_chief", label: "Начальнику ГИБДД (вышестоящему должностному лицу)" },
+            { value: "court", label: "В суд (районный или мировой)" },
+          ],
+        },
+        {
+          id: "gibdd_unit",
+          type: "text",
+          label: "Подразделение ГИБДД (для жалобы начальнику)",
+          placeholder: "ГИБДД УМВД России по г. Москве",
+          hint: "Заполните, если жалоба идёт начальнику ГИБДД",
+        },
+      ],
+    },
+    CONTACT_STEP,
+  ],
+
   airline: [
     {
       title: "Рейс",
