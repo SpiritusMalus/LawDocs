@@ -29,6 +29,8 @@ class Order(Base):
     # Данные из wizard-формы (вопросы + ответы пользователя) — хранятся в зашифрованном виде (152-ФЗ)
     form_data: Mapped[dict] = mapped_column(EncryptedJSON, nullable=False, default=dict)
 
+    auto_retry_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

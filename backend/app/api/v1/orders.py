@@ -9,13 +9,14 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
-from app.core.database import AsyncSessionLocal, get_db
+from app.core.database import get_db
 from app.core.limiter import limiter
 from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import OrderInitOut, OrderInitRequest, OrderListItem, OrderOut, PaymentOut
 from app.services.email import send_magic_link
+from app.services.generation import run_document_generation
 from app.services.payment import create_payment
 
 logger = logging.getLogger(__name__)
@@ -152,72 +153,6 @@ async def pay_order(
     return PaymentOut(order_id=order.id, payment_url=payment_data["confirmation_url"])
 
 
-async def _run_document_generation(order_id: str, situation_id: str, form_data: dict, user_email: str) -> None:
-    from app.models.document import Document
-    from app.services.docgen import generate_document, generate_instruction
-    from app.services.email import send_document_failed, send_document_ready
-    from app.services.llm import fill_instruction, fill_template
-    from app.services.storage import download_bytes
-
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Order).where(Order.id == order_id))
-        order = result.scalar_one_or_none()
-        if not order:
-            return
-        try:
-            filled_content = await fill_template(situation_id=situation_id, form_data=form_data)
-            docx_key, pdf_key = await generate_document(
-                order_id=order_id,
-                situation_id=situation_id,
-                content=filled_content,
-                form_data=form_data,
-            )
-            instruction_pdf_key = None
-            try:
-                from app.situations.registry import registry as _registry
-                _config = _registry.get(situation_id)
-                _legal_refs = [ref.model_dump() for ref in (_config.legal_refs if _config else [])]
-                instruction_content = await fill_instruction(situation_id=situation_id, form_data=form_data)
-                instruction_pdf_key = await generate_instruction(
-                    order_id=order_id,
-                    situation_id=situation_id,
-                    content=instruction_content,
-                    legal_refs=_legal_refs,
-                )
-            except Exception:
-                logger.exception("Instruction generation failed for retry order %s", order_id)
-
-            doc = Document(
-                order_id=order_id,
-                docx_key=docx_key,
-                pdf_key=pdf_key,
-                instruction_pdf_key=instruction_pdf_key,
-            )
-            db.add(doc)
-            order.status = "done"
-            order.payment_url = None
-            await db.commit()
-
-            pdf_bytes = await download_bytes(pdf_key)
-            instruction_bytes = await download_bytes(instruction_pdf_key) if instruction_pdf_key else None
-            await send_document_ready(
-                email=user_email,
-                order_id=order_id,
-                pdf_bytes=pdf_bytes,
-                pdf_filename=pdf_key.split("/")[-1],
-                instruction_bytes=instruction_bytes,
-                instruction_filename=instruction_pdf_key.split("/")[-1] if instruction_pdf_key else "instrukciya.pdf",
-            )
-        except Exception:
-            logger.exception("Retry generation failed for order %s", order_id)
-            order.status = "failed"
-            await db.commit()
-            try:
-                await send_document_failed(email=user_email, order_id=order_id)
-            except Exception:
-                logger.exception("Failed to send failure notification for retry order %s", order_id)
-
-
 @router.post("/{order_id}/retry")
 async def retry_order(
     order_id: str,
@@ -241,8 +176,8 @@ async def retry_order(
     logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id, "user_id": str(current_user.id)})
 
     background_tasks.add_task(
-        _run_document_generation,
-        order_id=order.id,
+        run_document_generation,
+        order_id=str(order.id),
         situation_id=order.situation_id,
         form_data=order.form_data,
         user_email=str(order.user.email),

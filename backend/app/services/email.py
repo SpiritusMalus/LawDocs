@@ -109,12 +109,14 @@ async def send_document_ready(
 
 
 async def send_document_failed(email: str, order_id: str) -> None:
+    url = f"{settings.FRONTEND_URL}/orders/{order_id}"
     html = f"""
     <p>К сожалению, при подготовке документа произошла ошибка.</p>
-    <p>Мы уже получили уведомление и разбираемся. Напишите нам — вернём деньги или сформируем документ вручную.</p>
+    <p>Мы уже пробуем создать его повторно — обычно это занимает несколько минут.</p>
+    <p>Если документ не появится в течение часа, нажмите «Попробовать ещё раз» в личном кабинете:</p>
     <p>
-      <a href="mailto:hi@lawdocs.ru" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
-          Написать в поддержку
+      <a href="{url}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+          Перейти к заказу
       </a>
     </p>
     <p style="color:#9ca3af;font-size:12px">Номер заказа: {order_id[:8].upper()}</p>

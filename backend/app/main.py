@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import delete, func, not_, select, update
+from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
@@ -45,6 +46,10 @@ logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 
 _cleanup_logger = logging.getLogger("cleanup")
 _law_monitor_logger = logging.getLogger("law_monitor")
+_auto_retry_logger = logging.getLogger("auto_retry")
+
+_MAX_AUTO_RETRIES = 5
+_AUTO_RETRY_INTERVAL = 15 * 60  # 15 минут
 
 
 async def _cleanup_draft_orders() -> None:
@@ -110,6 +115,57 @@ async def _cleanup_draft_orders() -> None:
             _cleanup_logger.exception("draft_cleanup_failed")
 
 
+async def _auto_retry_loop() -> None:
+    """Каждые 15 минут ищет failed-заказы с оплатой и повторяет генерацию (до 5 попыток)."""
+    while True:
+        await asyncio.sleep(_AUTO_RETRY_INTERVAL)
+        try:
+            from app.services.generation import run_document_generation
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(Order)
+                    .where(
+                        Order.status == "failed",
+                        Order.paid_at.is_not(None),
+                        Order.auto_retry_count < _MAX_AUTO_RETRIES,
+                    )
+                    .options(selectinload(Order.user))
+                    .with_for_update(skip_locked=True)
+                )
+                orders_to_retry = result.scalars().all()
+                for order in orders_to_retry:
+                    order.auto_retry_count += 1
+                    order.status = "generating"
+                retry_tasks = [
+                    (
+                        str(o.id),
+                        o.situation_id,
+                        o.form_data,
+                        str(o.user.email),
+                        o.auto_retry_count >= _MAX_AUTO_RETRIES,
+                    )
+                    for o in orders_to_retry
+                ]
+                await db.commit()
+
+            for order_id, situation_id, form_data, user_email, is_last in retry_tasks:
+                _auto_retry_logger.info(
+                    "auto_retry_triggered",
+                    extra={"action": "auto_retry_triggered", "order_id": order_id},
+                )
+                asyncio.create_task(
+                    run_document_generation(
+                        order_id=order_id,
+                        situation_id=situation_id,
+                        form_data=form_data,
+                        user_email=user_email,
+                        notify_on_failure=is_last,
+                    )
+                )
+        except Exception:
+            _auto_retry_logger.exception("auto_retry_loop_failed")
+
+
 async def _law_monitor_loop() -> None:
     """Запускает мониторинг законодательства 1-го числа каждого месяца в 09:00 UTC."""
     while True:
@@ -138,9 +194,11 @@ async def lifespan(app: FastAPI):
     registry.load(configs_dir)
     task = asyncio.create_task(_cleanup_draft_orders())
     law_task = asyncio.create_task(_law_monitor_loop())
+    retry_task = asyncio.create_task(_auto_retry_loop())
     yield
     task.cancel()
     law_task.cancel()
+    retry_task.cancel()
 
 
 app = FastAPI(
