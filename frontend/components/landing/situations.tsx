@@ -37,7 +37,7 @@ export function Situations() {
               </p>
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600">
                 Оформить документ
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
               </span>
             </Link>
             </ScrollReveal>

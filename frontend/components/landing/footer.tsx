@@ -13,7 +13,7 @@ export function Footer() {
               href="/"
               className="inline-flex items-center gap-2 font-semibold text-gray-900 mb-3"
             >
-              <Scale className="h-5 w-5 text-blue-600" />
+              <Scale className="h-5 w-5 text-blue-600" aria-hidden="true" />
               <span>LawDocs</span>
             </Link>
             <p className="text-xs text-gray-400 leading-relaxed">

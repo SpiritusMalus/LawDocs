@@ -22,7 +22,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
           className="flex items-center gap-2 font-semibold text-lg"
           onClick={() => setOpen(false)}
         >
-          <Scale className="h-5 w-5 text-blue-600" />
+          <Scale className="h-5 w-5 text-blue-600" aria-hidden="true" />
           <span>LawDocs</span>
         </Link>
 
@@ -46,7 +46,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 "h-9 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
               )}
             >
-              <LayoutDashboard className="h-4 w-4" />
+              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
               Мои заказы
             </Link>
           ) : (
@@ -72,7 +72,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             onClick={() => setOpen((v) => !v)}
             className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
           >
-            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {open ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </button>
         </div>
       </div>
@@ -103,7 +103,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 onClick={() => setOpen(false)}
                 className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
               >
-                <LayoutDashboard className="h-4 w-4" />
+                <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                 Мои заказы
               </Link>
             ) : (
