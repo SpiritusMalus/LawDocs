@@ -34,6 +34,9 @@ async def run_document_generation(
         if not order:
             return
         try:
+            from app.services.calculators import SITUATION_CALCULATORS
+            if situation_id in SITUATION_CALCULATORS:
+                form_data = SITUATION_CALCULATORS[situation_id](form_data)
             filled_content = await fill_template(situation_id=situation_id, form_data=form_data)
             docx_key, pdf_key = await generate_document(
                 order_id=order_id,
