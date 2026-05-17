@@ -28,12 +28,12 @@ export function Footer() {
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
               Ситуации
             </div>
-            <ul className="space-y-2">
+            <ul className="space-y-0.5">
               {SITUATIONS.map((s) => (
                 <li key={s.id}>
                   <Link
                     href={`/situations/${s.id}`}
-                    className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                    className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                   >
                     {s.title}
                   </Link>
@@ -47,11 +47,11 @@ export function Footer() {
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
               Документы
             </div>
-            <ul className="space-y-2">
+            <ul className="space-y-0.5">
               <li>
                 <Link
                   href="/about"
-                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
                   О сервисе
                 </Link>
@@ -59,7 +59,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/legal/offer"
-                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
                   Договор-оферта
                 </Link>
@@ -67,7 +67,7 @@ export function Footer() {
               <li>
                 <Link
                   href="/legal/privacy"
-                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
                   Политика конфиденциальности
                 </Link>
@@ -75,7 +75,7 @@ export function Footer() {
               <li>
                 <a
                   href="mailto:lawdocsru@gmail.com"
-                  className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
+                  className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
                 >
                   lawdocsru@gmail.com
                 </a>

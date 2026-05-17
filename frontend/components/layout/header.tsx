@@ -92,7 +92,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
               >
                 {link.label}
               </Link>
@@ -101,7 +101,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+                className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Мои заказы
@@ -111,14 +111,14 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+                  className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
                 >
                   Войти
                 </Link>
                 <Link
                   href="/situations"
                   onClick={() => setOpen(false)}
-                  className={cn(buttonVariants({}), "h-10 mt-2")}
+                  className={cn(buttonVariants({}), "h-11 mt-2")}
                 >
                   Получить за 199 ₽
                 </Link>
