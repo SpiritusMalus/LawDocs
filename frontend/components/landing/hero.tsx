@@ -1,75 +1,140 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { FileText, ArrowRight, ShieldCheck } from "lucide-react";
+import { FileText, ArrowRight, ShieldCheck, CheckCircle } from "lucide-react";
 
 export function Hero() {
   return (
     <section className="relative overflow-hidden bg-white">
       <div
-        className="absolute inset-0 opacity-[0.04]"
+        className="absolute inset-0 opacity-[0.03]"
         style={{
           backgroundImage: "radial-gradient(circle, #1d4ed8 1.5px, transparent 1.5px)",
           backgroundSize: "28px 28px",
         }}
       />
-      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-primary/8 rounded-full blur-3xl" />
 
-      <div className="relative max-w-(--l-content) mx-auto px-4 py-24 md:py-28 text-center">
-        <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-primary/8 border border-primary/20 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-8 tracking-wide uppercase">
-          <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-          Шаблоны проверены практикующим юристом
-        </div>
+      <div className="relative max-w-(--l-content) mx-auto px-4 py-16 md:py-20">
+        <div className="flex flex-col lg:flex-row items-center gap-12 lg:gap-16">
 
-        <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-6 leading-[1.1]">
-          Готовый юридический документ{" "}
-          <span className="text-primary">за 5 минут</span>
-          <br />— 199&nbsp;₽
-        </h1>
+          {/* Left column — copy */}
+          <div className="flex-1 text-center lg:text-left">
+            <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-primary/8 border border-primary/20 text-primary text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
+              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              Шаблоны проверены практикующим юристом
+            </div>
 
-        <p className="animate-hero animate-hero-3 text-lg md:text-xl text-gray-500 mb-10 max-w-2xl mx-auto leading-relaxed">
-          Опишите проблему — получите претензию или жалобу,
-          оформленную по всем правилам. С формулой расчёта неустойки,
-          ссылками на статьи закона и инструкцией «куда нести».
-        </p>
+            <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-gray-900 mb-5 leading-[1.1]">
+              Готовый юридический документ{" "}
+              <span className="text-primary">за 5 минут</span>
+              <br />— 199&nbsp;₽
+            </h1>
 
-        <div className="animate-hero animate-hero-4 flex flex-col sm:flex-row gap-3 justify-center mb-5">
-          <Link
-            href="/situations"
-            className={buttonVariants({ size: "lg" }) + " h-12 px-6 text-base"}
-          >
-            <FileText className="h-5 w-5 mr-2" aria-hidden="true" />
-            Получить документ
-            <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
-          </Link>
-          <Link
-            href="#how-it-works"
-            className={buttonVariants({ size: "lg", variant: "outline" }) + " h-12 px-6 text-base"}
-          >
-            Как это работает
-          </Link>
-        </div>
+            <p className="animate-hero animate-hero-3 text-lg text-gray-500 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
+              Опишите проблему — получите претензию или жалобу,
+              оформленную по всем правилам. С формулой расчёта неустойки,
+              ссылками на статьи закона и инструкцией «куда нести».
+            </p>
 
-        <p className="text-xs text-gray-400 mb-10">
-          Если документ не подойдёт — вернём деньги без вопросов
-        </p>
+            <div className="animate-hero animate-hero-4 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-4">
+              <Link
+                href="/situations"
+                className={buttonVariants({ size: "lg" }) + " h-12 px-6 text-base"}
+              >
+                <FileText className="h-5 w-5 mr-2" aria-hidden="true" />
+                Получить документ
+                <ArrowRight className="h-4 w-4 ml-2" aria-hidden="true" />
+              </Link>
+              <Link
+                href="#how-it-works"
+                className={buttonVariants({ size: "lg", variant: "outline" }) + " h-12 px-6 text-base"}
+              >
+                Как это работает
+              </Link>
+            </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 text-sm text-gray-500 mb-10">
-          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Word + PDF</span>
-          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Инструкция куда отправить</span>
-          <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Шаблоны проверены юристом</span>
-        </div>
+            <p className="text-xs text-gray-400 mb-7">
+              Если документ не подойдёт — вернём деньги без вопросов
+            </p>
 
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-xs text-gray-400">Оплата через ЮKassa — безопасно и быстро</p>
-          <div className="flex items-center gap-3">
-            <PaymentBadge label="Visa" />
-            <PaymentBadge label="Мир" />
-            <PaymentBadge label="Mastercard" />
-            <PaymentBadge label="СБП" accent />
+            <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-sm text-gray-500 mb-7">
+              <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Word + PDF</span>
+              <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Инструкция куда отправить</span>
+              <span className="flex items-center gap-1.5"><span className="text-primary" aria-hidden="true">✓</span> Шаблоны проверены юристом</span>
+            </div>
+
+            <div className="flex flex-col items-center lg:items-start gap-2">
+              <p className="text-xs text-gray-400">Оплата через ЮKassa — безопасно и быстро</p>
+              <div className="flex items-center gap-3">
+                <PaymentBadge label="Visa" />
+                <PaymentBadge label="Мир" />
+                <PaymentBadge label="Mastercard" />
+                <PaymentBadge label="СБП" accent />
+              </div>
+            </div>
           </div>
+
+          {/* Right column — document mockup */}
+          <div className="hidden lg:block flex-shrink-0 w-[360px]">
+            <DocumentMockup />
+          </div>
+
         </div>
       </div>
     </section>
+  );
+}
+
+function DocumentMockup() {
+  return (
+    <div className="relative">
+      <div className="absolute -inset-4 bg-primary/5 rounded-3xl blur-xl" />
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+        {/* Document header bar */}
+        <div className="bg-gray-900 px-5 py-3 flex items-center gap-2">
+          <div className="w-3 h-3 rounded-full bg-red-400/60" />
+          <div className="w-3 h-3 rounded-full bg-yellow-400/60" />
+          <div className="w-3 h-3 rounded-full bg-green-400/60" />
+          <span className="ml-2 text-xs text-gray-400">претензия.docx</span>
+        </div>
+        {/* Document body */}
+        <div className="p-6 font-mono text-xs leading-relaxed text-gray-700 space-y-3">
+          <div className="text-right text-gray-500 text-[11px]">
+            <div>Генеральному директору</div>
+            <div>ООО «Wildberries»</div>
+            <div className="mt-1">от Иванова Ивана Ивановича</div>
+            <div>г. Москва</div>
+          </div>
+          <div className="text-center font-bold text-gray-900 text-sm py-2 tracking-wide">
+            ПРЕТЕНЗИЯ
+          </div>
+          <div className="text-[11px] text-gray-600 leading-relaxed">
+            15 апреля 2024 года я приобрёл товар артикул №<span className="text-primary">48291</span> стоимостью <span className="text-primary font-semibold">3 490 ₽</span>...
+          </div>
+          <div className="text-[11px] text-gray-600 leading-relaxed">
+            В соответствии со ст. 18 Закона РФ «О защите прав потребителей» от 07.02.1992 №<span className="text-primary">2300-1</span>...
+          </div>
+          <div className="border-t border-gray-100 pt-3 space-y-2">
+            <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+              Неустойка: <span className="font-semibold">1% за каждый день просрочки</span>
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+              Куда подать: Роспотребнадзор, суд
+            </div>
+          </div>
+          <div className="pt-2 text-[11px] text-gray-400 flex items-center justify-between">
+            <span>Подпись: _______________</span>
+            <span>Дата: __.__.2024</span>
+          </div>
+        </div>
+      </div>
+      {/* Floating badge */}
+      <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+        Готов за 5 мин
+      </div>
+    </div>
   );
 }
 

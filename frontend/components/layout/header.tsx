@@ -15,23 +15,23 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="border-b bg-white sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+    <header className="bg-gray-900 sticky top-0 z-50 backdrop-blur supports-[backdrop-filter]:bg-gray-900/95">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link
           href="/"
-          className="flex items-center gap-2 font-semibold text-lg"
+          className="flex items-center gap-2 font-semibold text-lg text-white"
           onClick={() => setOpen(false)}
         >
-          <Scale className="h-5 w-5 text-blue-600" aria-hidden="true" />
+          <Scale className="h-5 w-5 text-blue-400" aria-hidden="true" />
           <span>LawDocs</span>
         </Link>
 
-        <nav className="hidden md:flex items-center gap-6 text-sm text-muted-foreground">
+        <nav className="hidden md:flex items-center gap-6 text-sm text-gray-400">
           {NAV_LINKS.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="hover:text-foreground transition-colors py-2 px-1"
+              className="hover:text-white transition-colors py-2 px-1"
             >
               {link.label}
             </Link>
@@ -43,7 +43,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             <Link
               href="/dashboard"
               className={cn(
-                "h-9 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+                "h-9 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-sm font-medium text-gray-300 transition-colors"
               )}
             >
               <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
@@ -53,7 +53,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             <>
               <Link
                 href="/login"
-                className="hidden md:inline-flex h-9 px-4 items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+                className="hidden md:inline-flex h-9 px-4 items-center text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
                 Войти
               </Link>
@@ -70,7 +70,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             aria-label={open ? "Закрыть меню" : "Открыть меню"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            className="md:hidden inline-flex items-center justify-center h-9 w-9 rounded-lg text-gray-400 hover:bg-gray-800 transition-colors"
           >
             {open ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
           </button>
@@ -79,20 +79,20 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
 
       {open && (
         <div
-          className="md:hidden fixed inset-0 bg-black/20 z-40"
+          className="md:hidden fixed inset-0 bg-black/40 z-40"
           aria-hidden="true"
           onClick={() => setOpen(false)}
         />
       )}
       {open && (
-        <div className="md:hidden border-t border-gray-100 bg-white relative z-50">
+        <div className="md:hidden border-t border-gray-800 bg-gray-900 relative z-50">
           <nav className="max-w-6xl mx-auto px-4 py-4 flex flex-col gap-1">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 onClick={() => setOpen(false)}
-                className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors"
+                className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
               >
                 {link.label}
               </Link>
@@ -101,7 +101,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+                className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
               >
                 <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
                 Мои заказы
@@ -111,7 +111,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors mt-1"
+                  className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
                 >
                   Войти
                 </Link>

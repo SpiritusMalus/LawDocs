@@ -37,7 +37,7 @@ export function HowItWorks() {
             <ScrollReveal key={title} delay={i * 80}>
             <div className="relative">
               <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 h-full">
-                <div className="text-5xl font-bold text-blue-100 leading-none mb-4 select-none">
+                <div className="text-5xl font-bold text-primary/20 leading-none mb-4 select-none">
                   0{i + 1}
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>

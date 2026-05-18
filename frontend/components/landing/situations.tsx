@@ -1,7 +1,37 @@
 import Link from "next/link";
-import { SITUATIONS } from "@/lib/situations";
-import { ArrowRight } from "lucide-react";
+import { SITUATIONS, SituationId } from "@/lib/situations";
+import { ArrowRight, ShoppingBag, Store, Landmark, Briefcase, Car, Building2, Plane, Lock, Gavel, AlertOctagon, Home, MapPin, GraduationCap, Droplets, Hammer, Wifi, HeartPulse, CalendarClock, HardHat, FileX, Wrench, PhoneOff, Dumbbell, HelpCircle } from "lucide-react";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { type LucideIcon } from "lucide-react";
+
+const SITUATION_ICONS: Record<SituationId, LucideIcon> = {
+  shop: ShoppingBag,
+  marketplace: Store,
+  bank: Landmark,
+  employer: Briefcase,
+  insurance: Car,
+  utility: Building2,
+  airline: Plane,
+  bank_block: Lock,
+  court_order: Gavel,
+  gibdd: AlertOctagon,
+  rental_deposit: Home,
+  tour_operator: MapPin,
+  online_course: GraduationCap,
+  neighbor_flood: Droplets,
+  repair: Hammer,
+  telecom: Wifi,
+  medical: HeartPulse,
+  ddu_delay: CalendarClock,
+  ddu_defects: HardHat,
+  ddu_termination: FileX,
+  dtp_osago: Car,
+  auto_repair: Wrench,
+  debt_collector: PhoneOff,
+  carsharing: Car,
+  gym_refund: Dumbbell,
+  other: HelpCircle,
+};
 
 export function Situations() {
   return (
@@ -20,28 +50,36 @@ export function Situations() {
         </ScrollReveal>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {SITUATIONS.map((s, i) => (
-            <ScrollReveal key={s.id} delay={i * 60} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
-            <Link
-              href={`/situations/${s.id}`}
-              className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all h-full flex flex-col"
-            >
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-primary transition-colors">
-                {s.title}
-              </h3>
-              <p className="text-sm text-gray-500 leading-relaxed mb-4">
-                {s.blurb}
-              </p>
-              <p className="text-xs text-gray-500 mb-4">
-                {s.examples}
-              </p>
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
-                Оформить документ
-                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-              </span>
-            </Link>
-            </ScrollReveal>
-          ))}
+          {SITUATIONS.map((s, i) => {
+            const Icon = SITUATION_ICONS[s.id] ?? HelpCircle;
+            return (
+              <ScrollReveal key={s.id} delay={i * 60} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
+                <Link
+                  href={`/situations/${s.id}`}
+                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all h-full flex flex-col"
+                >
+                  <div className="flex items-start gap-4 mb-3">
+                    <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/12 transition-colors">
+                      <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                    </div>
+                    <h3 className="text-base font-semibold text-gray-900 group-hover:text-primary transition-colors leading-snug pt-1">
+                      {s.title}
+                    </h3>
+                  </div>
+                  <p className="text-sm text-gray-500 leading-relaxed mb-3">
+                    {s.blurb}
+                  </p>
+                  <p className="text-xs text-gray-400 mb-4">
+                    {s.examples}
+                  </p>
+                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                    Оформить документ
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                  </span>
+                </Link>
+              </ScrollReveal>
+            );
+          })}
         </div>
       </div>
     </section>
