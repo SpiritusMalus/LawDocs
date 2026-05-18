@@ -21,7 +21,7 @@ export function Situations() {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {SITUATIONS.map((s, i) => (
-            <ScrollReveal key={s.id} delay={i * 60} className={i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? "lg:col-span-2" : ""}>
+            <ScrollReveal key={s.id} delay={i * 60} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
             <Link
               href={`/situations/${s.id}`}
               className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all h-full flex flex-col"
@@ -32,7 +32,7 @@ export function Situations() {
               <p className="text-sm text-gray-500 leading-relaxed mb-4">
                 {s.blurb}
               </p>
-              <p className="text-xs text-gray-400 mb-4">
+              <p className="text-xs text-gray-500 mb-4">
                 {s.examples}
               </p>
               <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">

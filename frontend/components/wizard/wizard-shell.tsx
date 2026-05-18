@@ -236,9 +236,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
               )}
             </Button>
             <p className="text-xs text-gray-400">
-              {hasBackend
-                ? "После оплаты документ придёт на email в течение рабочего дня"
-                : "Свяжемся в течение 2 часов и выставим счёт на 500 ₽"}
+              После оплаты 199 ₽ документ придёт на email в течение нескольких минут
             </p>
           </div>
         ) : (
@@ -303,7 +301,25 @@ function FieldRenderer({
         />
       )}
 
-      {(field.type === "text" || field.type === "number" || field.type === "date") && (
+      {field.type === "date" && (
+        <Input
+          id={field.id}
+          type="text"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => {
+            const digits = e.target.value.replace(/\D/g, "").slice(0, 8);
+            let formatted = digits;
+            if (digits.length > 2) formatted = digits.slice(0, 2) + "." + digits.slice(2);
+            if (digits.length > 4) formatted = digits.slice(0, 2) + "." + digits.slice(2, 4) + "." + digits.slice(4);
+            onChange(formatted);
+          }}
+          placeholder="дд.мм.гггг"
+          maxLength={10}
+        />
+      )}
+
+      {(field.type === "text" || field.type === "number") && (
         <Input
           id={field.id}
           type={field.type === "number" ? "text" : field.type}

@@ -79,9 +79,14 @@ export default async function WizardPage({
       <section className="bg-gray-50 min-h-[calc(100vh-8rem)] py-10 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="mb-8">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {page?.h1 ?? "Оформить документ"}
-            </h1>
+            <div className="flex items-start justify-between gap-4 mb-2">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {page?.h1 ?? "Оформить документ"}
+              </h1>
+              <span className="shrink-0 inline-flex items-center px-3 py-1 rounded-full bg-primary/8 border border-primary/20 text-primary text-sm font-semibold">
+                199&nbsp;₽
+              </span>
+            </div>
             <p className="text-gray-500 text-sm">
               Ответьте на вопросы — составим документ со ссылками на закон и инструкцией куда
               отправить.

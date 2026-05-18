@@ -5,6 +5,7 @@ import { WhyNotChatGPT } from "@/components/landing/why-not-chatgpt";
 import { Pricing } from "@/components/landing/pricing";
 import { Faq } from "@/components/landing/faq";
 import { FaqJsonLd } from "@/components/landing/faq-jsonld";
+import { MobileStickyCTA } from "@/components/landing/mobile-sticky-cta";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
 
@@ -44,6 +45,7 @@ export default function HomePage() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <FaqJsonLd />
+      <MobileStickyCTA />
       <Hero />
       <Situations />
       <HowItWorks />
