@@ -39,10 +39,10 @@ export function Situations() {
       <div className="max-w-(--l-content) mx-auto">
         <ScrollReveal>
           <div className="mb-(--l-section-heading)">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            <h2 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
               С какими ситуациями работаем
             </h2>
-            <p className="text-gray-500 max-w-xl">
+            <p className="text-gray-500 max-w-xl text-lg">
               Типовые случаи, которые покрывают большинство обращений.
               Не нашли свою — напишите на lawdocsru@gmail.com.
             </p>
@@ -56,23 +56,23 @@ export function Situations() {
               <ScrollReveal key={s.id} delay={i * 60} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
                 <Link
                   href={`/situations/${s.id}`}
-                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all h-full flex flex-col"
+                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:bg-gray-900 hover:border-gray-900 transition-all duration-200 h-full flex flex-col"
                 >
                   <div className="flex items-start gap-4 mb-3">
-                    <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/12 transition-colors">
-                      <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
+                    <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                      <Icon className="h-5 w-5 text-primary group-hover:text-blue-400 transition-colors" aria-hidden="true" />
                     </div>
-                    <h3 className="text-base font-semibold text-gray-900 group-hover:text-primary transition-colors leading-snug pt-1">
+                    <h3 className="text-base font-semibold text-gray-900 group-hover:text-white transition-colors leading-snug pt-1">
                       {s.title}
                     </h3>
                   </div>
-                  <p className="text-sm text-gray-500 leading-relaxed mb-3">
+                  <p className="text-sm text-gray-500 group-hover:text-gray-300 leading-relaxed mb-3 transition-colors">
                     {s.blurb}
                   </p>
-                  <p className="text-xs text-gray-400 mb-4">
+                  <p className="text-xs text-gray-400 group-hover:text-gray-500 mb-4 transition-colors">
                     {s.examples}
                   </p>
-                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary">
+                  <span className="mt-auto inline-flex items-center gap-1.5 text-sm font-medium text-primary group-hover:text-blue-400 transition-colors">
                     Оформить документ
                     <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
                   </span>
