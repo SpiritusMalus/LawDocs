@@ -91,17 +91,18 @@ async def test_generate_document_text_fallback(tmp_path):
     """When no template exists, falls back to text-to-docx."""
     with (
         patch("app.services.docgen.TEMPLATES_DIR", tmp_path),
-        patch("app.services.docgen.settings") as mock_settings,
         patch("app.services.docgen._docx_to_pdf", return_value=b"%PDF fake"),
+        patch("app.services.docgen.upload_bytes") as mock_upload,
     ):
-        mock_settings.DOCUMENTS_DIR = str(tmp_path)
+        mock_upload.return_value = None
         from app.services.docgen import generate_document
-        docx_name, pdf_name = await generate_document(
+        docx_key, pdf_key = await generate_document(
             order_id="550e8400-e29b-41d4-a716-446655440000",
             situation_id="shop",
             content="Текст претензии",
             form_data={"problem_type": "defect"},
         )
-        assert docx_name.startswith("pretenziya_shop_")
-        assert docx_name.endswith(".docx")
-        assert pdf_name.endswith(".pdf")
+        assert "pretenziya_shop_" in docx_key
+        assert docx_key.endswith(".docx")
+        assert pdf_key.endswith(".pdf")
+        assert mock_upload.call_count == 2

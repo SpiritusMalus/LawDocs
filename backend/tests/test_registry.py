@@ -2,15 +2,21 @@
 import pytest
 from app.situations.registry import registry, CONTACT_STEP
 
-EXPECTED_IDS = {"shop", "marketplace", "bank", "employer", "insurance", "utility", "airline"}
+EXPECTED_IDS = {
+    "shop", "marketplace", "bank", "bank_block", "employer", "insurance",
+    "utility", "airline", "court_order", "gibdd", "rental_deposit",
+    "tour_operator", "online_course", "neighbor_flood", "repair", "telecom",
+    "medical", "ddu_delay", "ddu_defects", "ddu_termination", "dtp_osago",
+    "auto_repair", "debt_collector", "carsharing", "gym_refund",
+}
 
 
 def test_registry_loads_all_situations():
-    assert registry.ids() == EXPECTED_IDS
+    assert EXPECTED_IDS <= registry.ids()
 
 
 def test_registry_len():
-    assert len(registry) == len(EXPECTED_IDS)
+    assert len(registry) == 25
 
 
 def test_unknown_situation_returns_none():

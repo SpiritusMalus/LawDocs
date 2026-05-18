@@ -1,4 +1,5 @@
 """Shared fixtures for all tests."""
+import asyncio
 import os
 import pytest
 from pathlib import Path
@@ -22,6 +23,9 @@ _db_url = (
 os.environ["SECRET_KEY"] = "a" * 64
 os.environ["DATABASE_URL"] = _db_url
 os.environ["APP_ENV"] = "development"
+
+from cryptography.fernet import Fernet
+os.environ.setdefault("FERNET_KEY", Fernet.generate_key().decode())
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -47,29 +51,34 @@ _TestSessionLocal = async_sessionmaker(_test_engine, expire_on_commit=False)
 _TRUNCATE_ORDER = ["documents", "orders", "users"]
 
 
+async def _create_all():
+    async with _test_engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+
+# Create tables once synchronously before any test event loop is started.
+# dispose() clears the connection pool so each test gets fresh connections
+# in its own function-scoped event loop — avoids "Future attached to different loop".
+asyncio.run(_create_all())
+_test_engine.sync_engine.dispose()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def load_registry():
     registry.load(CONFIGS_DIR)
     yield
 
 
-@pytest.fixture(scope="session")
-async def create_tables():
-    async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    yield
-    async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-
-
 @pytest.fixture
-async def db_session(create_tables) -> AsyncGenerator[AsyncSession, None]:
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with _TestSessionLocal() as session:
         yield session
-    # Truncate after each test for isolation
     async with _test_engine.begin() as conn:
         for table in _TRUNCATE_ORDER:
             await conn.execute(text(f'TRUNCATE TABLE "{table}" CASCADE'))
+    # Dispose pool so the next test (in its own event loop) starts with
+    # fresh asyncpg connections — avoids "Future attached to different loop".
+    _test_engine.sync_engine.dispose()
 
 
 @pytest.fixture

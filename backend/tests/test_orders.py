@@ -13,14 +13,14 @@ from app.models.user import User
 FORM_DATA = {
     "full_name": "Иванов Иван Иванович",
     "phone": "+79001234567",
-    "contact_address": "г. Москва, ул. Пушкина, д. 1",
     "email": "ivan@example.com",
-    "shop_name": "ТестМаркет",
+    "store_name": "ТестМаркет",
+    "product_name": "Тестовый товар",
+    "product_price": "5000",
     "purchase_date": "01.01.2025",
-    "purchase_amount": "5000",
-    "problem_description": "Товар оказался бракованным",
+    "problem_desc": "Товар оказался бракованным",
     "problem_type": "defect",
-    "request_type": "refund",
+    "demand": "refund",
 }
 
 
@@ -219,7 +219,7 @@ async def test_retry_failed_order_starts_generation(
     await db_session.commit()
     await db_session.refresh(order)
 
-    with patch("app.api.v1.orders._run_document_generation", new_callable=AsyncMock):
+    with patch("app.api.v1.orders.run_document_generation", new_callable=AsyncMock):
         resp = await client.post(f"/api/v1/orders/{order.id}/retry", headers=auth_headers)
 
     assert resp.status_code == 200

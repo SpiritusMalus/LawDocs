@@ -12,7 +12,7 @@ async def test_health_includes_situations_count():
     assert resp.status_code == 200
     data = resp.json()
     assert data["status"] == "ok"
-    assert data["situations_loaded"] == 7
+    assert data["situations_loaded"] == 25
 
 
 @pytest.mark.asyncio
@@ -21,9 +21,9 @@ async def test_list_situations_returns_all():
         resp = await client.get("/api/v1/situations/")
     assert resp.status_code == 200
     data = resp.json()
-    assert len(data) == 7
+    assert len(data) == 25
     ids = {s["id"] for s in data}
-    assert ids == {"shop", "marketplace", "bank", "employer", "insurance", "utility", "airline"}
+    assert {"shop", "marketplace", "bank", "employer", "insurance", "utility", "airline"} <= ids
 
 
 @pytest.mark.asyncio
@@ -65,7 +65,13 @@ async def test_get_situation_not_found():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("situation_id", ["shop", "marketplace", "bank", "employer", "insurance", "utility", "airline"])
+@pytest.mark.parametrize("situation_id", [
+    "shop", "marketplace", "bank", "bank_block", "employer", "insurance",
+    "utility", "airline", "court_order", "gibdd", "rental_deposit",
+    "tour_operator", "online_course", "neighbor_flood", "repair", "telecom",
+    "medical", "ddu_delay", "ddu_defects", "ddu_termination", "dtp_osago",
+    "auto_repair", "debt_collector", "carsharing", "gym_refund",
+])
 async def test_detail_has_contact_step(situation_id: str):
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get(f"/api/v1/situations/{situation_id}")
