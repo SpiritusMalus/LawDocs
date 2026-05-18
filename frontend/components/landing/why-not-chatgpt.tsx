@@ -26,7 +26,7 @@ export function WhyNotChatGPT() {
       <div className="max-w-(--l-content) mx-auto">
         <ScrollReveal>
           <div className="mb-(--l-section-heading)">
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full mb-6">
+            <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/15 px-3 py-1.5 rounded-full mb-6">
               Главный вопрос
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
@@ -40,26 +40,26 @@ export function WhyNotChatGPT() {
         </ScrollReveal>
 
         <ScrollReveal delay={100}>
-          <div className="rounded-2xl overflow-hidden shadow-sm border border-gray-200">
+          <div className="rounded-2xl overflow-hidden border border-gray-200 shadow-sm">
             <div className="grid md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-200">
-              {/* LawDocs side — dark */}
-              <div className="bg-gray-900 p-6 md:p-8">
-                <div className="inline-flex items-center gap-2 text-sm font-semibold text-blue-400 mb-6">
+              {/* LawDocs — светлая сторона с синим акцентом */}
+              <div className="bg-white p-6 md:p-8">
+                <div className="inline-flex items-center gap-2 text-sm font-semibold text-primary mb-6">
                   <CheckCircle className="h-4 w-4" />
                   LawDocs
                 </div>
                 <ul className="space-y-4">
                   {POINTS.map((p) => (
                     <li key={p.yes} className="flex items-start gap-3">
-                      <CheckCircle className="h-4 w-4 text-blue-400 mt-1 shrink-0" />
-                      <span className="text-sm text-gray-300 leading-relaxed">{p.yes}</span>
+                      <CheckCircle className="h-4 w-4 text-emerald-500 mt-1 shrink-0" />
+                      <span className="text-sm text-gray-800 leading-relaxed font-medium">{p.yes}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* ChatGPT side — light */}
-              <div className="bg-white p-6 md:p-8">
+              {/* ChatGPT — приглушённая сторона */}
+              <div className="bg-gray-50 p-6 md:p-8">
                 <div className="inline-flex items-center gap-2 text-sm font-semibold text-gray-400 mb-6">
                   <XCircle className="h-4 w-4" />
                   Универсальный AI
@@ -68,7 +68,7 @@ export function WhyNotChatGPT() {
                   {POINTS.map((p) => (
                     <li key={p.no} className="flex items-start gap-3">
                       <XCircle className="h-4 w-4 text-gray-300 mt-1 shrink-0" />
-                      <span className="text-sm text-gray-500 leading-relaxed">{p.no}</span>
+                      <span className="text-sm text-gray-400 leading-relaxed">{p.no}</span>
                     </li>
                   ))}
                 </ul>

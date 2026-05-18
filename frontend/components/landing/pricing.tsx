@@ -25,31 +25,31 @@ export function Pricing() {
         </ScrollReveal>
 
         <ScrollReveal delay={100}>
-          <div className="bg-gray-900 rounded-3xl overflow-hidden shadow-2xl">
-            {/* Top accent line */}
-            <div className="h-1 bg-gradient-to-r from-blue-500 via-blue-400 to-indigo-500" />
+          <div className="rounded-3xl border-2 border-primary/20 overflow-hidden">
+            {/* Top accent */}
+            <div className="h-1 bg-gradient-to-r from-blue-600 via-blue-500 to-indigo-500" />
 
             <div className="p-8 md:p-10">
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 pb-8 border-b border-gray-800">
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 pb-8 border-b border-gray-100">
                 <div>
-                  <h3 className="text-xl font-semibold text-white mb-1">
+                  <h3 className="text-xl font-semibold text-gray-900 mb-1">
                     Один готовый документ
                   </h3>
-                  <p className="text-sm text-gray-400">
+                  <p className="text-sm text-gray-500">
                     Любая из 25 типовых ситуаций
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-5xl font-bold text-white">199&nbsp;<span className="text-blue-400">₽</span></div>
-                  <div className="text-xs text-gray-500 mt-1">разовая оплата</div>
+                  <div className="text-5xl font-bold text-gray-900">199&nbsp;<span className="text-primary">₽</span></div>
+                  <div className="text-xs text-gray-400 mt-1">разовая оплата</div>
                 </div>
               </div>
 
-              <ul className="space-y-4">
+              <ul className="space-y-3">
                 {INCLUDED.map((item) => (
                   <li key={item} className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-blue-400 mt-0.5 shrink-0" />
-                    <span className="text-sm text-gray-300">{item}</span>
+                    <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                    <span className="text-sm text-gray-700">{item}</span>
                   </li>
                 ))}
               </ul>

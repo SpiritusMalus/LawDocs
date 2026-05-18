@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gray-900">
+    <section className="relative overflow-hidden bg-gray-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-16 after:bg-gradient-to-b after:from-transparent after:to-gray-50 after:pointer-events-none">
       {/* Subtle grid pattern */}
       <div
         className="absolute inset-0 opacity-[0.06]"
