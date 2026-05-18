@@ -369,8 +369,6 @@ export const SITUATION_PAGES: SituationPageData[] = [
       },
     ],
   },
-];
-
   {
     slug: "bank_block",
     seoTitle: "Заявление при блокировке счёта по 115-ФЗ — образец 2025 | LawDocs",
