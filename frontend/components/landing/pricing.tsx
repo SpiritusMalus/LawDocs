@@ -52,16 +52,6 @@ export function Pricing() {
         </div>
         </ScrollReveal>
 
-        <p className="text-center text-xs text-gray-400 mt-6 max-w-md mx-auto">
-          Сложный случай и нужна личная консультация?{" "}
-          <a
-            href="mailto:lawdocsru@gmail.com?subject=Консультация юриста"
-            className="text-primary hover:underline"
-          >
-            Напишите нам
-          </a>{" "}
-          — подключим партнёра, от 1500&nbsp;₽.
-        </p>
       </div>
     </section>
   );

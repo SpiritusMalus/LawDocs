@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { Scale } from "lucide-react";
-import { SITUATIONS } from "@/lib/situations";
 
 export function Footer() {
   return (
     <footer className="border-t border-gray-100 bg-white">
       <div className="max-w-(--l-content-wide) mx-auto px-4 py-12">
-        <div className="grid md:grid-cols-3 gap-10 mb-10">
+        <div className="grid md:grid-cols-2 gap-10 mb-10">
           {/* Brand + disclaimer */}
           <div>
             <Link
@@ -23,29 +22,10 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Situation links */}
-          <div>
-            <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
-              Ситуации
-            </div>
-            <ul className="space-y-0.5">
-              {SITUATIONS.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/situations/${s.id}`}
-                    className="flex items-center min-h-11 text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                  >
-                    {s.title}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
           {/* Legal + contact */}
           <div>
             <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">
-              Документы
+              Ссылки
             </div>
             <ul className="space-y-0.5">
               <li>
@@ -85,7 +65,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-gray-100 pt-6 text-xs text-gray-400">
-          © {new Date().getFullYear()} LawDocs. Для сложных случаев обратитесь к практикующему юристу.
+          © {new Date().getFullYear()} LawDocs
         </div>
       </div>
     </footer>
