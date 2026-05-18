@@ -19,6 +19,24 @@ const SITUATION_EMOJI: Record<string, string> = {
   insurance: "🚗",
   utility: "🏠",
   airline: "✈️",
+  bank_block: "🔒",
+  court_order: "⚖️",
+  gibdd: "🚔",
+  rental_deposit: "🔑",
+  tour_operator: "🧳",
+  online_course: "💻",
+  neighbor_flood: "💧",
+  repair: "🔨",
+  telecom: "📡",
+  medical: "🏥",
+  ddu_delay: "🏗️",
+  ddu_defects: "🧱",
+  ddu_termination: "📄",
+  dtp_osago: "🚗",
+  auto_repair: "🔧",
+  debt_collector: "📵",
+  carsharing: "🚙",
+  gym_refund: "🏋️",
   other: "📋",
 };
 
@@ -43,7 +61,7 @@ export default function SituationsPage() {
             С какими ситуациями работаем
           </h1>
           <p className="text-lg text-gray-500 max-w-xl mx-auto">
-            Семь типовых случаев, которые покрывают большинство обращений.
+            Типовые случаи, которые покрывают большинство обращений.
             Каждый документ — со ссылками на конкретные статьи законов.{" "}
             <span className="font-medium text-gray-700">199&nbsp;₽.</span>
           </p>
