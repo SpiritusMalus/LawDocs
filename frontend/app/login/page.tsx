@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Scale, Loader2, CheckCircle } from "lucide-react";
+import { Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
@@ -38,15 +38,8 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <main className="bg-gray-50 px-4 min-h-[calc(100vh-4rem)] flex items-center justify-center">
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 font-semibold text-lg text-gray-900">
-            <Scale className="h-5 w-5 text-blue-600" />
-            LawDocs
-          </Link>
-        </div>
-
         <div className="bg-white rounded-2xl border border-gray-100 p-8">
           {sent ? (
             <div className="text-center space-y-4">

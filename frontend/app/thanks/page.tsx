@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function ThanksPage() {
   return (
-    <section className="bg-white py-24 px-4 min-h-[70vh] flex items-center">
+    <section className="bg-gray-50 py-16 px-4">
       <YmGoal goal="lead_submitted" />
       <div className="max-w-xl mx-auto text-center">
         <div className="w-16 h-16 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6">
