@@ -14,10 +14,12 @@ export type VerifyMagicLinkResponse = {
   order_id?: string;
 };
 
+export type OrderStatus = "draft" | "pending_payment" | "paid" | "generating" | "done" | "failed";
+
 export type OrdersList = Array<{
   id: string;
   situation_id: string;
-  status: "pending" | "paid" | "generated";
+  status: OrderStatus;
   amount: number;
   created_at: string;
   has_document: boolean;
@@ -26,7 +28,7 @@ export type OrdersList = Array<{
 export type OrderDetail = {
   id: string;
   situation_id: string;
-  status: "pending" | "paid" | "generated";
+  status: OrderStatus;
   amount: number;
   created_at: string;
   paid_at: string | null;

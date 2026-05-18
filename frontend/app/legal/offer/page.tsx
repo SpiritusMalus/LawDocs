@@ -9,7 +9,7 @@ export default function OfferPage() {
   return (
     <article className="max-w-3xl mx-auto px-4 py-16 prose prose-gray">
       <h1 className="text-3xl font-bold mb-2">Договор-оферта</h1>
-      <p className="text-sm text-gray-400 mb-8">Редакция от 15 мая 2025 г.</p>
+      <p className="text-sm text-gray-400 mb-8">Редакция от 18 мая 2026 г.</p>
 
       <p className="text-gray-700 leading-relaxed">
         Индивидуальный предприниматель Тихоненко Евгений Юрьевич (ИНН 504414138460,
