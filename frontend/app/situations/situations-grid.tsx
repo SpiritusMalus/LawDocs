@@ -1,68 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import {
-  Search,
-  ArrowRight,
-  Mail,
-  ShoppingBag,
-  Store,
-  Landmark,
-  Briefcase,
-  Car,
-  Building2,
-  Plane,
-  Lock,
-  Gavel,
-  AlertOctagon,
-  Home,
-  MapPin,
-  GraduationCap,
-  Droplets,
-  Hammer,
-  Wifi,
-  HeartPulse,
-  CalendarClock,
-  HardHat,
-  FileX,
-  Wrench,
-  PhoneOff,
-  Dumbbell,
-  HelpCircle,
-} from "lucide-react";
+import { Search, Mail } from "lucide-react";
 import { SITUATIONS, type SituationId } from "@/lib/situations";
-import { getSituationPage } from "@/lib/situation-pages";
-import { type LucideIcon } from "lucide-react";
-
-const SITUATION_ICONS: Record<SituationId, LucideIcon> = {
-  shop: ShoppingBag,
-  marketplace: Store,
-  bank: Landmark,
-  employer: Briefcase,
-  insurance: Car,
-  utility: Building2,
-  airline: Plane,
-  bank_block: Lock,
-  court_order: Gavel,
-  gibdd: AlertOctagon,
-  rental_deposit: Home,
-  tour_operator: MapPin,
-  online_course: GraduationCap,
-  neighbor_flood: Droplets,
-  repair: Hammer,
-  telecom: Wifi,
-  medical: HeartPulse,
-  ddu_delay: CalendarClock,
-  ddu_defects: HardHat,
-  ddu_termination: FileX,
-  dtp_osago: Car,
-  auto_repair: Wrench,
-  debt_collector: PhoneOff,
-  carsharing: Car,
-  gym_refund: Dumbbell,
-  other: HelpCircle,
-};
+import { SituationCard } from "@/components/situation-card";
 
 type CategoryId =
   | "all"
@@ -132,6 +73,8 @@ export function SituationsGrid() {
     return true;
   });
 
+  const showGrouped = activeCategory === "all" && !query;
+
   return (
     <section className="bg-gray-50 py-12 px-4">
       <div className="max-w-5xl mx-auto">
@@ -147,7 +90,7 @@ export function SituationsGrid() {
           />
         </div>
 
-        {/* Chips */}
+        {/* Category chips */}
         <div className="flex flex-wrap gap-2 mb-8 items-center">
           {CATEGORIES.map((cat) => (
             <button
@@ -171,7 +114,7 @@ export function SituationsGrid() {
           </a>
         </div>
 
-        {/* Grid */}
+        {/* Empty state */}
         {filtered.length === 0 && (
           <div className="text-center py-16 text-gray-400">
             <p className="text-sm">Ничего не найдено</p>
@@ -183,42 +126,37 @@ export function SituationsGrid() {
             </a>
           </div>
         )}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filtered.map((s) => {
-            const Icon = SITUATION_ICONS[s.id] ?? HelpCircle;
-            const page = getSituationPage(s.id);
-            return (
-              <Link
-                key={s.id}
-                href={`/situations/${s.id}`}
-                className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:bg-gray-50 hover:border-primary/20 hover:-translate-y-0.5 transition-all duration-150 flex flex-col"
-              >
-                <div className="flex items-start gap-4 mb-3">
-                  <div className="shrink-0 w-10 h-10 rounded-xl bg-primary/8 flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                    <Icon className="h-5 w-5 text-primary" aria-hidden="true" />
-                  </div>
-                  <h2 className="font-semibold text-gray-900 group-hover:text-primary transition-colors leading-snug pt-1 text-base">
-                    {s.title}
+
+        {/* Grouped view: H2 per category when "All" selected with no search */}
+        {showGrouped ? (
+          <div className="space-y-10">
+            {CATEGORIES.filter((cat) => cat.id !== "all").map((cat) => {
+              const catSituations = filtered.filter(
+                (s) => SITUATION_CATEGORY[s.id] === cat.id
+              );
+              if (catSituations.length === 0) return null;
+              return (
+                <div key={cat.id}>
+                  <h2 className="text-xl font-bold text-gray-900 mb-4">
+                    {cat.label}
                   </h2>
+                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    {catSituations.map((s) => (
+                      <SituationCard key={s.id} situation={s} variant="list" showLegal />
+                    ))}
+                  </div>
                 </div>
-                <p className="text-sm text-gray-500 leading-relaxed mb-2 flex-1">{s.blurb}</p>
-                <p className="text-xs text-gray-400 leading-relaxed mb-4">{s.examples}</p>
-                {page && (
-                  <p className="text-xs text-gray-300 leading-relaxed mb-4">
-                    {page.legalBasis
-                      .slice(0, 2)
-                      .map((l) => l.article)
-                      .join(" · ")}
-                  </p>
-                )}
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium text-primary">
-                  Оформить документ
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* Flat filtered view: searching or category selected */
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {filtered.map((s) => (
+              <SituationCard key={s.id} situation={s} variant="list" showLegal />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   );

@@ -5,6 +5,7 @@ import { ChevronRight, FileText, Scale, Send, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { SITUATION_PAGES, getSituationPage } from "@/lib/situation-pages";
 import type { SituationId } from "@/lib/situations";
+import { SituationReviews } from "@/components/situation-reviews";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
@@ -227,6 +228,8 @@ export default async function SituationPage({
           </div>
         </section>
       )}
+
+      <SituationReviews situationId={slug} />
 
       {/* Legal Basis */}
       <section className="bg-white py-16 px-4">
