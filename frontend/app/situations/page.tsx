@@ -8,7 +8,7 @@ import { getSituationPage } from "@/lib/situation-pages";
 export const metadata: Metadata = {
   title: "Все ситуации — юридические документы за 199 ₽ | LawDocs",
   description:
-    "Претензии и жалобы для 7 типовых ситуаций: магазин, маркетплейс, банк, работодатель, страховая, УК, авиакомпания. Готовый документ со ссылками на законы.",
+    "25 ситуаций: потребитель, работодатель, банк, жильё, транспорт, страховая, ДДУ. Готовые претензии и жалобы со ссылками на законы за 199 ₽.",
 };
 
 const SITUATION_EMOJI: Record<string, string> = {
@@ -79,7 +79,7 @@ export default function SituationsPage() {
                 <Link
                   key={s.id}
                   href={`/situations/${s.id}`}
-                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-md hover:border-primary/20 transition-all flex flex-col"
+                  className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-lg hover:bg-gray-50 hover:border-primary/20 hover:-translate-y-0.5 transition-all duration-150 flex flex-col"
                 >
                   <div className="text-3xl mb-4">{emoji}</div>
                   <h2 className="font-semibold text-gray-900 mb-2 group-hover:text-primary transition-colors">

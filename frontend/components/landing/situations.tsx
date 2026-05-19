@@ -53,7 +53,7 @@ export function Situations() {
           {SITUATIONS.map((s, i) => {
             const Icon = SITUATION_ICONS[s.id] ?? HelpCircle;
             return (
-              <ScrollReveal key={s.id} delay={i * 60} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
+              <ScrollReveal key={s.id} className={`h-full${i === SITUATIONS.length - 1 && SITUATIONS.length % 3 === 1 ? " lg:col-span-2" : ""}`}>
                 <Link
                   href={`/situations/${s.id}`}
                   className="group bg-white rounded-2xl border border-gray-100 p-6 shadow-sm hover:shadow-xl hover:bg-gray-900 hover:border-gray-900 transition-all duration-200 h-full flex flex-col"
