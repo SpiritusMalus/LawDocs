@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, RefreshCcw, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { ReviewForm } from "@/components/reviews/review-form";
 
 interface Order {
   id: string;
@@ -250,6 +251,9 @@ export function OrderStatus({
             <PlusCircle className="h-4 w-4" />
             Создать ещё один документ
           </Link>
+          <div className="border-t border-gray-100 pt-2">
+            <ReviewForm orderId={orderId} situationId={order.situation_id} />
+          </div>
         </>
       )}
 

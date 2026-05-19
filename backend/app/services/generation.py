@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
 from app.models.order import Order
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +69,12 @@ async def run_document_generation(
             db.add(doc)
             order.status = "done"
             order.payment_url = None
+
+            user_result = await db.execute(select(User).where(User.id == order.user_id))
+            user_obj = user_result.scalar_one_or_none()
+            if user_obj:
+                user_obj.completed_orders_count += 1
+
             await db.commit()
 
             pdf_bytes = await download_bytes(pdf_key)

@@ -6,6 +6,7 @@ import { Pricing } from "@/components/landing/pricing";
 import { Faq } from "@/components/landing/faq";
 import { FaqJsonLd } from "@/components/landing/faq-jsonld";
 import { MobileStickyCTA } from "@/components/landing/mobile-sticky-cta";
+import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
 
@@ -51,6 +52,7 @@ export default function HomePage() {
       <HowItWorks />
       <WhyNotChatGPT />
       <Pricing />
+      <ReviewsCarousel />
       <Faq />
     </>
   );
