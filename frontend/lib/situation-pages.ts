@@ -12,6 +12,7 @@ export interface Deliverable {
 
 export interface SituationPageData {
   slug: SituationId;
+  sampleFile?: string;
   seoTitle: string;
   seoDescription: string;
   h1: string;
@@ -25,6 +26,7 @@ export interface SituationPageData {
 export const SITUATION_PAGES: SituationPageData[] = [
   {
     slug: "shop",
+    sampleFile: "/samples/obrazec_shop_dns.pdf",
     seoTitle: "Претензия в магазин — образец 2025, скачать за 100 ₽ | LawDocs",
     seoDescription:
       "Готовая претензия в магазин по Закону о ЗоЗПП: возврат некачественного товара, отказ в обмене, задержка гарантийного ремонта. Составим с расчётом неустойки 1% в день.",
@@ -70,6 +72,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "marketplace",
+    sampleFile: "/samples/obrazec_marketplace_wb.pdf",
     seoTitle: "Претензия на Wildberries / Ozon — образец 2025 | LawDocs",
     seoDescription:
       "Претензия на маркетплейс: незаконный платный возврат, удержание за «подмену», потеря товара на ПВЗ. Документ со ссылками на Постановление №2463 — за 100 ₽.",
@@ -117,6 +120,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "bank",
+    sampleFile: "/samples/obrazec_bank_tinkoff.pdf",
     seoTitle: "Жалоба на банк — возврат страховки, разблокировка счёта | LawDocs",
     seoDescription:
       "Заявление в банк и жалоба в ЦБ: возврат навязанной страховки за период охлаждения, разблокировка счёта по 115-ФЗ, оспаривание незаконных комиссий. От 100 ₽.",
@@ -169,6 +173,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "employer",
+    sampleFile: "/samples/obrazec_employer_nevyplata.pdf",
     seoTitle: "Жалоба на работодателя — задержка зарплаты, трудовая инспекция | LawDocs",
     seoDescription:
       "Претензия работодателю при задержке зарплаты, недоплате или незаконном увольнении. Жалоба в ГИТ + уведомление о приостановке работы по ст. 142 ТК РФ. От 100 ₽.",
@@ -216,6 +221,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "insurance",
+    sampleFile: "/samples/obrazec_insurance_reso.pdf",
     seoTitle: "Претензия в страховую ОСАГО / КАСКО — досудебная, образец 2025 | LawDocs",
     seoDescription:
       "Обязательная досудебная претензия в страховую при занижении выплаты по ОСАГО или КАСКО. Без неё суд не примет иск. Составим с расчётом недоплаты и неустойки 1% в день.",
@@ -269,6 +275,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "utility",
+    sampleFile: "/samples/obrazec_utility_zhilischnik.pdf",
     seoTitle: "Жалоба на управляющую компанию — перерасчёт ЖКХ, ГЖИ | LawDocs",
     seoDescription:
       "Жалоба на УК или ЖКХ: лишние начисления, некачественные услуги, отказ делать ремонт. Претензия на перерасчёт + жалоба в ГЖИ вашего региона. От 100 ₽.",
@@ -318,6 +325,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "airline",
+    sampleFile: "/samples/obrazec_airline_aeroflot.pdf",
     seoTitle: "Претензия авиакомпании — задержка рейса, возврат билета | LawDocs",
     seoDescription:
       "Претензия авиакомпании: компенсация за задержку рейса, возврат денег за отменённый рейс, возмещение за потерянный багаж. По Воздушному кодексу РФ. От 100 ₽.",
@@ -371,6 +379,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "bank_block",
+    sampleFile: "/samples/obrazec_bank_block_alfa.pdf",
     seoTitle: "Заявление при блокировке счёта по 115-ФЗ — образец 2025 | LawDocs",
     seoDescription:
       "Банк заблокировал счёт по 115-ФЗ: заявление с требованием раскрыть основания и разблокировать. Срок ответа банка — 10 рабочих дней. Составим за 199 ₽.",
@@ -423,6 +432,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "court_order",
+    sampleFile: "/samples/obrazec_court_order_sber.pdf",
     seoTitle: "Возражение на судебный приказ — образец 2025, 10 дней | LawDocs",
     seoDescription:
       "Мировой суд вынес приказ о взыскании долга без вашего участия? Подайте возражение в 10 дней — приказ будет отменён автоматически. Составим за 199 ₽.",
@@ -475,6 +485,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "gibdd",
+    sampleFile: "/samples/obrazec_gibdd_fine.pdf",
     seoTitle: "Жалоба на штраф ГИБДД — образец оспаривания 2025 | LawDocs",
     seoDescription:
       "Оспорить постановление ГИБДД: жалоба вышестоящему инспектору или в суд. Срок — 10 дней. Камера зафиксировала чужое нарушение, ошибка в протоколе — составим за 199 ₽.",
@@ -528,6 +539,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "rental_deposit",
+    sampleFile: "/samples/obrazec_rental_deposit.pdf",
     seoTitle: "Претензия за невозврат залога при аренде квартиры — 2025 | LawDocs",
     seoDescription:
       "Арендодатель не возвращает залог: претензия с требованием вернуть обеспечительный платёж. ГК РФ ст. 381.1, неосновательное обогащение. Составим за 199 ₽.",
@@ -580,6 +592,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "tour_operator",
+    sampleFile: "/samples/obrazec_tour_operator_pegas.pdf",
     seoTitle: "Претензия туроператору — возврат денег за тур 2025 | LawDocs",
     seoDescription:
       "Туроператор отменил тур или не возвращает деньги? Претензия по ФЗ №132-ФЗ ст. 10 — срок возврата 10 дней, неустойка 3%/день. Составим за 199 ₽.",
@@ -633,6 +646,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "online_course",
+    sampleFile: "/samples/obrazec_online_course_skillbox.pdf",
     seoTitle: "Претензия онлайн-школе — возврат денег за курс 2025 | LawDocs",
     seoDescription:
       "Онлайн-школа не возвращает деньги за курс? Претензия по ЗоЗПП ст. 32 и Постановлению №1563. Срок возврата — 10 дней, неустойка 3%/день. За 199 ₽.",
@@ -686,6 +700,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "neighbor_flood",
+    sampleFile: "/samples/obrazec_neighbor_flood.pdf",
     seoTitle: "Претензия за затопление квартиры соседями — образец 2025 | LawDocs",
     seoDescription:
       "Соседи затопили квартиру — претензия виновнику или управляющей компании с требованием возместить ущерб по ГК РФ ст. 1064. Составим за 199 ₽.",
@@ -739,6 +754,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "repair",
+    sampleFile: "/samples/obrazec_repair_contractor.pdf",
     seoTitle: "Претензия подрядчику за некачественный ремонт — 2025 | LawDocs",
     seoDescription:
       "Подрядчик сделал ремонт с дефектами или нарушил сроки? Претензия по ЗоЗПП ст. 29, неустойка 3%/день. Принудить устранить или вернуть деньги за 199 ₽.",
@@ -791,6 +807,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "telecom",
+    sampleFile: "/samples/obrazec_telecom_beeline.pdf",
     seoTitle: "Претензия оператору связи — плохой интернет, незаконные списания | LawDocs",
     seoDescription:
       "Интернет не работает или скорость ниже тарифа? Претензия оператору по ФЗ «О связи» и ЗоЗПП ст. 29. Перерасчёт + штраф за незаконные списания. За 199 ₽.",
@@ -844,6 +861,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "medical",
+    sampleFile: "/samples/obrazec_medical_clinic.pdf",
     seoTitle: "Претензия в медицинскую организацию — права пациента 2025 | LawDocs",
     seoDescription:
       "Отказали по полису ОМС, навязали платные услуги или некачественное лечение? Претензия по ФЗ 323-ФЗ и ЗоЗПП. Жалоба в Росздравнадзор и ТФОМС. За 199 ₽.",
@@ -897,6 +915,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "ddu_delay",
+    sampleFile: "/samples/obrazec_ddu_delay_pik.pdf",
     seoTitle: "Претензия застройщику за просрочку передачи квартиры — ДДУ 2025 | LawDocs",
     seoDescription:
       "Застройщик нарушил срок передачи квартиры по ДДУ — претензия с расчётом неустойки 1/150 ставки ЦБ за каждый день. ФЗ-214 ст. 6. Составим за 199 ₽.",
@@ -950,6 +969,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "ddu_defects",
+    sampleFile: "/samples/obrazec_ddu_defects_samolet.pdf",
     seoTitle: "Претензия застройщику за строительные дефекты по ДДУ — 2025 | LawDocs",
     seoDescription:
       "Застройщик сдал квартиру с недостатками? Претензия по ФЗ-214 ст. 7 — гарантия 5 лет, безвозмездное устранение или денежная компенсация. За 199 ₽.",
@@ -1003,6 +1023,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "ddu_termination",
+    sampleFile: "/samples/obrazec_ddu_termination_lsr.pdf",
     seoTitle: "Расторжение ДДУ и возврат денег — претензия застройщику 2025 | LawDocs",
     seoDescription:
       "Расторгнуть ДДУ в одностороннем порядке: уведомление застройщику по ФЗ-214 ст. 9 с возвратом суммы + проценты 1/150 ставки ЦБ. Составим за 199 ₽.",
@@ -1056,6 +1077,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "dtp_osago",
+    sampleFile: "/samples/obrazec_dtp_osago_sogaz.pdf",
     seoTitle: "Претензия в страховую по ОСАГО — задержка выплаты, занижение | LawDocs",
     seoDescription:
       "Страховая задержала выплату по ОСАГО или занизила сумму? Досудебная претензия по ФЗ-40, неустойка 1%/день. Обязательна до финансового уполномоченного. За 199 ₽.",
@@ -1109,6 +1131,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "auto_repair",
+    sampleFile: "/samples/obrazec_auto_repair_fitservice.pdf",
     seoTitle: "Претензия в автосервис — некачественный ремонт, просрочка | LawDocs",
     seoDescription:
       "Автосервис плохо отремонтировал, задержал авто или завысил счёт? Претензия по ЗоЗПП ст. 29, неустойка 3%/день за просрочку. Составим за 199 ₽.",
@@ -1161,6 +1184,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "debt_collector",
+    sampleFile: "/samples/obrazec_debt_collector_eos.pdf",
     seoTitle: "Жалоба на коллекторов в ФССП — нарушение ФЗ-230 | LawDocs",
     seoDescription:
       "Коллекторы звонят ночью, угрожают или давят? Жалоба в ФССП по ФЗ-230 — штраф до 500 000 руб. за нарушение. Составим за 199 ₽.",
@@ -1214,6 +1238,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "carsharing",
+    sampleFile: "/samples/obrazec_carsharing_yandex.pdf",
     seoTitle: "Претензия каршерингу за необоснованный ущерб — 2025 | LawDocs",
     seoDescription:
       "Яндекс.Драйв, Делимобиль или другой каршеринг предъявил ущерб, которого вы не причиняли? Претензия по ГК РФ ст. 401, 620 и ЗоЗПП. За 199 ₽.",
@@ -1267,6 +1292,7 @@ export const SITUATION_PAGES: SituationPageData[] = [
   },
   {
     slug: "gym_refund",
+    sampleFile: "/samples/obrazec_gym_refund_worldclass.pdf",
     seoTitle: "Претензия фитнес-клубу — возврат денег за абонемент 2025 | LawDocs",
     seoDescription:
       "Фитнес-клуб не возвращает деньги за абонемент? По ЗоЗПП ст. 32 клуб обязан вернуть пропорционально. Неустойка 3%/день. Составим претензию за 199 ₽.",
