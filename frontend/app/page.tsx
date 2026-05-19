@@ -8,7 +8,7 @@ import { FaqJsonLd } from "@/components/landing/faq-jsonld";
 import { MobileStickyCTA } from "@/components/landing/mobile-sticky-cta";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",

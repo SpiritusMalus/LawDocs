@@ -6,7 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SITUATION_PAGES, getSituationPage } from "@/lib/situation-pages";
 import type { SituationId } from "@/lib/situations";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
 // Use RegExp constructor to avoid file-encoding issues with U+2028/U+2029 literals
 const UNSAFE_RE = new RegExp("[<>&\\u2028\\u2029]", "g");

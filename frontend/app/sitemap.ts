@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITUATION_PAGES } from "@/lib/situation-pages";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://lawdocs.ru";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
