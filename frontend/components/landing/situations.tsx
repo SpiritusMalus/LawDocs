@@ -40,7 +40,7 @@ export function Situations() {
         <ScrollReveal>
           <div className="mb-(--l-section-heading)">
             <h2 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
-              С какими ситуациями работаем
+              С чем приходят чаще всего
             </h2>
             <p className="text-gray-500 max-w-xl text-lg">
               Типовые случаи, которые покрывают большинство обращений.

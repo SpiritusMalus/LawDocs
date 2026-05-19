@@ -24,15 +24,15 @@ export default function SituationsPage() {
       </nav>
 
       {/* Hero */}
-      <section className="bg-white py-14 px-4">
+      <section className="bg-gray-900 py-16 px-4">
         <div className="max-w-3xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 leading-tight tracking-tight">
             С какими ситуациями работаем
           </h1>
-          <p className="text-lg text-gray-500 max-w-xl mx-auto">
-            Типовые случаи, которые покрывают большинство обращений.
-            Каждый документ — со ссылками на конкретные статьи законов.{" "}
-            <span className="font-medium text-gray-700">199&nbsp;₽.</span>
+          <p className="text-lg text-gray-400 max-w-xl mx-auto">
+            25 типовых случаев — потребитель, жильё, транспорт, банк, работа.
+            Каждый документ со ссылками на конкретные статьи законов.{" "}
+            <span className="font-medium text-gray-200">199&nbsp;₽.</span>
           </p>
         </div>
       </section>
