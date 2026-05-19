@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Search,
   ArrowRight,
   Mail,
   ShoppingBag,
@@ -115,16 +116,37 @@ const SITUATION_CATEGORY: Record<SituationId, CategoryId> = {
 
 export function SituationsGrid() {
   const [activeCategory, setActiveCategory] = useState<CategoryId>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const filtered = SITUATIONS.filter(
-    (s) =>
-      s.id !== "other" &&
-      (activeCategory === "all" || SITUATION_CATEGORY[s.id] === activeCategory)
-  );
+  const query = searchQuery.trim().toLowerCase();
+  const filtered = SITUATIONS.filter((s) => {
+    if (s.id === "other") return false;
+    if (activeCategory !== "all" && SITUATION_CATEGORY[s.id] !== activeCategory) return false;
+    if (query) {
+      return (
+        s.title.toLowerCase().includes(query) ||
+        s.blurb.toLowerCase().includes(query) ||
+        s.examples.toLowerCase().includes(query)
+      );
+    }
+    return true;
+  });
 
   return (
     <section className="bg-gray-50 py-12 px-4">
       <div className="max-w-5xl mx-auto">
+        {/* Search */}
+        <div className="relative mb-5">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+          <input
+            type="search"
+            placeholder="Найти ситуацию..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-colors"
+          />
+        </div>
+
         {/* Chips */}
         <div className="flex flex-wrap gap-2 mb-8 items-center">
           {CATEGORIES.map((cat) => (
@@ -150,6 +172,17 @@ export function SituationsGrid() {
         </div>
 
         {/* Grid */}
+        {filtered.length === 0 && (
+          <div className="text-center py-16 text-gray-400">
+            <p className="text-sm">Ничего не найдено</p>
+            <a
+              href="mailto:lawdocsru@gmail.com"
+              className="mt-3 inline-block text-sm text-primary hover:underline"
+            >
+              Написать нам — подберём вариант
+            </a>
+          </div>
+        )}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((s) => {
             const Icon = SITUATION_ICONS[s.id] ?? HelpCircle;
