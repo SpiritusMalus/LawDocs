@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const getSecurityHeaders = () => {
   const isDev = process.env.NODE_ENV === "development";
-  const scriptSrc = ["'self'", "'unsafe-inline'", "mc.yandex.ru"];
+  const scriptSrc = ["'self'", "'unsafe-inline'", "mc.yandex.ru", "mc.yandex.com"];
   if (isDev) scriptSrc.push("'unsafe-eval'"); // React dev needs eval for stack traces
 
   return [
@@ -17,8 +17,8 @@ const getSecurityHeaders = () => {
         "default-src 'self'",
         `script-src ${scriptSrc.join(" ")}`,
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: mc.yandex.ru yandex.ru",
-        "connect-src 'self' mc.yandex.ru api.telegram.org",
+        "img-src 'self' data: mc.yandex.ru mc.yandex.com yandex.ru",
+        "connect-src 'self' mc.yandex.ru mc.yandex.com api.telegram.org",
         "font-src 'self'",
         "frame-src 'none'",
         "object-src 'none'",
