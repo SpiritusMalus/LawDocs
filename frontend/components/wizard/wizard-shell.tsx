@@ -13,6 +13,13 @@ import { submitWizard } from "@/lib/actions/submit-wizard";
 const LS_EMAIL_KEY = "lawdocs_email";
 const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as const;
 
+function ymGoal(goal: string, params?: Record<string, unknown>) {
+  const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
+  if (id && typeof window !== "undefined" && window.ym) {
+    window.ym(id, "reachGoal", goal, params);
+  }
+}
+
 interface WizardShellProps {
   steps: WizardStep[];
   situationId: string;
@@ -29,6 +36,10 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    ymGoal("wizard_started", { situation: situationId });
+  }, [situationId]);
 
   // Pre-fill contact fields from last order (if authenticated) + localStorage email
   useEffect(() => {
@@ -76,6 +87,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       return;
     }
     setFieldErrors([]);
+    ymGoal("wizard_step_completed", { step: currentStep + 1, situation: situationId });
     setCurrentStep((s) => s + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -99,6 +111,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       return;
     }
     setSubmitError(null);
+    ymGoal("wizard_submitted", { situation: situationId });
     startTransition(async () => {
       const result = await submitWizard({ situationId, answers });
       if (result.status === "redirect" && result.orderId) {

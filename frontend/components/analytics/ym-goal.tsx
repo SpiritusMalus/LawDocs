@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 declare global {
   interface Window {
-    ym?: (id: number, action: string, goal: string) => void;
+    ym?: (id: number, action: string, goal: string, params?: Record<string, unknown>) => void;
   }
 }
 

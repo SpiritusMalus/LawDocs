@@ -63,6 +63,12 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 
 const POLL_STATUSES = new Set(["paid", "generating"]);
 
+function ymGoal(goal: string, params?: Record<string, unknown>) {
+  const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
+  if (id && typeof window !== "undefined" && window.ym) {
+    window.ym(id, "reachGoal", goal, params);
+  }
+}
 
 export function OrderStatus({
   orderId,
@@ -97,6 +103,17 @@ export function OrderStatus({
     return () => clearInterval(interval);
   }, [orderId, order.status]);
 
+  useEffect(() => {
+    if (order.status !== "paid") return;
+    const key = `ym_ps_${orderId}`;
+    try {
+      if (!sessionStorage.getItem(key)) {
+        ymGoal("payment_success", { situation: order.situation_id });
+        sessionStorage.setItem(key, "1");
+      }
+    } catch {}
+  }, [order.status, orderId]);
+
   async function handleRetry() {
     setIsRetrying(true);
     setRetryError(null);
@@ -118,6 +135,7 @@ export function OrderStatus({
   async function handlePay() {
     setIsPaying(true);
     setPayError(null);
+    ymGoal("payment_initiated", { situation: order.situation_id });
     try {
       const res = await fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
       const data = await res.json();
@@ -187,6 +205,7 @@ export function OrderStatus({
           <a
             href={`/api/documents/${orderId}/download/docx`}
             download
+            onClick={() => ymGoal("document_downloaded", { format: "docx", situation: order.situation_id })}
             className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
           >
             <Download className="h-4 w-4" />
@@ -195,6 +214,7 @@ export function OrderStatus({
           <a
             href={`/api/documents/${orderId}/download/pdf`}
             download
+            onClick={() => ymGoal("document_downloaded", { format: "pdf", situation: order.situation_id })}
             className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
           >
             <Download className="h-4 w-4" />
