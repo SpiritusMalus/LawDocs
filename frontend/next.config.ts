@@ -20,7 +20,7 @@ const getSecurityHeaders = () => {
         "img-src 'self' data: mc.yandex.ru mc.yandex.com yandex.ru",
         "connect-src 'self' mc.yandex.ru mc.yandex.com api.telegram.org wss://mc.yandex.com",
         "font-src 'self'",
-        "frame-src 'none'",
+        "frame-src 'self'",
         "object-src 'none'",
         "base-uri 'self'",
         "form-action 'self'",
@@ -36,6 +36,12 @@ const nextConfig: NextConfig = {
       {
         source: "/(.*)",
         headers: getSecurityHeaders(),
+      },
+      {
+        source: "/samples/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "SAMEORIGIN" },
+        ],
       },
     ];
   },
