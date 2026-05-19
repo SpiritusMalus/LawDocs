@@ -50,7 +50,7 @@ export function ScrollReveal({
           observer.disconnect();
         }
       },
-      { threshold: 0.12 }
+      { threshold: 0.05 }
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -64,7 +64,7 @@ export function ScrollReveal({
   return (
     <div
       ref={ref}
-      className={`transition-all duration-700 ease-out ${
+      className={`transition-all duration-300 ease-out ${
         hidden ? `opacity-0 ${translatePending}` : "opacity-100 translate-y-0 translate-x-0"
       } ${className}`}
       style={{ transitionDelay: visible && delay ? `${delay}ms` : "0ms" }}

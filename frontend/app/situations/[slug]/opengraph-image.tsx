@@ -77,7 +77,7 @@ export default async function Image({
               lineHeight: 1.4,
             }}
           >
-            Готовый документ со ссылками на законы — 500 rub
+            Готовый документ со ссылками на законы — 199 ₽
           </div>
         </div>
 

@@ -28,10 +28,23 @@ export async function generateMetadata({
   const { slug } = await params;
   const page = getSituationPage(slug);
   if (!page) return {};
+  const url = `${SITE_URL}/situations/${slug}`;
   return {
     title: page.seoTitle,
     description: page.seoDescription,
-    alternates: { canonical: `${SITE_URL}/situations/${slug}` },
+    alternates: { canonical: url },
+    openGraph: {
+      title: page.seoTitle,
+      description: page.seoDescription,
+      url,
+      type: "website",
+      locale: "ru_RU",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: page.seoTitle,
+      description: page.seoDescription,
+    },
   };
 }
 
@@ -49,9 +62,10 @@ export default async function SituationPage({
     "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Главная", item: SITE_URL },
+      { "@type": "ListItem", position: 2, name: "Ситуации", item: `${SITE_URL}/situations` },
       {
         "@type": "ListItem",
-        position: 2,
+        position: 3,
         name: page.h1,
         item: `${SITE_URL}/situations/${page.slug}`,
       },
@@ -68,6 +82,24 @@ export default async function SituationPage({
     })),
   };
 
+  const serviceJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: page.h1,
+    description: page.seoDescription,
+    provider: {
+      "@type": "Organization",
+      name: "LawDocs",
+      url: SITE_URL,
+    },
+    offers: {
+      "@type": "Offer",
+      price: "199",
+      priceCurrency: "RUB",
+      url: `${SITE_URL}/situations/${page.slug}`,
+    },
+  };
+
   return (
     <>
       <script
@@ -78,12 +110,20 @@ export default async function SituationPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: safeJson(faqJsonLd) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: safeJson(serviceJsonLd) }}
+      />
 
       {/* Breadcrumb */}
       <nav aria-label="Хлебные крошки" className="bg-gray-50 border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-1 text-sm text-gray-500">
           <Link href="/" className="hover:text-gray-900 transition-colors">
             Главная
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-gray-300 shrink-0" />
+          <Link href="/situations" className="hover:text-gray-900 transition-colors">
+            Ситуации
           </Link>
           <ChevronRight className="h-3.5 w-3.5 text-gray-300 shrink-0" />
           <span className="text-gray-900 font-medium truncate">{page.h1}</span>
