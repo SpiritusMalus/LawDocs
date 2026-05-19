@@ -58,5 +58,9 @@ class Settings(BaseSettings):
     # Генерация: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     FERNET_KEY: str = ""
 
+    # Telegram-алерты (опционально — если пусто, алерты отключены)
+    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_CHAT_ID: str = ""
+
 
 settings = Settings()  # type: ignore[call-arg]

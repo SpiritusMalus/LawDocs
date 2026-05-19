@@ -89,3 +89,13 @@ async def run_document_generation(
                     await send_document_failed(email=user_email, order_id=order_id)
                 except Exception:
                     logger.exception("Failed to send failure notification for order %s", order_id)
+                try:
+                    from app.services.notifications import send_telegram_alert
+                    await send_telegram_alert(
+                        f"❌ <b>Order failed</b>\n"
+                        f"order_id: <code>{order_id}</code>\n"
+                        f"situation: {situation_id}\n"
+                        f"email: {user_email}"
+                    )
+                except Exception:
+                    logger.exception("Failed to send Telegram alert for order %s", order_id)
