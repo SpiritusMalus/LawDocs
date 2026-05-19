@@ -186,6 +186,19 @@ export default async function SituationPage({
         </div>
       </section>
 
+      {/* Send To */}
+      <section className="bg-primary/5 py-10 px-4">
+        <div className="max-w-5xl mx-auto flex gap-4 items-start">
+          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+            <Send className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Куда подать претензию</h2>
+            <div className="text-gray-600 text-sm">{page.sendTo}</div>
+          </div>
+        </div>
+      </section>
+
       {/* Sample document */}
       {page.sampleFile && (
         <section className="bg-white py-16 px-4 border-t border-gray-100">
@@ -241,19 +254,6 @@ export default async function SituationPage({
         </div>
       </section>
 
-      {/* Send To strip */}
-      <section className="bg-primary/5 py-10 px-4">
-        <div className="max-w-5xl mx-auto flex gap-4 items-start">
-          <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
-            <Send className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="font-semibold text-gray-900 mb-1">Куда направляется документ</div>
-            <div className="text-gray-600 text-sm">{page.sendTo}</div>
-          </div>
-        </div>
-      </section>
-
       {/* FAQ */}
       <section className="bg-white py-16 px-4">
         <div className="max-w-3xl mx-auto">
@@ -268,6 +268,28 @@ export default async function SituationPage({
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Bottom CTA */}
+      <section className="bg-gray-50 py-16 px-4 border-t border-gray-100">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            Готовы оформить документ?
+          </h2>
+          <p className="text-gray-500 mb-6">
+            Ответьте на несколько вопросов — составим за 5 минут и пришлём на email.
+          </p>
+          <Link
+            href={`/wizard/${page.slug}`}
+            className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
+          >
+            Получить документ — 199&nbsp;₽
+            <ArrowRight className="h-4 w-4 ml-2" />
+          </Link>
+          <p className="mt-4 text-sm text-gray-400">
+            Если не подойдёт — вернём деньги без вопросов
+          </p>
         </div>
       </section>
 

@@ -61,6 +61,10 @@ export default async function WizardPage({
             Главная
           </Link>
           <ChevronRight className="h-3.5 w-3.5 text-gray-300 shrink-0" />
+          <Link href="/situations" className="hover:text-gray-900 transition-colors">
+            Ситуации
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 text-gray-300 shrink-0" />
           {page && (
             <>
               <Link

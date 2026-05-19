@@ -1,4 +1,6 @@
-import { CheckCircle } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle, ArrowRight } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 const INCLUDED = [
@@ -53,6 +55,15 @@ export function Pricing() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-8 pt-8 border-t border-gray-100">
+                <Link
+                  href="/situations"
+                  className={buttonVariants({ size: "lg" }) + " w-full h-12 text-base"}
+                >
+                  Получить документ
+                  <ArrowRight className="h-4 w-4 ml-2" />
+                </Link>
+              </div>
             </div>
           </div>
         </ScrollReveal>
