@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Scale, FileText, PlusCircle } from "lucide-react";
+import { Scale, FileText, PlusCircle, User } from "lucide-react";
 import { OrderCard } from "@/components/order/order-card";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { DashboardPoller } from "@/components/dashboard/dashboard-poller";
@@ -61,6 +61,13 @@ export default async function DashboardPage() {
             >
               <PlusCircle className="h-4 w-4" />
               Новый документ
+            </Link>
+            <Link
+              href="/profile"
+              className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+            >
+              <User className="h-4 w-4" />
+              Профиль
             </Link>
             <LogoutButton />
           </div>

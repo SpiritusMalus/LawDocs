@@ -62,5 +62,8 @@ class Settings(BaseSettings):
     TELEGRAM_BOT_TOKEN: str = ""
     TELEGRAM_CHAT_ID: str = ""
 
+    # Администрирование (модерация отзывов)
+    ADMIN_SECRET: str = ""
+
 
 settings = Settings()  # type: ignore[call-arg]

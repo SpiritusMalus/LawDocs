@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database import Base
@@ -19,4 +19,5 @@ class OrderReview(Base):
     name: Mapped[str | None] = mapped_column(String(100), nullable=True)
     city: Mapped[str | None] = mapped_column(String(50), nullable=True)
     completed_orders_count: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    is_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

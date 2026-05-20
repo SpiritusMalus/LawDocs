@@ -2,18 +2,24 @@ import html
 import logging
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.config import settings
 from app.models.order import Order
 from app.models.review import OrderReview
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def require_admin(x_admin_secret: str | None = Header(default=None)) -> None:
+    if not settings.ADMIN_SECRET or x_admin_secret != settings.ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 class ReviewCreate(BaseModel):
@@ -43,6 +49,12 @@ class ReviewOut(BaseModel):
     completed_orders_count: int
     created_at: datetime
     situation_id: str
+
+
+class AdminReviewOut(ReviewOut):
+    is_hidden: bool
+    order_id: str
+    user_id: str
 
 
 class ReviewListOut(BaseModel):
@@ -116,8 +128,8 @@ async def list_reviews(
     limit = min(max(limit, 1), 50)
     offset = (page - 1) * limit
 
-    base = select(OrderReview)
-    count_base = select(func.count()).select_from(OrderReview)
+    base = select(OrderReview).where(OrderReview.is_hidden.is_(False))
+    count_base = select(func.count()).select_from(OrderReview).where(OrderReview.is_hidden.is_(False))
 
     if situation:
         base = base.where(OrderReview.situation_id == situation)
@@ -129,3 +141,30 @@ async def list_reviews(
     total = (await db.execute(count_base)).scalar_one()
 
     return ReviewListOut(reviews=list(reviews), total=total, page=page)
+
+
+@router.get("/admin", response_model=list[AdminReviewOut])
+async def list_all_reviews_admin(
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> list[OrderReview]:
+    result = await db.execute(
+        select(OrderReview).order_by(OrderReview.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+@router.patch("/{review_id}/visibility", response_model=AdminReviewOut)
+async def toggle_review_visibility(
+    review_id: str,
+    _: None = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+) -> OrderReview:
+    result = await db.execute(select(OrderReview).where(OrderReview.id == review_id))
+    review = result.scalar_one_or_none()
+    if not review:
+        raise HTTPException(status_code=404, detail="Review not found")
+    review.is_hidden = not review.is_hidden
+    await db.commit()
+    await db.refresh(review)
+    return review

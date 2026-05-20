@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel, ConfigDict
+import html
 
-from app.api.deps import get_current_user
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.api.deps import get_current_user, get_db
 from app.models.user import User
 
 router = APIRouter()
@@ -16,6 +19,30 @@ class UserMeOut(BaseModel):
     completed_orders_count: int
 
 
+class UserUpdate(BaseModel):
+    name: str | None = Field(default=None, max_length=100)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def strip_and_escape(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        stripped = str(v).strip()
+        return html.escape(stripped) if stripped else None
+
+
 @router.get("/me", response_model=UserMeOut)
 async def get_me(current_user: User = Depends(get_current_user)) -> User:
+    return current_user
+
+
+@router.patch("/me", response_model=UserMeOut)
+async def update_me(
+    body: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> User:
+    current_user.name = body.name
+    await db.commit()
+    await db.refresh(current_user)
     return current_user
