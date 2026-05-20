@@ -2,6 +2,18 @@
 
 All notable changes to LawDocs are documented in this file.
 
+## [0.0.1.0] - 2026-05-20
+
+### Security
+- **Fix XSS vulnerability** — replaced sessionStorage-based admin secret with httpOnly cookie (4-hour TTL, sameSite=strict). Secrets are no longer accessible to JavaScript, protecting against XSS exploitation.
+- **Add CSRF protection for admin mutations** — /api/admin/* POST/PATCH/DELETE now require Origin header, preventing cross-site request forgery from older browsers that omit Origin headers.
+
+### Fixed
+- **UUID validation in admin reviews API** — added isValidUuid check before proxying admin requests to backend
+- **Race condition in review visibility toggle** — added pessimistic locking (.with_for_update) to prevent concurrent toggle race conditions
+- **Profile update logging** — update_me endpoint now logs when user profile changes
+- **Validator duplication** — consolidated strip_whitespace validator to shared backend/app/core/validators.py (also removed forgotten html.escape from users.py)
+
 ## [0.27.0.0] - 2026-05-17
 
 ### Added

@@ -14,6 +14,19 @@ export function middleware(request: NextRequest) {
   // For POST, PUT, DELETE: check Origin header
   const origin = request.headers.get("origin");
 
+  // For /api/admin/* mutations: Origin header is required
+  const isAdminMutation =
+    request.nextUrl.pathname.startsWith("/api/admin/") &&
+    request.method !== "GET" &&
+    request.method !== "HEAD";
+
+  if (isAdminMutation && !origin) {
+    return NextResponse.json(
+      { error: "Forbidden: origin required for admin mutations" },
+      { status: 403 }
+    );
+  }
+
   // Allow requests without Origin header (same-origin requests from Server Actions, server-to-server)
   // But reject requests with Origin that doesn't match our allowed list
   if (origin && !ALLOWED_ORIGINS.has(origin)) {
