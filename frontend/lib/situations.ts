@@ -31,6 +31,7 @@ export interface Situation {
   title: string;
   blurb: string;
   examples: string;
+  featured?: boolean;
 }
 
 export const SITUATIONS: Situation[] = [
@@ -39,18 +40,21 @@ export const SITUATIONS: Situation[] = [
     title: "Магазин не возвращает деньги",
     blurb: "Товар сломался или не подошёл — продавец отказывает в возврате.",
     examples: "Товар ненадлежащего качества, отказ в возврате в 14 дней, навязанные услуги",
+    featured: true,
   },
   {
     id: "marketplace",
     title: "Проблема с маркетплейсом",
     blurb: "Списали деньги, потеряли товар, отказались принимать возврат.",
     examples: "Платный возврат, удержание за подмену, потеря на ПВЗ",
+    featured: true,
   },
   {
     id: "bank",
     title: "Банк списал лишнее",
     blurb: "Незаконные комиссии, навязанная страховка, списания без согласия.",
     examples: "Возврат страховки за период охлаждения, разблокировка, перерасчёт",
+    featured: true,
   },
   {
     id: "employer",
