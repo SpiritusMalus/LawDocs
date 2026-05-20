@@ -132,12 +132,14 @@ def _split_document(
 
 
 def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> None:
+    RIGHT_COL_X = 105.0
+    RIGHT_COL_W = 85.0
     for line in lines:
         if not line.strip():
             pdf.ln(2)
         else:
-            pdf.set_x(105.0)
-            pdf.multi_cell(85.0, line_h, line.strip(), align="L")
+            pdf.set_x(RIGHT_COL_X)
+            pdf.multi_cell(RIGHT_COL_W, line_h, line.strip(), align="L")
 
 
 def _render_sig_block(pdf: "FPDF", line_h: float = 6.0) -> None:

@@ -47,7 +47,3 @@ def generate_magic_token() -> str:
 
 def hash_magic_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
-
-
-def verify_magic_token(token: str, stored_hash: str) -> bool:
-    return hashlib.sha256(token.encode()).hexdigest() == stored_hash
