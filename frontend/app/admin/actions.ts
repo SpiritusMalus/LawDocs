@@ -8,16 +8,18 @@ export async function adminLoginAction(secret: string): Promise<{ success: boole
   }
 
   try {
-    const res = await fetch(`${process.env.BACKEND_URL}/api/v1/reviews/admin?limit=1`, {
+    const tokenRes = await fetch(`${process.env.BACKEND_URL}/api/v1/reviews/admin/token`, {
+      method: 'POST',
       headers: { 'X-Admin-Secret': secret },
     });
 
-    if (!res.ok) {
+    if (!tokenRes.ok) {
       return { success: false, error: 'Invalid password' };
     }
 
+    const { admin_token } = await tokenRes.json();
     const cookieStore = await cookies();
-    cookieStore.set('admin_token', secret, {
+    cookieStore.set('admin_token', admin_token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',

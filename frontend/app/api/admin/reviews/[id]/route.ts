@@ -9,8 +9,8 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const cookieStore = await cookies();
-  const secret = cookieStore.get("admin_token")?.value;
-  if (!secret) {
+  const adminToken = cookieStore.get("admin_token")?.value;
+  if (!adminToken) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await params;
@@ -20,7 +20,7 @@ export async function PATCH(
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/reviews/${id}/visibility`, {
       method: "PATCH",
-      headers: { "X-Admin-Secret": secret },
+      headers: { "X-Admin-Token": adminToken },
       cache: "no-store",
     });
     const data = await res.json();
