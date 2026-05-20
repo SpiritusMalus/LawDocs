@@ -25,7 +25,7 @@ export function Hero() {
           <div className="flex-1 text-center lg:text-left">
             <div className="animate-hero animate-hero-1 inline-flex items-center gap-2 bg-blue-500/10 border border-blue-400/20 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-full mb-6 tracking-wide uppercase">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
-              Шаблоны проверены практикующим юристом
+              Шаблоны проверены юристом
             </div>
 
             <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1]">

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "О сервисе — LawDocs",
   description:
-    "Информация о сервисе LawDocs: подготовка юридических документов онлайн. Реквизиты, контакты, описание услуги.",
+    "LawDocs — онлайн-сервис подготовки юридических документов. Узнайте, как мы помогаем людям защищать свои права.",
 };
 
 export default function AboutPage() {
@@ -11,33 +12,50 @@ export default function AboutPage() {
     <article className="max-w-3xl mx-auto px-4 py-16 prose prose-gray">
       <h1 className="text-3xl font-bold mb-6">О сервисе</h1>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">Что такое LawDocs</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-3">Зачем мы это сделали</h2>
       <p className="text-gray-700 leading-relaxed">
-        LawDocs — онлайн-сервис подготовки юридических документов. Пользователь описывает
-        свою ситуацию через форму, система формирует готовый документ (претензию или жалобу)
-        с расчётом неустойки и инструкцией по отправке. Документ предоставляется в форматах
-        Word (.docx) и PDF на указанный email.
+        Большинство людей, столкнувшись с нарушением своих прав — будь то некачественный товар,
+        задержка возврата денег или отказ страховой — не знают, с чего начать. Составить претензию
+        самому страшно: непонятно, какие статьи цитировать, как рассчитать неустойку и куда всё это
+        нести.
       </p>
       <p className="text-gray-700 leading-relaxed">
-        Документы формируются на основе проверенных юридических шаблонов с применением
-        технологий искусственного интеллекта. Сервис не оказывает юридических консультаций;
-        документы носят информационный характер.
+        LawDocs появился в 2026 году как ответ на этот барьер. Мы автоматизировали то, что юристы
+        делают каждый день: берём описание вашей ситуации и составляем документ с правильными
+        формулировками, расчётами и ссылками на закон — за 5 минут и 199 рублей.
+      </p>
+
+      <h2 className="text-xl font-semibold mt-8 mb-3">Как это работает</h2>
+      <p className="text-gray-700 leading-relaxed">
+        Вы отвечаете на вопросы формы — система подбирает шаблон и заполняет его вашими данными.
+        Шаблоны составлены и проверены юристом. Итоговый документ приходит на email в форматах
+        Word и PDF вместе с инструкцией: куда подавать, в какие сроки, что писать на конверте.
       </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">Что получает покупатель</h2>
-      <p className="text-gray-700 leading-relaxed">
-        После оплаты покупатель получает цифровой товар — комплект файлов:
-      </p>
       <ul className="list-disc pl-6 text-gray-700 space-y-1">
-        <li>готовый юридический документ в формате Word (.docx) и PDF;</li>
-        <li>инструкцию по подаче документа с указанием адресата и способа отправки.</li>
+        <li>Готовый юридический документ в форматах Word (.docx) и PDF</li>
+        <li>Расчёт неустойки по закону — формула и сумма</li>
+        <li>Инструкция по подаче: адресат, способ отправки, сроки ответа</li>
       </ul>
-      <p className="text-gray-700 leading-relaxed">
+      <p className="text-gray-700 leading-relaxed mt-3">
         Файлы доступны для скачивания в личном кабинете сразу после формирования.
-        Стоимость одного документа — <strong>199 рублей</strong>.
+        Стоимость — <strong>199 рублей</strong> за документ.
       </p>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">Реквизиты</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-3">Возврат средств</h2>
+      <p className="text-gray-700 leading-relaxed">
+        Если документ не соответствует ситуации, описанной в форме, — вернём деньги без вопросов
+        в течение 7 дней. Пишите на{" "}
+        <a href="mailto:lawdocsru@gmail.com" className="underline">
+          lawdocsru@gmail.com
+        </a>{" "}
+        с номером заказа.
+      </p>
+
+      <hr className="my-12 border-gray-200" />
+
+      <h2 className="text-xl font-semibold mb-3 text-gray-500">Реквизиты</h2>
       <table className="text-sm text-gray-700 border-collapse w-full">
         <tbody>
           <tr className="border-b border-gray-100">
@@ -63,15 +81,15 @@ export default function AboutPage() {
         </tbody>
       </table>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">Возврат средств</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Если подготовленный документ не соответствует ситуации, описанной в форме,
-        покупатель вправе запросить возврат в течение 7 календарных дней с момента получения.
-        Для этого напишите на{" "}
-        <a href="mailto:lawdocsru@gmail.com" className="underline">
-          lawdocsru@gmail.com
-        </a>{" "}
-        с указанием номера заказа.
+      <p className="text-sm text-gray-400 mt-6">
+        Полные условия оферты:{" "}
+        <Link href="/legal/offer" className="underline">
+          Договор оферты
+        </Link>
+        {" · "}
+        <Link href="/legal/privacy" className="underline">
+          Политика конфиденциальности
+        </Link>
       </p>
     </article>
   );

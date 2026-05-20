@@ -1,4 +1,5 @@
 import { Hero } from "@/components/landing/hero";
+import { SocialProofBar } from "@/components/landing/social-proof-bar";
 import { Situations } from "@/components/landing/situations";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { WhyNotChatGPT } from "@/components/landing/why-not-chatgpt";
@@ -48,6 +49,7 @@ export default function HomePage() {
       <FaqJsonLd />
       <MobileStickyCTA />
       <Hero />
+      <SocialProofBar />
       <Situations />
       <HowItWorks />
       <WhyNotChatGPT />

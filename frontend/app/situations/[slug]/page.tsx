@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { SITUATION_PAGES, getSituationPage } from "@/lib/situation-pages";
 import type { SituationId } from "@/lib/situations";
 import { SituationReviews } from "@/components/situation-reviews";
+import { PdfPreview } from "@/components/pdf-preview";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
@@ -171,13 +172,7 @@ export default async function SituationPage({
             <p className="text-gray-500 mb-6">
               Так выглядит готовый документ — реальный образец для этой ситуации.
             </p>
-            <div className="rounded-2xl border border-gray-200 overflow-hidden">
-              <iframe
-                src={page.sampleFile}
-                className="w-full h-[700px]"
-                title="Пример документа"
-              />
-            </div>
+            <PdfPreview src={page.sampleFile} />
             <div className="mt-4 flex justify-end">
               <a
                 href={page.sampleFile}
