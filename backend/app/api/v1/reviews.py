@@ -1,5 +1,5 @@
-import html
 import logging
+import secrets
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException
@@ -18,7 +18,9 @@ router = APIRouter()
 
 
 def require_admin(x_admin_secret: str | None = Header(default=None)) -> None:
-    if not settings.ADMIN_SECRET or x_admin_secret != settings.ADMIN_SECRET:
+    if not settings.ADMIN_SECRET or not secrets.compare_digest(
+        x_admin_secret or "", settings.ADMIN_SECRET
+    ):
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -31,11 +33,11 @@ class ReviewCreate(BaseModel):
 
     @field_validator("text", "name", "city", mode="before")
     @classmethod
-    def strip_and_escape(cls, v: str | None) -> str | None:
+    def strip_whitespace(cls, v: str | None) -> str | None:
         if v is None:
             return v
         stripped = str(v).strip()
-        return html.escape(stripped) if stripped else None
+        return stripped if stripped else None
 
 
 class ReviewOut(BaseModel):
@@ -126,6 +128,7 @@ async def list_reviews(
     db: AsyncSession = Depends(get_db),
 ) -> ReviewListOut:
     limit = min(max(limit, 1), 50)
+    page = max(page, 1)
     offset = (page - 1) * limit
 
     base = select(OrderReview).where(OrderReview.is_hidden.is_(False))
@@ -143,15 +146,25 @@ async def list_reviews(
     return ReviewListOut(reviews=list(reviews), total=total, page=page)
 
 
-@router.get("/admin", response_model=list[AdminReviewOut])
+@router.get("/admin", response_model=ReviewListOut)
 async def list_all_reviews_admin(
+    page: int = 1,
+    limit: int = 100,
     _: None = Depends(require_admin),
     db: AsyncSession = Depends(get_db),
-) -> list[OrderReview]:
-    result = await db.execute(
-        select(OrderReview).order_by(OrderReview.created_at.desc())
-    )
-    return list(result.scalars().all())
+) -> ReviewListOut:
+    limit = min(max(limit, 1), 500)
+    offset = (page - 1) * limit
+    page = max(page, 1)
+
+    base = select(OrderReview).order_by(OrderReview.created_at.desc())
+    count_base = select(func.count()).select_from(OrderReview)
+
+    result = await db.execute(base.offset(offset).limit(limit))
+    reviews = result.scalars().all()
+    total = (await db.execute(count_base)).scalar_one()
+
+    return ReviewListOut(reviews=list(reviews), total=total, page=page)
 
 
 @router.patch("/{review_id}/visibility", response_model=AdminReviewOut)
