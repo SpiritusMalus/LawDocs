@@ -140,15 +140,16 @@ def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> N
             pdf.multi_cell(85.0, line_h, line.strip(), align="L")
 
 
-def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) -> None:
+def _render_sig_block(pdf: "FPDF", line_h: float = 6.0) -> None:
     """Блок подписи: дата-бланк слева + подпись/расшифровка-бланк справа. Всё от руки."""
     PAGE_W  = 210.0
     LEFT_M  = 25.0
     RIGHT_M = 20.0
     BODY_W  = PAGE_W - LEFT_M - RIGHT_M
     SIG_W   = 80.0
+    BLOCK_H = 2 * line_h + 5
 
-    if pdf.get_y() + 20 > pdf.h - pdf.b_margin:
+    if pdf.get_y() + BLOCK_H > pdf.h - pdf.b_margin:
         pdf.add_page()
 
     DATE_TEXT = "«___» _________________ 20___ г."
@@ -204,7 +205,7 @@ def _docx_to_pdf(docx_bytes: bytes) -> bytes:
         pdf.ln(1)
 
     if sig:
-        _render_sig_block(pdf, sig)
+        _render_sig_block(pdf)
 
     return bytes(pdf.output())
 
