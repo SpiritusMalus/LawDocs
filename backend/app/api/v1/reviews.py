@@ -141,7 +141,7 @@ async def list_reviews(
     reviews = (await db.execute(base)).scalars().all()
     total = (await db.execute(count_base)).scalar_one()
 
-    return ReviewListOut(reviews=list(reviews), total=total, page=page)
+    return ReviewListOut(reviews=reviews, total=total, page=page)
 
 
 @router.get("/admin", response_model=ReviewListOut)
@@ -162,7 +162,7 @@ async def list_all_reviews_admin(
     reviews = result.scalars().all()
     total = (await db.execute(count_base)).scalar_one()
 
-    return ReviewListOut(reviews=list(reviews), total=total, page=page)
+    return ReviewListOut(reviews=reviews, total=total, page=page)
 
 
 @router.patch("/{review_id}/visibility", response_model=AdminReviewOut)
