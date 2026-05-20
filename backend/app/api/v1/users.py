@@ -1,4 +1,3 @@
-import html
 import logging
 
 from fastapi import APIRouter, Depends
@@ -6,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
+from app.core.validators import strip_whitespace
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -26,11 +26,8 @@ class UserUpdate(BaseModel):
 
     @field_validator("name", mode="before")
     @classmethod
-    def strip_and_escape(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        stripped = str(v).strip()
-        return html.escape(stripped) if stripped else None
+    def validate_strip(cls, v: str | None) -> str | None:
+        return strip_whitespace(v)
 
 
 @router.get("/me", response_model=UserMeOut)

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
+from app.core.validators import strip_whitespace
 from app.models.order import Order
 from app.models.review import OrderReview
 from app.models.user import User
@@ -33,11 +34,8 @@ class ReviewCreate(BaseModel):
 
     @field_validator("text", "name", "city", mode="before")
     @classmethod
-    def strip_whitespace(cls, v: str | None) -> str | None:
-        if v is None:
-            return v
-        stripped = str(v).strip()
-        return stripped if stripped else None
+    def validate_strip(cls, v: str | None) -> str | None:
+        return strip_whitespace(v)
 
 
 class ReviewOut(BaseModel):
