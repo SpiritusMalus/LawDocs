@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isValidUuid } from "@/lib/validators";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
 
@@ -13,6 +14,9 @@ export async function PATCH(
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await params;
+  if (!isValidUuid(id)) {
+    return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+  }
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/reviews/${id}/visibility`, {
       method: "PATCH",
