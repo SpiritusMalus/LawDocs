@@ -1,8 +1,9 @@
 import logging
 import secrets
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException
+from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
+from app.core.security import ALGORITHM
 from app.core.validators import strip_whitespace
 from app.models.order import Order
 from app.models.review import OrderReview
@@ -19,10 +21,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def require_admin(x_admin_secret: str | None = Header(default=None)) -> None:
-    if not settings.ADMIN_SECRET or not secrets.compare_digest(
-        x_admin_secret or "", settings.ADMIN_SECRET
-    ):
+def create_admin_token() -> str:
+    expire = datetime.now(UTC) + timedelta(hours=4)
+    return jwt.encode(
+        {"role": "admin", "exp": expire},
+        settings.SECRET_KEY,
+        algorithm=ALGORITHM,
+    )
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    if not x_admin_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        payload = jwt.decode(x_admin_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Forbidden")
+    except JWTError:
         raise HTTPException(status_code=403, detail="Forbidden")
 
 
@@ -62,6 +77,21 @@ class ReviewListOut(BaseModel):
     reviews: list[ReviewOut]
     total: int
     page: int
+
+
+class AdminTokenOut(BaseModel):
+    admin_token: str
+
+
+@router.post("/admin/token", response_model=AdminTokenOut)
+async def create_admin_session(
+    x_admin_secret: str | None = Header(default=None),
+) -> AdminTokenOut:
+    if not settings.ADMIN_SECRET or not secrets.compare_digest(
+        x_admin_secret or "", settings.ADMIN_SECRET
+    ):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    return AdminTokenOut(admin_token=create_admin_token())
 
 
 @router.post("/", response_model=ReviewOut, status_code=201)
