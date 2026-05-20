@@ -163,6 +163,35 @@ export default async function SituationPage({
         </div>
       </section>
 
+      {/* Sample document — shown first so visitors see the product before reading about it */}
+      {page.sampleFile && (
+        <section className="bg-white py-16 px-4 border-t border-gray-100">
+          <div className="max-w-5xl mx-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Пример документа</h2>
+            <p className="text-gray-500 mb-6">
+              Так выглядит готовый документ — реальный образец для этой ситуации.
+            </p>
+            <div className="rounded-2xl border border-gray-200 overflow-hidden">
+              <iframe
+                src={page.sampleFile}
+                className="w-full h-[700px]"
+                title="Пример документа"
+              />
+            </div>
+            <div className="mt-4 flex justify-end">
+              <a
+                href={page.sampleFile}
+                download
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Скачать образец PDF
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Deliverables */}
       <section className="bg-gray-50 py-16 px-4">
         <div className="max-w-5xl mx-auto">
@@ -199,35 +228,6 @@ export default async function SituationPage({
           </div>
         </div>
       </section>
-
-      {/* Sample document */}
-      {page.sampleFile && (
-        <section className="bg-white py-16 px-4 border-t border-gray-100">
-          <div className="max-w-5xl mx-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Пример документа</h2>
-            <p className="text-gray-500 mb-6">
-              Так выглядит готовый документ — реальный образец для этой ситуации.
-            </p>
-            <div className="rounded-2xl border border-gray-200 overflow-hidden">
-              <iframe
-                src={page.sampleFile}
-                className="w-full h-[700px]"
-                title="Пример документа"
-              />
-            </div>
-            <div className="mt-4 flex justify-end">
-              <a
-                href={page.sampleFile}
-                download
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Скачать образец PDF
-              </a>
-            </div>
-          </div>
-        </section>
-      )}
 
       <SituationReviews situationId={slug} />
 

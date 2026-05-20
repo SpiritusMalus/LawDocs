@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Scale, Menu, X, LayoutDashboard } from "lucide-react";
+import { Scale, Menu, X, LayoutDashboard, FolderOpen } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -53,9 +53,10 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
             <>
               <Link
                 href="/login"
-                className="hidden md:inline-flex h-9 px-4 items-center text-sm font-medium text-gray-400 hover:text-white transition-colors"
+                className="hidden md:inline-flex h-9 px-4 items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
               >
-                Войти
+                <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                Мои документы
               </Link>
               <Link
                 href="/situations"
@@ -111,9 +112,10 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 <Link
                   href="/login"
                   onClick={() => setOpen(false)}
-                  className="flex items-center min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
+                  className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
                 >
-                  Войти
+                  <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                  Мои документы
                 </Link>
                 <Link
                   href="/situations"
