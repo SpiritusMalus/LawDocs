@@ -2,21 +2,28 @@
 
 import { useState, useMemo } from "react";
 import { Search } from "lucide-react";
-import { SITUATIONS, CATEGORIES } from "@/lib/situations";
+import { SITUATIONS, CATEGORIES, type SituationCategory } from "@/lib/situations";
 import { SituationCard } from "@/components/situation-card";
 
 export function SituationsGrid() {
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState<SituationCategory | null>(null);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return SITUATIONS;
-    const q = search.toLowerCase();
-    return SITUATIONS.filter(
-      (s) =>
-        s.title.toLowerCase().includes(q) ||
-        s.blurb.toLowerCase().includes(q)
-    );
-  }, [search]);
+    let items = SITUATIONS;
+    if (activeCategory) {
+      items = items.filter((s) => s.category === activeCategory);
+    }
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      items = items.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.blurb.toLowerCase().includes(q)
+      );
+    }
+    return items;
+  }, [search, activeCategory]);
 
   const grouped = useMemo(() => {
     const result: Record<string, typeof filtered> = {};
@@ -29,9 +36,9 @@ export function SituationsGrid() {
 
   return (
     <>
-      {/* Search */}
+      {/* Search + category tabs */}
       <section className="bg-white border-b border-gray-100 px-4 py-8">
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -41,6 +48,31 @@ export function SituationsGrid() {
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setActiveCategory(null)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                activeCategory === null
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Все
+            </button>
+            {Object.entries(CATEGORIES).map(([catId, cat]) => (
+              <button
+                key={catId}
+                onClick={() => setActiveCategory(catId as SituationCategory)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  activeCategory === catId
+                    ? "bg-blue-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {cat.icon} {cat.label}
+              </button>
+            ))}
           </div>
         </div>
       </section>
@@ -54,11 +86,11 @@ export function SituationsGrid() {
             return (
               <div key={catId}>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <span>{cat.icon}</span> {cat.label} ({items.length})
+                  <span>{cat.icon}</span> {cat.label}
                 </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map((s) => (
-                    <SituationCard key={s.id} situation={s} variant="dark" />
+                    <SituationCard key={s.id} situation={s} variant="dark" showLegal />
                   ))}
                 </div>
               </div>

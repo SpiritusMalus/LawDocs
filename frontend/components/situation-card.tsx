@@ -114,23 +114,20 @@ export function SituationCard({
         </h3>
       </div>
       <p
-        className={`text-sm leading-relaxed mb-2 flex-1 transition-colors ${
+        className={`text-sm leading-relaxed mb-4 flex-1 transition-colors ${
           isDark ? "text-gray-500 group-hover:text-gray-300" : "text-gray-500"
         }`}
       >
         {s.blurb}
       </p>
-      <p
-        className={`text-xs leading-relaxed mb-4 transition-colors ${
-          isDark
-            ? "text-gray-400 group-hover:text-gray-500"
-            : "text-gray-400"
-        }`}
-      >
-        {s.examples}
-      </p>
       {showLegal && page && (
-        <p className="text-xs text-gray-300 leading-relaxed mb-4">
+        <p
+          className={`text-xs leading-relaxed mb-4 transition-colors ${
+            isDark
+              ? "text-gray-400 group-hover:text-gray-400"
+              : "text-gray-400"
+          }`}
+        >
           {page.legalBasis
             .slice(0, 2)
             .map((l) => l.article)
@@ -142,7 +139,7 @@ export function SituationCard({
           isDark ? "text-primary group-hover:text-blue-400" : "text-primary"
         }`}
       >
-        Оформить документ
+        Оформить претензию
         <ArrowRight
           className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
           aria-hidden="true"
