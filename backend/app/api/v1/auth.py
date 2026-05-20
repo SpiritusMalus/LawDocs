@@ -70,15 +70,16 @@ async def request_magic_link(
     body: MagicLinkRequest,
     db: AsyncSession = Depends(get_db),
 ) -> None:
-    email_domain = body.email.split("@")[-1] if "@" in body.email else "unknown"
+    email_normalized = body.email.lower()
+    email_domain = email_normalized.split("@")[-1] if "@" in email_normalized else "unknown"
     ip = request.client.host if request.client else "unknown"
 
-    result = await db.execute(select(User).where(User.email == body.email))
+    result = await db.execute(select(User).where(User.email == email_normalized))
     user = result.scalar_one_or_none()
 
     # Always create or update user (don't reveal if user exists)
     if not user:
-        user = User(email=body.email)
+        user = User(email=email_normalized)
         db.add(user)
 
     token = generate_magic_token()
@@ -92,7 +93,7 @@ async def request_magic_link(
 
     magic_url = f"{settings.FRONTEND_URL}/auth/verify?token={token}"
     try:
-        await send_magic_link(email=body.email, url=magic_url)
+        await send_magic_link(email=email_normalized, url=magic_url)
         logger.info("magic_link_sent", extra={"action": "magic_link_sent", "email_domain": email_domain})
     except Exception as exc:
         logger.error("magic_link_send_failed", extra={"action": "magic_link_send_failed", "email_domain": email_domain}, exc_info=True)

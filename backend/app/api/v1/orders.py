@@ -75,17 +75,18 @@ async def init_order(
         )
 
     # Unauthenticated flow: upsert user and send magic link
-    result = await db.execute(select(User).where(User.email == body.email))
+    email_normalized = body.email.lower()
+    result = await db.execute(select(User).where(User.email == email_normalized))
     user = result.scalar_one_or_none()
 
     if not user:
-        user = User(email=str(body.email))
+        user = User(email=email_normalized)
         db.add(user)
         try:
             await db.flush()
         except IntegrityError:
             await db.rollback()
-            result = await db.execute(select(User).where(User.email == body.email))
+            result = await db.execute(select(User).where(User.email == email_normalized))
             user = result.scalar_one()
 
     order = Order(
