@@ -29,16 +29,16 @@ export function Hero() {
             </div>
 
             <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1]">
-              Готовый юридический{" "}
-              <span className="text-blue-400">документ</span>
-              <br />за 5 минут —{" "}
-              <span className="text-blue-400">199&nbsp;₽</span>
+              Готовая <span className="text-blue-400">претензия</span>{" "}
+              за <span className="text-blue-400">5&nbsp;минут</span>
+              <br />— вместо 5&nbsp;000&nbsp;₽ у юриста
             </h1>
 
             <p className="animate-hero animate-hero-3 text-lg text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
-              Опишите проблему — получите претензию или жалобу,
-              оформленную по всем правилам. С формулой расчёта неустойки,
-              ссылками на статьи закона и инструкцией «куда нести».
+              Магазин не возвращает деньги, банк списал лишнее,
+              маркетплейс кинул на возврат — опишите ситуацию,
+              и получите документ со ссылками на статьи закона,
+              расчётом неустойки и инструкцией куда отправить.
             </p>
 
             <div className="animate-hero animate-hero-4 flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-4">
@@ -62,7 +62,7 @@ export function Hero() {
             </div>
 
             <p className="text-xs text-gray-500 mb-8">
-              Если документ не подойдёт — вернём деньги без вопросов
+              Вернём 199&nbsp;₽ в течение 7 дней, если документ не подойдёт
             </p>
 
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-sm text-gray-400 mb-8">
