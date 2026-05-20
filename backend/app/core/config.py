@@ -1,4 +1,4 @@
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -52,7 +52,7 @@ class Settings(BaseSettings):
     S3_REGION: str = "ru-central1"
 
     # Frontend URL (for magic link redirects)
-    FRONTEND_URL: str = "https://lawdocs.ru"
+    FRONTEND_URL: str = "https://law-docs.ru"
 
     # Шифрование ПДн в form_data (152-ФЗ)
     # Генерация: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
@@ -64,6 +64,12 @@ class Settings(BaseSettings):
 
     # Администрирование (модерация отзывов)
     ADMIN_SECRET: str = ""
+
+    @model_validator(mode="after")
+    def check_admin_secret_in_production(self) -> "Settings":
+        if self.APP_ENV == "production" and not self.ADMIN_SECRET:
+            raise ValueError("ADMIN_SECRET must be set in production environment")
+        return self
 
 
 settings = Settings()  # type: ignore[call-arg]
