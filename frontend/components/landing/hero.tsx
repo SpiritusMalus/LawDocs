@@ -83,7 +83,7 @@ export function Hero() {
           </div>
 
           {/* Right column — document mockup */}
-          <div className="hidden lg:block flex-shrink-0 w-[360px]">
+          <div className="hidden lg:block flex-shrink-0">
             <DocumentMockup />
           </div>
 
@@ -95,51 +95,73 @@ export function Hero() {
 
 function DocumentMockup() {
   return (
-    <div className="relative">
-      <div className="absolute -inset-4 bg-blue-500/10 rounded-3xl blur-2xl" />
-      <div className="relative bg-white rounded-2xl shadow-2xl overflow-hidden border border-white/10">
-        {/* Titlebar */}
-        <div className="bg-gray-800 px-5 py-3 flex items-center gap-2">
-          <div className="w-3 h-3 rounded-full bg-red-400/70" />
-          <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
-          <div className="w-3 h-3 rounded-full bg-green-400/70" />
-          <span className="ml-2 text-xs text-gray-400">претензия.docx</span>
+    <div className="flex items-start gap-4">
+      {/* Document */}
+      <div className="relative">
+        <div className="absolute -inset-4 bg-blue-500/10 rounded-3xl blur-2xl pointer-events-none" />
+        <div className="relative bg-white rounded-2xl shadow-[0_2px_20px_rgba(0,0,0,0.14)] overflow-hidden border border-gray-200/60 w-[340px]">
+          {/* Titlebar */}
+          <div className="bg-gray-800 px-5 py-3 flex items-center gap-2">
+            <div className="w-3 h-3 rounded-full bg-red-400/70" />
+            <div className="w-3 h-3 rounded-full bg-yellow-400/70" />
+            <div className="w-3 h-3 rounded-full bg-green-400/70" />
+            <span className="ml-2 text-xs text-gray-400">претензия.docx</span>
+          </div>
+          {/* Document body */}
+          <div className="p-6 font-mono text-xs leading-relaxed text-gray-700 space-y-3">
+            <div className="text-right text-gray-500 text-[11px]">
+              <div>Генеральному директору</div>
+              <div>ООО «Wildberries»</div>
+              <div className="mt-1">от Иванова Ивана Ивановича</div>
+              <div>г. Москва</div>
+            </div>
+            <div className="text-center font-bold text-gray-900 text-sm py-2 tracking-wide">
+              ПРЕТЕНЗИЯ № 2026-04-15
+            </div>
+            <div className="text-[11px] text-gray-600 leading-relaxed">
+              15 апреля 2024 года я приобрёл товар артикул №<span className="text-blue-600">48291</span> стоимостью <span className="text-blue-600 font-semibold">3 490 ₽</span>...
+            </div>
+            <div className="text-[11px] text-gray-600 leading-relaxed">
+              В соответствии со ст. 18 Закона РФ «О защите прав потребителей» от 07.02.1992 №<span className="text-blue-600">2300-1</span>...
+            </div>
+            <div className="border-t border-gray-100 pt-3 space-y-2">
+              <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
+                <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                Неустойка: <span className="font-semibold">1% за каждый день просрочки</span>
+              </div>
+              <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+                <CheckCircle className="h-3.5 w-3.5 shrink-0" />
+                Куда подать: Роспотребнадзор, суд
+              </div>
+            </div>
+            <div className="pt-2 text-[11px] text-gray-400 flex items-center justify-between">
+              <span>Подпись: _______________</span>
+              <span>Дата: __.__.2024</span>
+            </div>
+          </div>
         </div>
-        {/* Document body */}
-        <div className="p-6 font-mono text-xs leading-relaxed text-gray-700 space-y-3">
-          <div className="text-right text-gray-500 text-[11px]">
-            <div>Генеральному директору</div>
-            <div>ООО «Wildberries»</div>
-            <div className="mt-1">от Иванова Ивана Ивановича</div>
-            <div>г. Москва</div>
-          </div>
-          <div className="text-center font-bold text-gray-900 text-sm py-2 tracking-wide">
-            ПРЕТЕНЗИЯ
-          </div>
-          <div className="text-[11px] text-gray-600 leading-relaxed">
-            15 апреля 2024 года я приобрёл товар артикул №<span className="text-blue-600">48291</span> стоимостью <span className="text-blue-600 font-semibold">3 490 ₽</span>...
-          </div>
-          <div className="text-[11px] text-gray-600 leading-relaxed">
-            В соответствии со ст. 18 Закона РФ «О защите прав потребителей» от 07.02.1992 №<span className="text-blue-600">2300-1</span>...
-          </div>
-          <div className="border-t border-gray-100 pt-3 space-y-2">
-            <div className="flex items-center gap-2 text-[11px] text-emerald-700 bg-emerald-50 rounded-lg px-3 py-2">
-              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
-              Неустойка: <span className="font-semibold">1% за каждый день просрочки</span>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
-              <CheckCircle className="h-3.5 w-3.5 shrink-0" />
-              Куда подать: Роспотребнадзор, суд
-            </div>
-          </div>
-          <div className="pt-2 text-[11px] text-gray-400 flex items-center justify-between">
-            <span>Подпись: _______________</span>
-            <span>Дата: __.__.2024</span>
-          </div>
+        <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
+          Готов за 5 мин
         </div>
       </div>
-      <div className="absolute -bottom-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg">
-        Готов за 5 мин
+
+      {/* Callouts */}
+      <div className="flex flex-col gap-5 mt-[172px]">
+        <CalloutLabel icon="🔗" text="Ссылка на статью закона" />
+        <CalloutLabel icon="🧮" text="Расчёт неустойки автоматически" />
+        <CalloutLabel icon="📮" text="Куда подать" />
+      </div>
+    </div>
+  );
+}
+
+function CalloutLabel({ icon, text }: { icon: string; text: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <div className="w-6 h-px bg-white/30 shrink-0" />
+      <div className="flex items-center gap-1.5 bg-white/10 border border-white/20 rounded-lg px-2.5 py-1.5">
+        <span className="text-sm leading-none">{icon}</span>
+        <span className="text-[11px] text-gray-300 font-medium whitespace-nowrap">{text}</span>
       </div>
     </div>
   );
