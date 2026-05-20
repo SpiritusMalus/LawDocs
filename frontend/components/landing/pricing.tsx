@@ -8,7 +8,7 @@ const INCLUDED = [
   "Расчёт неустойки или процентов, если применимо",
   "Инструкция: реальные контакты компании, куда отправить, сроки",
   "Ссылки на законы — читать прямо в КонсультантПлюс",
-  "Возврат денег, если документ вам не подойдёт",
+  "Гарантия возврата 199 ₽ за 7 дней, если не подойдёт",
 ];
 
 export function Pricing() {
@@ -42,8 +42,9 @@ export function Pricing() {
                   </p>
                 </div>
                 <div className="text-right">
+                  <div className="text-sm text-gray-500 line-through mb-1">Юрист — от 5&nbsp;000&nbsp;₽</div>
                   <div className="text-5xl font-bold text-gray-900">199&nbsp;<span className="text-primary">₽</span></div>
-                  <div className="text-xs text-gray-400 mt-1">разовая оплата</div>
+                  <div className="text-xs text-gray-400 mt-1">разовая оплата, без подписок</div>
                 </div>
               </div>
 

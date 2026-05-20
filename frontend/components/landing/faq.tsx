@@ -6,6 +6,9 @@ import { FAQ_ITEMS } from "@/lib/faq";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export function Faq() {
+  const featured = FAQ_ITEMS.filter((item) => item.featured);
+  const collapsed = FAQ_ITEMS.filter((item) => !item.featured);
+
   return (
     <section className="bg-gray-50 border-y border-gray-100 py-24 px-4 sm:px-6">
       <div className="max-w-(--l-content-narrow) mx-auto">
@@ -20,9 +23,26 @@ export function Faq() {
         </div>
         </ScrollReveal>
 
+        {/* Featured questions — раскрытые */}
         <ScrollReveal delay={80}>
+        <div className="space-y-8 mb-8">
+          {featured.map((item) => (
+            <div key={item.q}>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                {item.q}
+              </h3>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                {item.a}
+              </p>
+            </div>
+          ))}
+        </div>
+        </ScrollReveal>
+
+        {/* Остальные вопросы — аккордеон */}
+        <ScrollReveal delay={100}>
         <Accordion.Root className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-100">
-          {FAQ_ITEMS.map((item) => (
+          {collapsed.map((item) => (
             <Accordion.Item key={item.q} className="group">
               <Accordion.Header>
                 <Accordion.Trigger className="flex w-full items-center justify-between text-left px-6 py-5 hover:bg-gray-50 transition-colors">

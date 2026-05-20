@@ -1,4 +1,5 @@
 import { Hero } from "@/components/landing/hero";
+import { TrustBlock } from "@/components/landing/trust-block";
 import { SocialProofBar } from "@/components/landing/social-proof-bar";
 import { Situations } from "@/components/landing/situations";
 import { HowItWorks } from "@/components/landing/how-it-works";
@@ -49,6 +50,7 @@ export default function HomePage() {
       <FaqJsonLd />
       <MobileStickyCTA />
       <Hero />
+      <TrustBlock />
       <SocialProofBar />
       <Situations />
       <HowItWorks />
