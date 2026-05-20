@@ -160,6 +160,8 @@ export default function AdminReviewsPage() {
                 onClick={() => toggleVisibility(review.id)}
                 disabled={isPending}
                 title={review.is_hidden ? "Показать" : "Скрыть"}
+                aria-label={review.is_hidden ? "Показать отзыв" : "Скрыть отзыв"}
+                aria-pressed={!review.is_hidden}
                 className="flex-shrink-0 p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-700 disabled:opacity-40"
               >
                 {review.is_hidden ? (
