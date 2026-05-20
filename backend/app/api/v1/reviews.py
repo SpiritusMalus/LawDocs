@@ -5,6 +5,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -76,12 +77,6 @@ async def create_review(
     if order.status != "done":
         raise HTTPException(status_code=400, detail="Отзыв можно оставить только после успешного завершения заказа.")
 
-    existing = await db.execute(
-        select(OrderReview).where(OrderReview.order_id == body.order_id)
-    )
-    if existing.scalar_one_or_none():
-        raise HTTPException(status_code=409, detail="Отзыв на этот заказ уже оставлен.")
-
     review = OrderReview(
         order_id=body.order_id,
         user_id=current_user.id,
@@ -98,7 +93,14 @@ async def create_review(
     if body.name and not current_user.name:
         current_user.name = body.name
 
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as e:
+        await db.rollback()
+        if "order_id" in str(e):
+            raise HTTPException(status_code=409, detail="Отзыв на этот заказ уже оставлен.")
+        raise
+
     await db.refresh(review)
     return review
 
