@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Eye, EyeOff, Star, LogIn } from "lucide-react";
+import { Eye, EyeOff, Star, LogIn, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { adminLoginAction, adminLogoutAction } from "./actions";
 
 interface Review {
   id: string;
@@ -19,53 +20,59 @@ interface Review {
   created_at: string;
 }
 
-const SESSION_KEY = "admin_secret";
-
 export default function AdminReviewsPage() {
-  const [secret, setSecret] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [authed, setAuthed] = useState(false);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    const saved = sessionStorage.getItem(SESSION_KEY);
-    if (saved) {
-      setSecret(saved);
-      loadReviews(saved);
-    }
+    loadReviews();
   }, []);
 
-  async function loadReviews(s: string) {
+  async function loadReviews() {
     setError(null);
-    const res = await fetch("/api/admin/reviews", {
-      headers: { "X-Admin-Secret": s },
-    });
-    if (res.status === 403) {
-      setError("Неверный пароль");
-      sessionStorage.removeItem(SESSION_KEY);
+    const res = await fetch("/api/admin/reviews");
+    if (res.status === 401) {
+      setError("Session expired");
       return;
     }
     if (!res.ok) {
-      setError("Ошибка загрузки");
+      setError("Failed to load reviews");
       return;
     }
     const data = (await res.json()) as Review[];
     setReviews(data);
     setAuthed(true);
-    sessionStorage.setItem(SESSION_KEY, s);
   }
 
-  function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
-    startTransition(() => loadReviews(secret));
+    setError(null);
+    startTransition(async () => {
+      const result = await adminLoginAction(inputValue);
+      if (result.success) {
+        setInputValue("");
+        await loadReviews();
+      } else {
+        setError(result.error || "Invalid password");
+      }
+    });
+  }
+
+  async function handleLogout() {
+    startTransition(async () => {
+      await adminLogoutAction();
+      setAuthed(false);
+      setReviews([]);
+    });
   }
 
   function toggleVisibility(id: string) {
     startTransition(async () => {
       const res = await fetch(`/api/admin/reviews/${id}`, {
         method: "PATCH",
-        headers: { "X-Admin-Secret": secret },
       });
       if (!res.ok) return;
       const updated = (await res.json()) as Review;
@@ -82,12 +89,12 @@ export default function AdminReviewsPage() {
             <Input
               type="password"
               placeholder="Admin secret"
-              value={secret}
-              onChange={(e) => setSecret(e.target.value)}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
               autoFocus
             />
             {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={isPending || !secret} className="w-full">
+            <Button type="submit" disabled={isPending || !inputValue} className="w-full">
               <LogIn className="h-4 w-4 mr-2" />
               {isPending ? "Входим..." : "Войти"}
             </Button>
@@ -105,9 +112,15 @@ export default function AdminReviewsPage() {
       <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Отзывы</h1>
-          <p className="text-sm text-gray-500">
-            {visible} показано · {hidden} скрыто
-          </p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-gray-500">
+              {visible} показано · {hidden} скрыто
+            </p>
+            <Button variant="ghost" size="sm" onClick={handleLogout} disabled={isPending}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Выход
+            </Button>
+          </div>
         </div>
 
         {reviews.length === 0 && (

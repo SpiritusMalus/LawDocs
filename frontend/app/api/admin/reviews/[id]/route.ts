@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
 
 const BACKEND_URL = process.env.BACKEND_URL ?? "";
 
@@ -6,9 +7,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const secret = request.headers.get("x-admin-secret");
+  const cookieStore = await cookies();
+  const secret = cookieStore.get("admin_token")?.value;
   if (!secret) {
-    return NextResponse.json({ error: "forbidden" }, { status: 403 });
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
   const { id } = await params;
   try {
