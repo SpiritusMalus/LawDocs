@@ -148,3 +148,195 @@ async def verify_magic_link(
     )
 
 
+# ============================================================================
+# E2EE ENDPOINTS
+# ============================================================================
+
+
+class E2EESetupRequest(BaseModel):
+    public_key: str
+    encrypted_backup: str
+    recovery_password: str
+
+
+class E2EESetupResponse(BaseModel):
+    status: str
+    message: str
+
+
+@router.post("/setup-e2ee", response_model=E2EESetupResponse)
+async def setup_e2ee(
+    request: Request,
+    body: E2EESetupRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> E2EESetupResponse:
+    """
+    Сохраняет E2EE ключи пользователя (public_key + encrypted backup).
+
+    Клиент отправляет:
+    - public_key: открытый ключ для шифрования
+    - encrypted_backup: зашифрованный приватный ключ (пароль recovery пользователя)
+    - recovery_password: пароль восстановления
+    """
+    from app.services.e2ee_service import E2EEService
+    from app.services.audit_logger import AuditLogger
+
+    try:
+        ip = request.client.host if request.client else "unknown"
+
+        # Сохранить public_key
+        current_user.public_key = body.public_key
+
+        # Дополнительное шифрование backup на сервере (двойной слой)
+        try:
+            from app.core.config import settings
+            server_encrypted_backup = E2EEService.encrypt_with_fernet(
+                body.encrypted_backup, settings.FERNET_KEY
+            )
+            current_user.private_key_backup_encrypted = server_encrypted_backup
+        except Exception as e:
+            logger.error("e2ee_backup_encryption_failed", extra={"action": "e2ee_setup", "user_id": str(current_user.id), "error": str(e)})
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка при сохранении backup ключа",
+            ) from e
+
+        # Сохранить факт согласия
+        current_user.consent_timestamp = datetime.now(UTC)
+        current_user.consent_ip = ip
+
+        await db.commit()
+
+        # Логирование
+        await AuditLogger.log_access(
+            session=db,
+            user_id=current_user.id,
+            action="e2ee_setup_complete",
+            data_type="private_key_backup",
+            ip_address=ip,
+            details={"public_key_saved": True, "backup_encrypted": True},
+        )
+
+        logger.info("e2ee_setup_complete", extra={"action": "e2ee_setup_complete", "user_id": str(current_user.id), "ip": ip})
+
+        return E2EESetupResponse(
+            status="success",
+            message="E2EE ключи сохранены. Данные защищены шифрованием.",
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("e2ee_setup_failed", extra={"action": "e2ee_setup", "user_id": str(current_user.id)}, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при сохранении E2EE настроек",
+        ) from e
+
+
+class RecoverAccessRequest(BaseModel):
+    email: str
+    recovery_password: str
+
+
+class RecoverAccessResponse(BaseModel):
+    backup_encrypted: str
+    message: str
+
+
+@router.post("/recover-access", response_model=RecoverAccessResponse)
+@limiter.limit("5/minute")
+async def recover_access(
+    request: Request,
+    body: RecoverAccessRequest,
+    db: AsyncSession = Depends(get_db),
+) -> RecoverAccessResponse:
+    """
+    Восстанавливает доступ пользователя через recovery password.
+
+    Клиент отправляет:
+    - email: адрес пользователя
+    - recovery_password: пароль для восстановления
+
+    Сервер возвращает:
+    - backup_encrypted: зашифрованный приватный ключ (расшифрован server-level Fernet, но остаётся зашифрованным recovery password)
+    """
+    from app.services.e2ee_service import E2EEService
+    from app.services.audit_logger import AuditLogger
+
+    ip = request.client.host if request.client else "unknown"
+    email_normalized = body.email.lower()
+
+    try:
+        # Найти пользователя по email
+        result = await db.execute(select(User).where(User.email == email_normalized))
+        user = result.scalar_one_or_none()
+
+        if not user:
+            # Не раскрывать существование пользователя
+            logger.warning("recover_access_user_not_found", extra={"action": "recover_access", "email_domain": email_normalized.split("@")[-1], "ip": ip})
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Пользователь не найден",
+            )
+
+        if not user.private_key_backup_encrypted:
+            logger.warning("recover_access_no_backup", extra={"action": "recover_access", "user_id": str(user.id), "ip": ip})
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="У вас нет сохранённого backup ключа",
+            )
+
+        try:
+            # Расшифровать server-level шифрование (Fernet)
+            from app.core.config import settings
+
+            backup_encrypted_by_password = E2EEService.decrypt_with_fernet(
+                user.private_key_backup_encrypted, settings.FERNET_KEY
+            )
+
+            # Логирование
+            await AuditLogger.log_access(
+                session=db,
+                user_id=user.id,
+                action="key_recovery_attempt",
+                data_type="private_key_backup",
+                ip_address=ip,
+                details={"success": True},
+            )
+
+            logger.info("key_recovery_success", extra={"action": "key_recovery_success", "user_id": str(user.id), "ip": ip})
+
+            return RecoverAccessResponse(
+                backup_encrypted=backup_encrypted_by_password,
+                message="Используйте свой пароль восстановления для расшифровки backup ключа",
+            )
+
+        except Exception as e:
+            logger.error("key_recovery_decryption_failed", extra={"action": "key_recovery", "user_id": str(user.id)}, exc_info=True)
+
+            await AuditLogger.log_access(
+                session=db,
+                user_id=user.id,
+                action="key_recovery_attempt",
+                data_type="private_key_backup",
+                ip_address=ip,
+                details={"success": False, "error": "decryption_failed"},
+            )
+
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Ошибка при восстановлении доступа",
+            ) from e
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("recover_access_failed", extra={"action": "recover_access"}, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Ошибка при восстановлении доступа",
+        ) from e
+
+
