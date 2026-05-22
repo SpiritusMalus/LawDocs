@@ -49,6 +49,21 @@ export function SituationsGrid() {
               className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
+          {activeCategory && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Поиск в:</span>
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 border border-blue-100 rounded-full text-sm text-blue-700">
+                {CATEGORIES[activeCategory]?.icon} {CATEGORIES[activeCategory]?.label}
+                <button
+                  onClick={() => setActiveCategory(null)}
+                  className="ml-0.5 text-blue-400 hover:text-blue-600 transition-colors"
+                  aria-label="Сбросить категорию"
+                >
+                  ×
+                </button>
+              </span>
+            </div>
+          )}
           <div className="relative">
             <div
               className="flex gap-2 overflow-x-auto whitespace-nowrap pb-1 scrollbar-none"
