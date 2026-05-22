@@ -1,6 +1,5 @@
 import base64
 import hashlib
-from typing import dict
 
 from cryptography.fernet import Fernet
 

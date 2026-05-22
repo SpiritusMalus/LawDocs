@@ -72,40 +72,18 @@ async def send_magic_link(email: str, url: str) -> None:
     await _send(to=email, subject="Вход в LawDocs", html=html)
 
 
-async def send_document_ready(
-    email: str,
-    order_id: str,
-    pdf_bytes: bytes | None = None,
-    pdf_filename: str = "pretenziya.pdf",
-    instruction_bytes: bytes | None = None,
-    instruction_filename: str = "instrukciya.pdf",
-) -> None:
+async def send_document_ready(email: str, order_id: str) -> None:
+    # Документ НЕ вкладываем в письмо: файлы доступны только в ЛК, где их можно
+    # расшифровать ключом пользователя. Вложение положило бы открытый PDF в почту.
     url = f"{settings.FRONTEND_URL}/orders/{order_id}"
-    has_instruction = bool(instruction_bytes)
-    attachments_note = (
-        "К письму прикреплены претензия (PDF) и инструкция по подаче."
-        if has_instruction
-        else "К письму прикреплён PDF с претензией."
-    )
     html = f"""
     <p>Ваш документ готов!</p>
-    <p>{attachments_note} Также всё доступно по ссылке:</p>
+    <p>Претензия, инструкция по подаче и версия в формате Word доступны в личном кабинете:</p>
     <p><a href="{url}" style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
         Открыть заказ
     </a></p>
-    <p style="color:#6b7280;font-size:13px">Там же доступна версия в формате Word (.docx) для редактирования.</p>
     """
-    attachments = []
-    if pdf_bytes:
-        attachments.append((pdf_filename, pdf_bytes))
-    if instruction_bytes:
-        attachments.append((instruction_filename, instruction_bytes))
-    await _send(
-        to=email,
-        subject="LawDocs — ваш документ готов",
-        html=html,
-        attachments=attachments,
-    )
+    await _send(to=email, subject="LawDocs — ваш документ готов", html=html)
 
 
 async def send_document_failed(email: str, order_id: str) -> None:

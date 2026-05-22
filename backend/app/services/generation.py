@@ -27,7 +27,6 @@ async def run_document_generation(
     from app.services.docgen import generate_document, generate_instruction
     from app.services.email import send_document_failed, send_document_ready
     from app.services.llm import fill_instruction, fill_template
-    from app.services.storage import download_bytes
 
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(Order).where(Order.id == order_id))
@@ -77,16 +76,7 @@ async def run_document_generation(
 
             await db.commit()
 
-            pdf_bytes = await download_bytes(pdf_key)
-            instruction_bytes = await download_bytes(instruction_pdf_key) if instruction_pdf_key else None
-            await send_document_ready(
-                email=user_email,
-                order_id=order_id,
-                pdf_bytes=pdf_bytes,
-                pdf_filename=pdf_key.split("/")[-1],
-                instruction_bytes=instruction_bytes,
-                instruction_filename=instruction_pdf_key.split("/")[-1] if instruction_pdf_key else "instrukciya.pdf",
-            )
+            await send_document_ready(email=user_email, order_id=order_id)
         except Exception:
             logger.exception("Document generation failed for order %s", order_id)
             order.status = "failed"
