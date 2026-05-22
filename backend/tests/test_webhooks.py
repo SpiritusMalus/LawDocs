@@ -89,13 +89,15 @@ async def test_webhook_happy_path_order_becomes_done(
     await db_session.commit()
     await db_session.refresh(order)
 
+    # Генерация делегирована run_document_generation, который импортирует свои
+    # зависимости из source-модулей — патчим там.
     with (
-        patch("app.api.v1.webhooks.fill_template", new_callable=AsyncMock, return_value="Текст претензии"),
-        patch("app.api.v1.webhooks.generate_document", new_callable=AsyncMock, return_value=("doc.docx", "doc.pdf")),
-        patch("app.api.v1.webhooks.fill_instruction", new_callable=AsyncMock, return_value="Инструкция"),
-        patch("app.api.v1.webhooks.generate_instruction", new_callable=AsyncMock, return_value="instr.pdf"),
-        patch("app.api.v1.webhooks.download_bytes", new_callable=AsyncMock, return_value=b"%PDF-1.4"),
-        patch("app.api.v1.webhooks.send_document_ready", new_callable=AsyncMock),
+        patch("app.services.llm.fill_template", new_callable=AsyncMock, return_value="Текст претензии"),
+        patch("app.services.docgen.generate_document", new_callable=AsyncMock, return_value=("doc.docx", "doc.pdf")),
+        patch("app.services.llm.fill_instruction", new_callable=AsyncMock, return_value="Инструкция"),
+        patch("app.services.docgen.generate_instruction", new_callable=AsyncMock, return_value="instr.pdf"),
+        patch("app.services.storage.download_bytes", new_callable=AsyncMock, return_value=b"%PDF-1.4"),
+        patch("app.services.email.send_document_ready", new_callable=AsyncMock),
     ):
         resp = await client.post(
             "/api/v1/webhooks/yookassa",
@@ -158,8 +160,9 @@ async def test_webhook_generation_failure_sets_failed_status(
     await db_session.refresh(order)
 
     with (
-        patch("app.api.v1.webhooks.fill_template", new_callable=AsyncMock, side_effect=RuntimeError("GigaChat down")),
-        patch("app.api.v1.webhooks.send_document_failed", new_callable=AsyncMock),
+        patch("app.services.llm.fill_template", new_callable=AsyncMock, side_effect=RuntimeError("GigaChat down")),
+        patch("app.services.email.send_document_failed", new_callable=AsyncMock),
+        patch("app.services.notifications.send_telegram_alert", new_callable=AsyncMock),
     ):
         resp = await client.post(
             "/api/v1/webhooks/yookassa",
@@ -167,10 +170,9 @@ async def test_webhook_generation_failure_sets_failed_status(
             headers={"Content-Type": "application/json", "x-real-ip": _YOOKASSA_IP},
         )
 
+    # run_document_generation сам ловит ошибку и ставит failed → webhook всегда 200.
     assert resp.status_code == 200
-    data = resp.json()
-    assert data["received"] is True
-    assert data.get("error") == "generation_failed"
+    assert resp.json()["received"] is True
 
     await db_session.refresh(order)
     assert order.status == "failed"

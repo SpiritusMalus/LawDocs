@@ -12,12 +12,8 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.limiter import limiter
-from app.models.document import Document
 from app.models.order import Order
-from app.services.docgen import generate_document, generate_instruction
-from app.services.storage import download_bytes
-from app.services.email import send_document_failed, send_document_ready
-from app.services.llm import fill_instruction, fill_template
+from app.services.generation import run_document_generation
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -103,71 +99,24 @@ async def yookassa_webhook(
     if not order:
         return {"received": True}
 
+    # Захватываем нужные значения до commit: после него атрибуты ORM-объекта
+    # истекают, а ленивая подгрузка в async-сессии бросит исключение.
+    order_id = order.id
+    situation_id = order.situation_id
+    form_data = order.form_data
+    user_email = order.user.email
+
     order.status = "generating"
     order.paid_at = datetime.now(UTC)
     await db.commit()
 
-    try:
-        filled_content = await fill_template(
-            situation_id=order.situation_id,
-            form_data=order.form_data,
-        )
-        docx_key, pdf_key = await generate_document(
-            order_id=order.id,
-            situation_id=order.situation_id,
-            content=filled_content,
-            form_data=order.form_data,
-        )
-
-        instruction_pdf_key = None
-        try:
-            from app.situations.registry import registry as _registry
-            _config = _registry.get(order.situation_id)
-            _legal_refs = [ref.model_dump() for ref in (_config.legal_refs if _config else [])]
-            instruction_content = await fill_instruction(
-                situation_id=order.situation_id,
-                form_data=order.form_data,
-            )
-            instruction_pdf_key = await generate_instruction(
-                order_id=order.id,
-                situation_id=order.situation_id,
-                content=instruction_content,
-                legal_refs=_legal_refs,
-            )
-        except Exception:
-            logger.exception("Instruction generation failed for order %s, continuing without it", order.id)
-
-        doc = Document(
-            order_id=order.id,
-            docx_key=docx_key,
-            pdf_key=pdf_key,
-            instruction_pdf_key=instruction_pdf_key,
-        )
-        db.add(doc)
-        order.status = "done"
-        order.payment_url = None
-        await db.commit()
-
-        pdf_bytes = await download_bytes(pdf_key)
-        instruction_bytes = await download_bytes(instruction_pdf_key) if instruction_pdf_key else None
-        await send_document_ready(
-            email=order.user.email,
-            order_id=order.id,
-            pdf_bytes=pdf_bytes,
-            pdf_filename=pdf_key.split("/")[-1],
-            instruction_bytes=instruction_bytes,
-            instruction_filename=instruction_pdf_key.split("/")[-1] if instruction_pdf_key else "instrukciya.pdf",
-        )
-
-    except Exception:
-        logger.exception("Document generation failed for order %s", order.id)
-        order.status = "failed"
-        await db.commit()
-        try:
-            await send_document_failed(email=order.user.email, order_id=order.id)
-        except Exception:
-            logger.exception("Failed to send failure notification for order %s", order.id)
-        # Return 200 so ЮKassa doesn't retry — failure is handled in app
-        return {"received": True, "error": "generation_failed"}
+    # Единый пайплайн генерации (тот же, что у retry и авто-retry). Сам ловит
+    # ошибки, ставит status=failed и шлёт уведомления — поэтому всегда 200.
+    await run_document_generation(
+        order_id=order_id,
+        situation_id=situation_id,
+        form_data=form_data,
+        user_email=user_email,
+    )
 
     return {"received": True}
