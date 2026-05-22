@@ -38,7 +38,7 @@ export function SituationsGrid() {
     <>
       {/* Search + category tabs */}
       <section className="bg-white border-b border-gray-100 px-4 py-8">
-        <div className="max-w-5xl mx-auto space-y-4">
+        <div className="max-w-screen-xl mx-auto space-y-4">
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
@@ -100,7 +100,7 @@ export function SituationsGrid() {
 
       {/* Situations by category */}
       <section className="bg-gray-50 px-4 py-12">
-        <div className="max-w-5xl mx-auto space-y-12">
+        <div className="max-w-screen-xl mx-auto space-y-12">
           {Object.entries(CATEGORIES).map(([catId, cat]) => {
             const items = grouped[catId] || [];
             if (items.length === 0) return null;
