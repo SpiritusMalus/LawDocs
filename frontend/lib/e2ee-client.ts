@@ -47,6 +47,12 @@ function concatBytes(...chunks: Uint8Array[]): Uint8Array {
   return out;
 }
 
+// WebCrypto ждёт BufferSource поверх ArrayBuffer. tweetnacl-util и .slice() дают
+// Uint8Array<ArrayBufferLike> (TS 5.7+), что несовместимо — копируем в свежий буфер.
+function asBuffer(u: Uint8Array): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(u);
+}
+
 export class E2EEClient {
   /** Генерирует пару ключей. privateKey НИКОГДА не уходит на сервер. */
   static generateKeyPair(): E2EEKeyPair {
@@ -144,9 +150,9 @@ export class E2EEClient {
 
     const ciphertext = new Uint8Array(
       await crypto.subtle.encrypt(
-        { name: "AES-GCM", iv },
+        { name: "AES-GCM", iv: asBuffer(iv) },
         key,
-        decodeUTF8(privateKeyB64)
+        asBuffer(decodeUTF8(privateKeyB64))
       )
     );
 
@@ -167,9 +173,9 @@ export class E2EEClient {
     let plaintext: ArrayBuffer;
     try {
       plaintext = await crypto.subtle.decrypt(
-        { name: "AES-GCM", iv },
+        { name: "AES-GCM", iv: asBuffer(iv) },
         key,
-        ciphertext
+        asBuffer(ciphertext)
       );
     } catch {
       throw new Error("E2EE: неверный пароль восстановления");
@@ -185,7 +191,7 @@ async function deriveAesKey(
 ): Promise<CryptoKey> {
   const baseKey = await crypto.subtle.importKey(
     "raw",
-    decodeUTF8(password),
+    asBuffer(decodeUTF8(password)),
     "PBKDF2",
     false,
     ["deriveKey"]
@@ -193,7 +199,7 @@ async function deriveAesKey(
   return crypto.subtle.deriveKey(
     {
       name: "PBKDF2",
-      salt,
+      salt: asBuffer(salt),
       iterations: PBKDF2_ITERATIONS,
       hash: "SHA-256",
     },
