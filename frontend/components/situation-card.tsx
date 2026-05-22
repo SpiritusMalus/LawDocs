@@ -122,10 +122,10 @@ export function SituationCard({
       </p>
       {showLegal && page && (
         <p
-          className={`text-xs leading-relaxed mb-4 transition-colors ${
+          className={`text-xs leading-relaxed mb-4 truncate transition-colors ${
             isDark
-              ? "text-gray-400 group-hover:text-gray-400"
-              : "text-gray-400"
+              ? "text-gray-600 group-hover:text-gray-400"
+              : "text-gray-600"
           }`}
         >
           {page.legalBasis
