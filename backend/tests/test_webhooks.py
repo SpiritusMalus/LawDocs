@@ -96,7 +96,6 @@ async def test_webhook_happy_path_order_becomes_done(
         patch("app.services.docgen.generate_document", new_callable=AsyncMock, return_value=("doc.docx", "doc.pdf")),
         patch("app.services.llm.fill_instruction", new_callable=AsyncMock, return_value="Инструкция"),
         patch("app.services.docgen.generate_instruction", new_callable=AsyncMock, return_value="instr.pdf"),
-        patch("app.services.storage.download_bytes", new_callable=AsyncMock, return_value=b"%PDF-1.4"),
         patch("app.services.email.send_document_ready", new_callable=AsyncMock),
     ):
         resp = await client.post(
