@@ -77,6 +77,13 @@ async def run_document_generation(
             await db.commit()
 
             await send_document_ready(email=user_email, order_id=order_id)
+
+            # Privacy: документ доставлен — персональные данные больше не нужны.
+            # Стираем отдельным commit только после успеха; на failed form_data
+            # сохраняется для retry (поэтому стирание не в транзакции status=done:
+            # сбой письма не должен оставить заказ без данных для повторной генерации).
+            order.form_data = {}
+            await db.commit()
         except Exception:
             logger.exception("Document generation failed for order %s", order_id)
             order.status = "failed"
