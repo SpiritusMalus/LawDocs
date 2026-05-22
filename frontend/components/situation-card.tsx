@@ -115,7 +115,7 @@ export function SituationCard({
       </div>
       <p
         className={`text-sm leading-relaxed mb-4 flex-1 transition-colors ${
-          isDark ? "text-gray-500 group-hover:text-gray-300" : "text-gray-500"
+          isDark ? "text-gray-500 group-hover:text-gray-300" : "text-gray-600"
         }`}
       >
         {s.blurb}
@@ -139,7 +139,7 @@ export function SituationCard({
           isDark ? "text-primary group-hover:text-blue-400" : "text-primary"
         }`}
       >
-        Оформить претензию
+        Подобрать документ
         <ArrowRight
           className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
           aria-hidden="true"
