@@ -10,6 +10,7 @@ from app.services.calculators import (
     calculate_auto_repair,
     calculate_ddu_delay,
     calculate_ddu_termination,
+    calculate_dtp_osago,
     calculate_gym_refund,
     calculate_shop,
     _parse_subscription_days,
@@ -469,3 +470,124 @@ class TestCalculateGymRefund:
 def test_registry_has_gym_refund():
     assert "gym_refund" in SITUATION_CALCULATORS
     assert SITUATION_CALCULATORS["gym_refund"] is calculate_gym_refund
+
+
+# ---------------------------------------------------------------------------
+# calculate_dtp_osago
+# ---------------------------------------------------------------------------
+
+_DTP_TODAY = date(2026, 5, 24)
+# claim_date 60 calendar days ago; due = claim + 28 days → overdue = 60 - 28 = 32 days
+_DTP_CLAIM_DATE = date(2026, 3, 25)
+_DTP_DUE_DATE = _DTP_CLAIM_DATE + __import__("datetime").timedelta(days=28)
+_DTP_OVERDUE_DAYS = max((_DTP_TODAY - _DTP_DUE_DATE).days, 0)
+
+
+class TestCalculateDtpOsagoDelay:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "violation_type": "delay",
+            "damage_amount": "150000",
+            "claim_date": _DTP_CLAIM_DATE.isoformat(),
+        }
+        data.update(overrides)
+        return data
+
+    def _run(self, data):
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = _DTP_TODAY
+            mock_date.fromisoformat = date.fromisoformat
+            return calculate_dtp_osago(data)
+
+    def test_correct_overdue_days(self):
+        result = self._run(self._base())
+        assert result["calculated_overdue_days"] == str(_DTP_OVERDUE_DAYS)
+
+    def test_correct_claim_amount(self):
+        result = self._run(self._base())
+        assert result["calculated_claim_amount"] == "150000.00"
+
+    def test_correct_penalty(self):
+        # 150000 × 1% × overdue_days
+        from decimal import Decimal
+        expected = Decimal("150000") * Decimal("0.01") * Decimal(_DTP_OVERDUE_DAYS)
+        result = self._run(self._base())
+        assert Decimal(result["calculated_penalty"]) == expected
+
+    def test_penalty_section_contains_amounts(self):
+        result = self._run(self._base())
+        assert "150000.00" in result["calculated_penalty_section"]
+        assert str(_DTP_OVERDUE_DAYS) in result["calculated_penalty_section"]
+
+    def test_paid_amount_reduces_claim_base(self):
+        data = self._base(paid_amount="50000")
+        result = self._run(data)
+        assert result["calculated_claim_amount"] == "100000.00"
+
+    def test_no_claim_date_returns_empty_penalty(self):
+        data = {"violation_type": "delay", "damage_amount": "150000"}
+        result = calculate_dtp_osago(data)
+        assert result["calculated_penalty_section"] == ""
+        assert result["calculated_overdue_days"] == ""
+
+    def test_missing_damage_amount_returns_early(self):
+        data = {"violation_type": "delay"}
+        result = calculate_dtp_osago(data)
+        assert result["calculated_penalty_section"] == ""
+
+
+class TestCalculateDtpOsagoUnderestimate:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "violation_type": "underestimate",
+            "damage_amount": "150000",
+            "paid_amount": "80000",
+            "claim_date": _DTP_CLAIM_DATE.isoformat(),
+        }
+        data.update(overrides)
+        return data
+
+    def _run(self, data):
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = _DTP_TODAY
+            mock_date.fromisoformat = date.fromisoformat
+            return calculate_dtp_osago(data)
+
+    def test_correct_underpayment(self):
+        result = self._run(self._base())
+        assert result["calculated_underpayment"] == "70000.00"
+
+    def test_claim_base_is_underpayment(self):
+        result = self._run(self._base())
+        assert result["calculated_claim_amount"] == "70000.00"
+
+    def test_underpayment_section_contains_amounts(self):
+        result = self._run(self._base())
+        assert "80000.00" in result["calculated_underpayment_section"]
+        assert "150000.00" in result["calculated_underpayment_section"]
+        assert "70000.00" in result["calculated_underpayment_section"]
+
+    def test_penalty_based_on_underpayment(self):
+        from decimal import Decimal
+        expected = Decimal("70000") * Decimal("0.01") * Decimal(_DTP_OVERDUE_DAYS)
+        result = self._run(self._base())
+        assert Decimal(result["calculated_penalty"]) == expected
+
+
+def test_dtp_osago_does_not_mutate_input():
+    original = {
+        "violation_type": "delay",
+        "damage_amount": "150000",
+        "claim_date": _DTP_CLAIM_DATE.isoformat(),
+    }
+    copy_ = dict(original)
+    with patch("app.services.calculators.date") as mock_date:
+        mock_date.today.return_value = _DTP_TODAY
+        mock_date.fromisoformat = date.fromisoformat
+        calculate_dtp_osago(original)
+    assert original == copy_
+
+
+def test_registry_has_dtp_osago():
+    assert "dtp_osago" in SITUATION_CALCULATORS
+    assert SITUATION_CALCULATORS["dtp_osago"] is calculate_dtp_osago

@@ -256,10 +256,66 @@ def calculate_gym_refund(form_data: dict) -> dict:
     return data
 
 
+def calculate_dtp_osago(form_data: dict) -> dict:
+    """Претензия в страховую по ОСАГО: пеня ст. 16.1 ч.21 ФЗ-40 + недоплата."""
+    data = dict(form_data)
+    data["calculated_penalty_section"] = ""
+    data["calculated_underpayment_section"] = ""
+    data["calculated_claim_amount"] = ""
+    data["calculated_overdue_days"] = ""
+    data["calculated_penalty"] = ""
+
+    violation = str(data.get("violation_type", ""))
+
+    try:
+        damage = Decimal(str(data["damage_amount"]))
+    except Exception:
+        return data
+
+    try:
+        paid = Decimal(str(data.get("paid_amount") or "0"))
+    except Exception:
+        paid = Decimal("0")
+
+    # Underpayment (underestimate branch)
+    if violation == "underestimate":
+        underpayment = max(damage - paid, Decimal("0"))
+        data["calculated_underpayment"] = _fmt(underpayment)
+        data["calculated_underpayment_section"] = (
+            f"Страховая компания выплатила {_fmt(paid)} руб., "
+            f"тогда как ущерб составляет {_fmt(damage)} руб. "
+            f"Недоплата: {_fmt(underpayment)} руб."
+        )
+        claim_base = underpayment
+    else:
+        claim_base = max(damage - paid, Decimal("0"))
+
+    data["calculated_claim_amount"] = _fmt(claim_base)
+
+    # Penalty: claim_base × 1% × overdue_days (ст. 16.1 ч.21 ФЗ-40)
+    # 20 рабочих дней ≈ 28 календарных дней
+    claim_date = _parse_date(data.get("claim_date"))
+    if claim_date:
+        due_date = claim_date + timedelta(days=28)
+        overdue_days = max((date.today() - due_date).days, 0)
+        data["calculated_overdue_days"] = str(overdue_days)
+        if overdue_days > 0:
+            penalty = claim_base * Decimal("0.01") * Decimal(overdue_days)
+            data["calculated_penalty"] = _fmt(penalty)
+            data["calculated_penalty_section"] = (
+                f"Пеня по ст. 16.1 ч. 21 ФЗ-40: {_fmt(claim_base)} руб. × 1% × "
+                f"{overdue_days} дней (просрочка с {_fmt_date_ru(due_date)}) "
+                f"= {_fmt(penalty)} руб."
+            )
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
     "shop": calculate_shop,
     "auto_repair": calculate_auto_repair,
     "gym_refund": calculate_gym_refund,
+    "dtp_osago": calculate_dtp_osago,
 }
