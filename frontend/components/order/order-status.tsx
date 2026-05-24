@@ -5,6 +5,7 @@ import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, RefreshCcw, P
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { E2EEClient } from "@/lib/e2ee-client";
 
 interface Order {
   id: string;
@@ -83,6 +84,60 @@ export function OrderStatus({
   const [isPaying, setIsPaying] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
+  const [downloadingFmt, setDownloadingFmt] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  async function handleDownload(fmt: "docx" | "pdf") {
+    setDownloadingFmt(fmt);
+    setDownloadError(null);
+    try {
+      const res = await fetch(`/api/documents/${orderId}/download-info/${fmt}`);
+      if (!res.ok) throw new Error("Не удалось получить ссылку на файл");
+
+      const { url, is_encrypted, filename } = await res.json() as {
+        url: string;
+        is_encrypted: boolean;
+        filename: string;
+      };
+
+      ymGoal("document_downloaded", { format: fmt, situation: order.situation_id });
+
+      if (!is_encrypted) {
+        // Старые заказы без шифрования — открываем напрямую
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        return;
+      }
+
+      const privateKey = E2EEClient.getPrivateKeyFromLocalStorage();
+      if (!privateKey) {
+        throw new Error("Ключ не найден в браузере. Войдите заново и настройте доступ к документам.");
+      }
+
+      const encryptedRes = await fetch(url);
+      if (!encryptedRes.ok) throw new Error("Ошибка при скачивании файла");
+
+      const encryptedBytes = new Uint8Array(await encryptedRes.arrayBuffer());
+      const plaintext = await E2EEClient.decryptFile(encryptedBytes, privateKey);
+
+      const blob = new Blob([plaintext], {
+        type: fmt === "pdf" ? "application/pdf"
+          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = filename;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+    } catch (e) {
+      setDownloadError(e instanceof Error ? e.message : "Ошибка скачивания");
+    } finally {
+      setDownloadingFmt(null);
+    }
+  }
 
   // Poll status while processing
   useEffect(() => {
@@ -203,25 +258,34 @@ export function OrderStatus({
 
       {order.status === "done" && (
         <div className="flex flex-col sm:flex-row gap-3">
-          <a
-            href={`/api/documents/${orderId}/download/docx`}
-            download
-            onClick={() => ymGoal("document_downloaded", { format: "docx", situation: order.situation_id })}
-            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+          <button
+            onClick={() => handleDownload("docx")}
+            disabled={downloadingFmt !== null}
+            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60"
           >
-            <Download className="h-4 w-4" />
+            {downloadingFmt === "docx" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             Скачать Word
-          </a>
-          <a
-            href={`/api/documents/${orderId}/download/pdf`}
-            download
-            onClick={() => ymGoal("document_downloaded", { format: "pdf", situation: order.situation_id })}
-            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
+          </button>
+          <button
+            onClick={() => handleDownload("pdf")}
+            disabled={downloadingFmt !== null}
+            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors disabled:opacity-60"
           >
-            <Download className="h-4 w-4" />
+            {downloadingFmt === "pdf" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
             Скачать PDF
-          </a>
+          </button>
         </div>
+      )}
+      {downloadError && (
+        <p className="text-sm text-red-600">{downloadError}</p>
       )}
 
       {order.status === "done" && (
@@ -239,9 +303,9 @@ export function OrderStatus({
       {order.status === "done" && (
         <>
           <p className="text-xs text-gray-400">
-            PDF также отправлен на вашу почту.{" "}
+            Письмо с ссылкой на заказ отправлено на вашу почту.{" "}
             <a href="mailto:lawdocsru@gmail.com" className="text-primary hover:underline">
-              Не получили?
+              Нужна помощь?
             </a>
           </p>
           <Link

@@ -59,18 +59,35 @@ async def run_document_generation(
             except Exception:
                 logger.exception("Instruction generation failed for order %s", order_id)
 
+            # Шифруем файлы публичным ключом юзера, если он задан.
+            # Инструкция не шифруется — она не содержит ПДн.
+            user_result = await db.execute(select(User).where(User.id == order.user_id))
+            user_obj = user_result.scalar_one_or_none()
+            user_encrypted = False
+            if user_obj and user_obj.public_key:
+                from app.services.e2ee_file import encrypt_file_for_user
+                from app.services.storage import download_bytes, upload_bytes
+                try:
+                    pub = user_obj.public_key
+                    for key in (k for k in [docx_key, pdf_key] if k):
+                        raw = await download_bytes(key)
+                        await upload_bytes(key, encrypt_file_for_user(raw, pub))
+                    user_encrypted = True
+                    logger.info("Files encrypted for order %s", order_id)
+                except Exception:
+                    logger.exception("File encryption failed for order %s — uploading plaintext", order_id)
+
             doc = Document(
                 order_id=order_id,
                 docx_key=docx_key,
                 pdf_key=pdf_key,
                 instruction_pdf_key=instruction_pdf_key,
+                user_encrypted=user_encrypted,
             )
             db.add(doc)
             order.status = "done"
             order.payment_url = None
 
-            user_result = await db.execute(select(User).where(User.id == order.user_id))
-            user_obj = user_result.scalar_one_or_none()
             if user_obj:
                 user_obj.completed_orders_count += 1
 

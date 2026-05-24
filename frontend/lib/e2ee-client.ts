@@ -9,15 +9,16 @@ import {
 /**
  * E2EEClient — сквозное шифрование на стороне браузера.
  *
- * Модель (см. E2EE_CLAUDE_CODE_INSTRUCTIONS.md):
- *  - Пара ключей TweetNaCl (nacl.box) генерируется в браузере.
- *  - Public key уходит на сервер, private key живёт ТОЛЬКО в localStorage.
- *  - Форма шифруется публичным ключом перед отправкой; сервер хранит шифртекст
- *    и не способен его расшифровать.
- *  - Резервная копия private key защищается паролем восстановления (AES-GCM
- *    + PBKDF2) — её можно вернуть, не давая серверу доступ к ключу.
+ * Применение:
+ *  - generateKeyPair: пара ключей TweetNaCl. public_key → сервер, private_key → localStorage.
+ *  - createPasswordProtectedBackup: резервный blob (AES-GCM + PBKDF2) → сервер хранит непрозрачно.
+ *  - decryptPasswordProtectedBackup: восстановление ключа из blob по фразе (локально).
+ *  - decryptFile: расшифровка файла после скачивания из S3.
  *
- * Формат шифртекста формы: base64( nonce[24] | ephemeralPublicKey[32] | box ).
+ * Формат зашифрованного файла (бинарный, см. backend/app/services/e2ee_file.py):
+ *   key_blob[104] = nonce[24] | ephemeralPub[32] | nacl_box(aes_key_32)[48]
+ *   aes_nonce[12]
+ *   aes_ciphertext[N+16]
  */
 
 const NONCE_LENGTH = nacl.box.nonceLength; // 24
@@ -182,6 +183,56 @@ export class E2EEClient {
     }
 
     return encodeUTF8(new Uint8Array(plaintext));
+  }
+
+  /**
+   * Расшифровывает файл, зашифрованный бэкендом (e2ee_file.py).
+   * Формат: key_blob[104] | aes_nonce[12] | aes_ciphertext
+   *   key_blob = nonce[24] | ephemeral_pub[32] | nacl_box(aes_key_32)[48]
+   */
+  static async decryptFile(
+    encryptedBytes: Uint8Array,
+    privateKeyB64: string
+  ): Promise<ArrayBuffer> {
+    const KEY_BLOB_LEN = NONCE_LENGTH + PUBLIC_KEY_LENGTH + 32 + 16; // 104
+    const AES_NONCE_LEN = 12;
+
+    const keyBlob = encryptedBytes.slice(0, KEY_BLOB_LEN);
+    const aesNonce = encryptedBytes.slice(KEY_BLOB_LEN, KEY_BLOB_LEN + AES_NONCE_LEN);
+    const aesCiphertext = encryptedBytes.slice(KEY_BLOB_LEN + AES_NONCE_LEN);
+
+    const naclNonce = keyBlob.slice(0, NONCE_LENGTH);
+    const ephemeralPub = keyBlob.slice(NONCE_LENGTH, NONCE_LENGTH + PUBLIC_KEY_LENGTH);
+    const boxCiphertext = keyBlob.slice(NONCE_LENGTH + PUBLIC_KEY_LENGTH);
+    const privateKey = decodeBase64(privateKeyB64);
+
+    const aesKeyBytes = nacl.box.open(
+      asBuffer(boxCiphertext),
+      asBuffer(naclNonce),
+      asBuffer(ephemeralPub),
+      privateKey
+    );
+    if (!aesKeyBytes) {
+      throw new Error("E2EE: не удалось расшифровать ключ файла (неверный ключ)");
+    }
+
+    const cryptoKey = await crypto.subtle.importKey(
+      "raw",
+      asBuffer(aesKeyBytes),
+      "AES-GCM",
+      false,
+      ["decrypt"]
+    );
+
+    try {
+      return await crypto.subtle.decrypt(
+        { name: "AES-GCM", iv: asBuffer(aesNonce) },
+        cryptoKey,
+        asBuffer(aesCiphertext)
+      );
+    } catch {
+      throw new Error("E2EE: не удалось расшифровать файл (повреждённые данные)");
+    }
   }
 }
 

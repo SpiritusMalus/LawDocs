@@ -35,8 +35,10 @@ export async function GET(request: NextRequest) {
       order_id: string | null;
     };
 
-    const redirectTo =
-      order_id && isValidUuid(order_id) ? `/orders/${order_id}` : "/";
+    // После входа направляем на setup-e2ee: страница проверит localStorage
+    // и либо пропустит настройку (ключи уже есть), либо покажет wizard настройки.
+    const finalDest = order_id && isValidUuid(order_id) ? `/orders/${order_id}` : "/";
+    const redirectTo = `/setup-e2ee?next=${encodeURIComponent(finalDest)}`;
     const response = NextResponse.redirect(new URL(redirectTo, baseUrl));
     response.cookies.set("access_token", access_token, {
       httpOnly: true,

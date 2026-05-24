@@ -16,3 +16,4 @@ aiosmtplib==3.0.1
 python-multipart==0.0.20
 slowapi==0.1.9
 boto3==1.35.99
+PyNaCl==1.5.0

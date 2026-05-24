@@ -155,8 +155,7 @@ async def verify_magic_link(
 
 class E2EESetupRequest(BaseModel):
     public_key: str
-    encrypted_backup: str
-    recovery_password: str
+    encrypted_backup: str  # AES-GCM(private_key, PBKDF2(phrase)) — браузер шифрует сам
 
 
 class E2EESetupResponse(BaseModel):
@@ -172,12 +171,10 @@ async def setup_e2ee(
     db: AsyncSession = Depends(get_db),
 ) -> E2EESetupResponse:
     """
-    Сохраняет E2EE ключи пользователя (public_key + encrypted backup).
-
-    Клиент отправляет:
-    - public_key: открытый ключ для шифрования
-    - encrypted_backup: зашифрованный приватный ключ (пароль recovery пользователя)
-    - recovery_password: пароль восстановления
+    Zero-knowledge: сервер получает public_key и зашифрованный blob.
+    Фраза восстановления НИКОГДА не уходит на сервер — браузер шифрует ею
+    private_key и отправляет непрозрачный blob. Сервер хранит blob и не может
+    его расшифровать без фразы.
     """
     from app.services.e2ee_service import E2EEService
     from app.services.audit_logger import AuditLogger
@@ -185,10 +182,10 @@ async def setup_e2ee(
     try:
         ip = request.client.host if request.client else "unknown"
 
-        # Сохранить public_key
         current_user.public_key = body.public_key
 
-        # Дополнительное шифрование backup на сервере (двойной слой)
+        # Дополнительный слой Fernet at-rest для backup blob (сервер не знает фразу,
+        # но blob защищён и от компрометации базы данных).
         try:
             from app.core.config import settings
             server_encrypted_backup = E2EEService.encrypt_with_fernet(
@@ -202,27 +199,25 @@ async def setup_e2ee(
                 detail="Ошибка при сохранении backup ключа",
             ) from e
 
-        # Сохранить факт согласия
         current_user.consent_timestamp = datetime.now(UTC)
         current_user.consent_ip = ip
 
         await db.commit()
 
-        # Логирование
         await AuditLogger.log_access(
             session=db,
             user_id=current_user.id,
             action="e2ee_setup_complete",
             data_type="private_key_backup",
             ip_address=ip,
-            details={"public_key_saved": True, "backup_encrypted": True},
+            details={"public_key_saved": True, "backup_stored": True},
         )
 
         logger.info("e2ee_setup_complete", extra={"action": "e2ee_setup_complete", "user_id": str(current_user.id), "ip": ip})
 
         return E2EESetupResponse(
             status="success",
-            message="E2EE ключи сохранены. Данные защищены шифрованием.",
+            message="Ключи сохранены. Документы будут зашифрованы вашим ключом.",
         )
 
     except HTTPException:
@@ -237,11 +232,12 @@ async def setup_e2ee(
 
 class RecoverAccessRequest(BaseModel):
     email: str
-    recovery_password: str
+    # recovery_password намеренно УБРАН: фраза не должна уходить на сервер.
+    # Браузер получит зашифрованный blob и расшифрует его локально.
 
 
 class RecoverAccessResponse(BaseModel):
-    backup_encrypted: str
+    backup_encrypted: str  # blob зашифрован фразой пользователя — сервер его не читает
     message: str
 
 
@@ -253,14 +249,8 @@ async def recover_access(
     db: AsyncSession = Depends(get_db),
 ) -> RecoverAccessResponse:
     """
-    Восстанавливает доступ пользователя через recovery password.
-
-    Клиент отправляет:
-    - email: адрес пользователя
-    - recovery_password: пароль для восстановления
-
-    Сервер возвращает:
-    - backup_encrypted: зашифрованный приватный ключ (расшифрован server-level Fernet, но остаётся зашифрованным recovery password)
+    Zero-knowledge recovery: сервер возвращает зашифрованный blob (Fernet снят),
+    браузер расшифровывает его парольной фразой локально. Фраза на сервер не идёт.
     """
     from app.services.e2ee_service import E2EEService
     from app.services.audit_logger import AuditLogger
@@ -269,12 +259,10 @@ async def recover_access(
     email_normalized = body.email.lower()
 
     try:
-        # Найти пользователя по email
         result = await db.execute(select(User).where(User.email == email_normalized))
         user = result.scalar_one_or_none()
 
         if not user:
-            # Не раскрывать существование пользователя
             logger.warning("recover_access_user_not_found", extra={"action": "recover_access", "email_domain": email_normalized.split("@")[-1], "ip": ip})
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -289,14 +277,12 @@ async def recover_access(
             )
 
         try:
-            # Расшифровать server-level шифрование (Fernet)
             from app.core.config import settings
-
-            backup_encrypted_by_password = E2EEService.decrypt_with_fernet(
+            # Снимаем server-level Fernet — возвращаем blob зашифрованным фразой юзера
+            blob_encrypted_by_phrase = E2EEService.decrypt_with_fernet(
                 user.private_key_backup_encrypted, settings.FERNET_KEY
             )
 
-            # Логирование
             await AuditLogger.log_access(
                 session=db,
                 user_id=user.id,
@@ -306,11 +292,11 @@ async def recover_access(
                 details={"success": True},
             )
 
-            logger.info("key_recovery_success", extra={"action": "key_recovery_success", "user_id": str(user.id), "ip": ip})
+            logger.info("key_recovery_blob_sent", extra={"action": "key_recovery_success", "user_id": str(user.id), "ip": ip})
 
             return RecoverAccessResponse(
-                backup_encrypted=backup_encrypted_by_password,
-                message="Используйте свой пароль восстановления для расшифровки backup ключа",
+                backup_encrypted=blob_encrypted_by_phrase,
+                message="Расшифруйте ключ своей парольной фразой в браузере.",
             )
 
         except Exception as e:

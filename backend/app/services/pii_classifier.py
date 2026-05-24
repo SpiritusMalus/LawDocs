@@ -45,6 +45,7 @@ ROUTING_FIELDS: frozenset[str] = frozenset({
     "platform",
     "platform_other",
     "policy_type",
+    "reason",          # gym_refund: причина отказа (club_closed/terms_changed/medical/voluntary)
 })
 
 

@@ -11,3 +11,9 @@ class DocumentOut(BaseModel):
     generated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class DocumentDownloadInfo(BaseModel):
+    url: str
+    is_encrypted: bool
+    filename: str
