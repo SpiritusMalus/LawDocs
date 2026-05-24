@@ -311,6 +311,207 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     return data
 
 
+_CB_RATE = Decimal("21")
+
+
+def calculate_employer(form_data: dict) -> dict:
+    """Претензия работодателю: компенсация 1/150 × ставки ЦБ за каждый день задержки (ст. 236 ТК РФ)."""
+    data = dict(form_data)
+    data["calculated_compensation_section"] = ""
+    data["calculated_compensation"] = ""
+
+    last_paid = _parse_date(data.get("last_payment_date"))
+    if not last_paid:
+        return data
+    delay_days = max((date.today() - last_paid).days, 0)
+    if delay_days == 0:
+        return data
+
+    try:
+        debt = Decimal(str(data["debt_amount"]))
+        compensation = debt * Decimal("1") / Decimal("150") * _CB_RATE / Decimal("100") * Decimal(delay_days)
+        compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    except Exception:
+        return data
+
+    data["calculated_delay_days"] = str(delay_days)
+    data["calculated_compensation"] = _fmt(compensation)
+    total = debt + compensation
+    data["calculated_compensation_section"] = (
+        f"Компенсация за задержку {delay_days} дней: "
+        f"{_fmt(debt)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дней = "
+        f"{_fmt(compensation)} руб. (ст. 236 ТК РФ). "
+        f"Итого к выплате: {_fmt(debt)} + {_fmt(compensation)} = {_fmt(total)} руб."
+    )
+    return data
+
+
+def calculate_repair(form_data: dict) -> dict:
+    """Претензия подрядчику: неустойка 3%/день от даты обнаружения недостатков (ст. 28 ч. 5 ЗоЗПП)."""
+    data = dict(form_data)
+    data["calculated_penalty_section"] = ""
+    data["calculated_penalty"] = ""
+
+    discovery = _parse_date(data.get("defect_discovery_date"))
+    if not discovery:
+        return data
+    delay_days = max((date.today() - discovery).days, 0)
+
+    try:
+        price = Decimal(str(data["work_price"]))
+        penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+    except Exception:
+        return data
+
+    data["calculated_penalty_days"] = str(delay_days)
+    data["calculated_penalty"] = _fmt(penalty)
+    data["calculated_penalty_section"] = (
+        f"За {delay_days} дней с момента обнаружения недостатков "
+        f"неустойка составляет {_fmt(penalty)} руб. "
+        f"(3% × {_fmt(price)} руб. × {delay_days} дней, не более стоимости работ, "
+        f"ст. 28 ч. 5 ЗоЗПП)."
+    )
+    return data
+
+
+def calculate_insurance(form_data: dict) -> dict:
+    """Претензия в страховую: недоплата + пеня 1%/день (ОСАГО ст. 16.1 ФЗ-40 / КАСКО ЗоЗПП ст. 28)."""
+    data = dict(form_data)
+    data["calculated_underpayment_section"] = ""
+    data["calculated_penalty_section"] = ""
+    data["calculated_underpayment"] = ""
+    data["calculated_total"] = ""
+
+    try:
+        actual = Decimal(str(data["actual_damage"]))
+    except Exception:
+        return data
+
+    try:
+        paid = Decimal(str(data.get("paid_amount") or "0"))
+    except Exception:
+        paid = Decimal("0")
+
+    underpayment = max(actual - paid, Decimal("0"))
+    if underpayment > 0:
+        data["calculated_underpayment"] = _fmt(underpayment)
+        data["calculated_underpayment_section"] = (
+            f"Страховая компания выплатила {_fmt(paid)} руб., "
+            f"тогда как реальный ущерб составляет {_fmt(actual)} руб. "
+            f"Недоплата: {_fmt(underpayment)} руб."
+        )
+
+    try:
+        overdue_days = int(str(data.get("overdue_days") or "0"))
+    except Exception:
+        overdue_days = 0
+
+    if overdue_days > 0 and underpayment > 0:
+        penalty = underpayment * Decimal("0.01") * Decimal(overdue_days)
+        total = underpayment + penalty
+        data["calculated_penalty"] = _fmt(penalty)
+        data["calculated_total"] = _fmt(total)
+        data["calculated_penalty_section"] = (
+            f"Неустойка: {_fmt(underpayment)} руб. × 1% × {overdue_days} дней = "
+            f"{_fmt(penalty)} руб. "
+            f"Итого к выплате: {_fmt(underpayment)} + {_fmt(penalty)} = {_fmt(total)} руб."
+        )
+    elif underpayment > 0:
+        data["calculated_total"] = _fmt(underpayment)
+
+    return data
+
+
+def calculate_telecom(form_data: dict) -> dict:
+    """Претензия провайдеру: возврат пропорционально периоду отсутствия услуги (monthly_fee / 30 × дней)."""
+    data = dict(form_data)
+    data["calculated_refund_section"] = ""
+
+    problem_type = str(data.get("problem_type", ""))
+    if problem_type not in ("no_service", "slow_speed"):
+        return data
+
+    start = _parse_date(data.get("problem_start_date"))
+    if not start:
+        return data
+    days = max((date.today() - start).days, 0)
+
+    try:
+        monthly = Decimal(str(data["monthly_fee"]))
+        if monthly <= 0:
+            return data
+        refund = (monthly / Decimal("30") * Decimal(days)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    except Exception:
+        return data
+
+    data["calculated_refund_days"] = str(days)
+    data["calculated_refund"] = _fmt(refund)
+    data["calculated_refund_section"] = (
+        f"За {days} дней отсутствия услуги сумма к возврату: "
+        f"{_fmt(monthly)} руб. / 30 × {days} дней = {_fmt(refund)} руб."
+    )
+    return data
+
+
+def calculate_airline(form_data: dict) -> dict:
+    """Претензия авиакомпании: компенсация за задержку 25 руб./час + штраф 50% (ВК РФ ст. 120)."""
+    data = dict(form_data)
+    data["calculated_penalty_section"] = ""
+
+    try:
+        ticket = Decimal(str(data["ticket_price"]))
+    except Exception:
+        return data
+
+    try:
+        delay_hours = int(str(data.get("delay_hours") or "0"))
+    except Exception:
+        delay_hours = 0
+
+    try:
+        extra = Decimal(str(data.get("extra_expenses") or "0"))
+    except Exception:
+        extra = Decimal("0")
+
+    try:
+        received = Decimal(str(data.get("received_compensation") or "0"))
+    except Exception:
+        received = Decimal("0")
+
+    parts = []
+    total = Decimal("0")
+
+    if delay_hours > 0:
+        delay_comp = Decimal("25") * Decimal(delay_hours)
+        fine = (ticket * Decimal("0.5")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        total += delay_comp + fine
+        parts.append(
+            f"компенсация за задержку {delay_hours} ч: 25 × {delay_hours} = {_fmt(delay_comp)} руб.; "
+            f"штраф 50% от стоимости билета: {_fmt(fine)} руб."
+        )
+        data["calculated_delay_comp"] = _fmt(delay_comp)
+        data["calculated_fine"] = _fmt(fine)
+
+    if extra > 0:
+        total += extra
+        parts.append(f"доп. расходы: {_fmt(extra)} руб.")
+
+    if not parts:
+        return data
+
+    if received > 0:
+        total = max(total - received, Decimal("0"))
+        parts.append(f"уже выплачено: −{_fmt(received)} руб.")
+
+    data["calculated_total"] = _fmt(total)
+    data["calculated_penalty_section"] = (
+        "; ".join(parts) + f". Итого к выплате: {_fmt(total)} руб."
+    )
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
@@ -318,4 +519,9 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "auto_repair": calculate_auto_repair,
     "gym_refund": calculate_gym_refund,
     "dtp_osago": calculate_dtp_osago,
+    "employer": calculate_employer,
+    "repair": calculate_repair,
+    "insurance": calculate_insurance,
+    "telecom": calculate_telecom,
+    "airline": calculate_airline,
 }
