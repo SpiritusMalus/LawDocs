@@ -5,7 +5,8 @@ Each calculator receives form_data and returns a new dict with injected
 `calculated_*` fields that the system_prompt can reference directly.
 """
 
-from datetime import date
+import re
+from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 _MONTHS_GENITIVE = [
@@ -176,9 +177,89 @@ def calculate_auto_repair(form_data: dict) -> dict:
     return data
 
 
+_PERIOD_PATTERNS = [
+    (re.compile(r"(\d+)\s*(?:месяц(?:ев|а)?|month)", re.IGNORECASE), lambda m: int(m.group(1)) * 30),
+    (re.compile(r"(\d+)\s*(?:год(?:а)?|лет|year)", re.IGNORECASE), lambda m: int(m.group(1)) * 365),
+    (re.compile(r"(\d+)\s*(?:недел(?:и|ь|я)|week)", re.IGNORECASE), lambda m: int(m.group(1)) * 7),
+    (re.compile(r"(\d+)\s*(?:дней|дня|день|day)", re.IGNORECASE), lambda m: int(m.group(1))),
+]
+_DATE_RANGE_RE = re.compile(
+    r"с?\s*(\d{2})\.(\d{2})\.(\d{4})\s*(?:по|—|-)\s*(\d{2})\.(\d{2})\.(\d{4})"
+)
+
+
+def _parse_subscription_days(text: str | None) -> int | None:
+    if not text:
+        return None
+    text = text.strip()
+    m = _DATE_RANGE_RE.search(text)
+    if m:
+        try:
+            start = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            end = date(int(m.group(6)), int(m.group(5)), int(m.group(4)))
+            return max((end - start).days, 0)
+        except Exception:
+            pass
+    for pattern, extractor in _PERIOD_PATTERNS:
+        hit = pattern.search(text)
+        if hit:
+            return extractor(hit)
+    return None
+
+
+def calculate_gym_refund(form_data: dict) -> dict:
+    """Фитнес-клуб: возврат за неиспользованный период абонемента (ст. 32 ЗоЗПП)."""
+    data = dict(form_data)
+    data["calculated_refund_section"] = ""
+    data["calculated_refund_amount"] = ""
+
+    # Пользователь указал сумму вручную — используем её напрямую
+    try:
+        user_amount = Decimal(str(data["refund_amount"]))
+        if user_amount > 0:
+            data["calculated_refund_amount"] = _fmt(user_amount)
+            data["calculated_refund_section"] = (
+                f"Сумма к возврату за неиспользованный период: "
+                f"{_fmt(user_amount)} руб."
+            )
+            return data
+    except Exception:
+        pass
+
+    # Рассчитываем пропорционально
+    purchase = _parse_date(data.get("purchase_date"))
+    refund_request = _parse_date(data.get("refund_request_date")) or date.today()
+    total_days = _parse_subscription_days(data.get("subscription_period"))
+
+    if not purchase or not total_days or total_days <= 0:
+        return data
+
+    end_date = purchase + timedelta(days=total_days)
+    unused_days = max((end_date - refund_request).days, 0)
+
+    try:
+        price = Decimal(str(data["subscription_price"]))
+        refund = (price / Decimal(total_days) * Decimal(unused_days)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+    except Exception:
+        return data
+
+    data["calculated_total_days"] = str(total_days)
+    data["calculated_unused_days"] = str(unused_days)
+    data["calculated_refund_amount"] = _fmt(refund)
+    data["calculated_refund_section"] = (
+        f"Расчёт суммы к возврату: "
+        f"{_fmt(price)} руб. / {total_days} дней × {unused_days} дней = "
+        f"{_fmt(refund)} руб."
+    )
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
     "shop": calculate_shop,
     "auto_repair": calculate_auto_repair,
+    "gym_refund": calculate_gym_refund,
 }

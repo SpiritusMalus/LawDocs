@@ -10,7 +10,9 @@ from app.services.calculators import (
     calculate_auto_repair,
     calculate_ddu_delay,
     calculate_ddu_termination,
+    calculate_gym_refund,
     calculate_shop,
+    _parse_subscription_days,
 )
 
 
@@ -350,3 +352,120 @@ def test_auto_repair_does_not_mutate_input():
 def test_registry_has_auto_repair():
     assert "auto_repair" in SITUATION_CALCULATORS
     assert SITUATION_CALCULATORS["auto_repair"] is calculate_auto_repair
+
+
+# ---------------------------------------------------------------------------
+# _parse_subscription_days
+# ---------------------------------------------------------------------------
+
+class TestParseSubscriptionDays:
+    def test_months(self):
+        assert _parse_subscription_days("12 месяцев") == 360
+
+    def test_months_2(self):
+        assert _parse_subscription_days("3 месяца") == 90
+
+    def test_year(self):
+        assert _parse_subscription_days("1 год") == 365
+
+    def test_days(self):
+        assert _parse_subscription_days("90 дней") == 90
+
+    def test_date_range(self):
+        # 2026-01-01 to 2026-12-31 = 364 days
+        result = _parse_subscription_days("с 01.01.2026 по 31.12.2026")
+        assert result == 364
+
+    def test_date_range_without_c(self):
+        result = _parse_subscription_days("01.01.2026 - 30.06.2026")
+        assert result == 180
+
+    def test_none_returns_none(self):
+        assert _parse_subscription_days(None) is None
+
+    def test_unparseable_returns_none(self):
+        assert _parse_subscription_days("абонемент") is None
+
+
+# ---------------------------------------------------------------------------
+# calculate_gym_refund
+# ---------------------------------------------------------------------------
+
+_GYM_TODAY = date(2026, 5, 24)
+_GYM_PURCHASE = date(2026, 1, 1)   # purchase start
+# 12 months → 360 days, end = 2026-12-26; unused from today (day 143 of 360) = 217 days
+_GYM_TOTAL_DAYS = 360
+_GYM_UNUSED_DAYS = (_GYM_PURCHASE + __import__("datetime").timedelta(days=_GYM_TOTAL_DAYS) - _GYM_TODAY).days
+
+
+class TestCalculateGymRefund:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "purchase_date": _GYM_PURCHASE.isoformat(),
+            "subscription_period": "12 месяцев",
+            "subscription_price": "36000",
+        }
+        data.update(overrides)
+        return data
+
+    def _run(self, data):
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = _GYM_TODAY
+            mock_date.fromisoformat = date.fromisoformat
+            return calculate_gym_refund(data)
+
+    def test_correct_total_days(self):
+        result = self._run(self._base())
+        assert result["calculated_total_days"] == str(_GYM_TOTAL_DAYS)
+
+    def test_correct_unused_days(self):
+        result = self._run(self._base())
+        assert result["calculated_unused_days"] == str(_GYM_UNUSED_DAYS)
+
+    def test_correct_refund_amount(self):
+        # 36000 / 360 * unused_days
+        from decimal import Decimal, ROUND_HALF_UP
+        expected = (Decimal("36000") / Decimal(_GYM_TOTAL_DAYS) * Decimal(_GYM_UNUSED_DAYS)).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
+        result = self._run(self._base())
+        assert Decimal(result["calculated_refund_amount"]) == expected
+
+    def test_user_provided_refund_amount_takes_priority(self):
+        data = self._base(refund_amount="15000")
+        result = self._run(data)
+        assert result["calculated_refund_amount"] == "15000.00"
+        assert "15000.00" in result["calculated_refund_section"]
+        assert "calculated_total_days" not in result
+
+    def test_no_purchase_date_returns_empty_section(self):
+        data = {"subscription_period": "12 месяцев", "subscription_price": "36000"}
+        result = calculate_gym_refund(data)
+        assert result["calculated_refund_section"] == ""
+
+    def test_unparseable_period_returns_empty_section(self):
+        data = self._base(subscription_period="абонемент")
+        result = self._run(data)
+        assert result["calculated_refund_section"] == ""
+
+    def test_refund_request_date_used_when_provided(self):
+        # If refund requested on purchase date → all days unused
+        data = self._base(refund_request_date=_GYM_PURCHASE.isoformat())
+        result = self._run(data)
+        assert result["calculated_unused_days"] == str(_GYM_TOTAL_DAYS)
+
+    def test_section_contains_amounts(self):
+        result = self._run(self._base())
+        assert "36000.00" in result["calculated_refund_section"]
+        assert str(_GYM_UNUSED_DAYS) in result["calculated_refund_section"]
+
+    def test_does_not_mutate_input(self):
+        original = self._base()
+        copy_ = dict(original)
+        self._run(original)
+        assert original == copy_
+
+
+def test_registry_has_gym_refund():
+    assert "gym_refund" in SITUATION_CALCULATORS
+    assert SITUATION_CALCULATORS["gym_refund"] is calculate_gym_refund
