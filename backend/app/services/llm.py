@@ -271,8 +271,11 @@ def _substitute_field_placeholders(text: str, form_data: dict) -> str:
     """
     def replacer(m: re.Match) -> str:
         key = m.group(1)
-        if key in form_data and form_data[key]:
-            return _sanitize_value(str(form_data[key]))
+        if key in form_data:
+            value = form_data[key]
+            if value:
+                return _sanitize_value(str(value))
+            return ""
         for alias_key, candidates in _FIELD_ALIASES.items():
             if key == alias_key:
                 for candidate in candidates:
