@@ -7,6 +7,7 @@ import pytest
 
 from app.services.calculators import (
     SITUATION_CALCULATORS,
+    calculate_auto_repair,
     calculate_ddu_delay,
     calculate_ddu_termination,
     calculate_shop,
@@ -239,3 +240,113 @@ class TestCalculateShop:
 def test_registry_has_shop():
     assert "shop" in SITUATION_CALCULATORS
     assert SITUATION_CALCULATORS["shop"] is calculate_shop
+
+
+# ---------------------------------------------------------------------------
+# calculate_auto_repair
+# ---------------------------------------------------------------------------
+
+_AR_TODAY = date(2026, 5, 24)
+_AR_PLANNED = date(2026, 5, 4)   # 20 days before _AR_TODAY
+_AR_DAYS = (_AR_TODAY - _AR_PLANNED).days  # == 20
+
+
+class TestCalculateAutoRepairDelay:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "violation_type": "delay",
+            "work_price": "50000",
+            "planned_date": _AR_PLANNED.isoformat(),
+        }
+        data.update(overrides)
+        return data
+
+    def _run(self, data):
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = _AR_TODAY
+            mock_date.fromisoformat = date.fromisoformat
+            return calculate_auto_repair(data)
+
+    def test_correct_delay_days(self):
+        result = self._run(self._base())
+        assert result["calculated_delay_days"] == str(_AR_DAYS)
+
+    def test_correct_penalty_3pct(self):
+        # 50000 × 3% × 20 = 30000.00
+        result = self._run(self._base())
+        assert result["calculated_penalty"] == "30000.00"
+
+    def test_penalty_capped_at_work_price(self):
+        data = self._base(planned_date=date(2026, 1, 1).isoformat())
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = date(2026, 10, 1)
+            mock_date.fromisoformat = date.fromisoformat
+            result = calculate_auto_repair(data)
+        assert Decimal(result["calculated_penalty"]) == Decimal("50000.00")
+
+    def test_no_planned_date_returns_empty_section(self):
+        data = {"violation_type": "delay", "work_price": "50000"}
+        result = self._run(data)
+        assert result["calculated_penalty_section"] == ""
+
+    def test_section_contains_days_and_amount(self):
+        result = self._run(self._base())
+        assert str(_AR_DAYS) in result["calculated_penalty_section"]
+        assert "30000.00" in result["calculated_penalty_section"]
+
+
+class TestCalculateAutoRepairOvercharge:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "violation_type": "overcharge",
+            "work_price": "45000",
+            "agreed_price": "30000",
+        }
+        data.update(overrides)
+        return data
+
+    def test_correct_overcharge_diff(self):
+        result = calculate_auto_repair(self._base())
+        assert result["calculated_overcharge_diff"] == "15000.00"
+
+    def test_overcharge_section_contains_amounts(self):
+        result = calculate_auto_repair(self._base())
+        assert "15000.00" in result["calculated_overcharge_section"]
+        assert "45000.00" in result["calculated_overcharge_section"]
+        assert "30000.00" in result["calculated_overcharge_section"]
+
+    def test_missing_agreed_price_returns_empty_section(self):
+        data = {"violation_type": "overcharge", "work_price": "45000"}
+        result = calculate_auto_repair(data)
+        assert result["calculated_overcharge_section"] == ""
+
+    def test_penalty_section_empty_for_overcharge(self):
+        result = calculate_auto_repair(self._base())
+        assert result["calculated_penalty_section"] == ""
+
+
+class TestCalculateAutoRepairBadQuality:
+    def test_penalty_section_empty(self):
+        data = {"violation_type": "bad_quality", "work_price": "50000"}
+        result = calculate_auto_repair(data)
+        assert result["calculated_penalty_section"] == ""
+
+    def test_overcharge_section_empty(self):
+        data = {"violation_type": "bad_quality", "work_price": "50000"}
+        result = calculate_auto_repair(data)
+        assert result["calculated_overcharge_section"] == ""
+
+
+def test_auto_repair_does_not_mutate_input():
+    original = {"violation_type": "delay", "work_price": "50000", "planned_date": _AR_PLANNED.isoformat()}
+    copy = dict(original)
+    with patch("app.services.calculators.date") as mock_date:
+        mock_date.today.return_value = _AR_TODAY
+        mock_date.fromisoformat = date.fromisoformat
+        calculate_auto_repair(original)
+    assert original == copy
+
+
+def test_registry_has_auto_repair():
+    assert "auto_repair" in SITUATION_CALCULATORS
+    assert SITUATION_CALCULATORS["auto_repair"] is calculate_auto_repair

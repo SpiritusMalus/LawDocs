@@ -132,8 +132,53 @@ def calculate_shop(form_data: dict) -> dict:
     return data
 
 
+def calculate_auto_repair(form_data: dict) -> dict:
+    """Претензия в автосервис: ветки по violation_type (delay / bad_quality / overcharge)."""
+    data = dict(form_data)
+    data["calculated_penalty_section"] = ""
+    data["calculated_overcharge_section"] = ""
+
+    violation = str(data.get("violation_type", ""))
+
+    if violation == "delay":
+        planned = _parse_date(data.get("planned_date"))
+        if planned:
+            delay_days = max((date.today() - planned).days, 0)
+            try:
+                price = Decimal(str(data["work_price"]))
+                penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+                data["calculated_delay_days"] = str(delay_days)
+                data["calculated_penalty"] = _fmt(penalty)
+                data["calculated_penalty_section"] = (
+                    f"За {delay_days} дней просрочки выдачи автомобиля "
+                    f"неустойка составляет {_fmt(penalty)} руб. "
+                    f"(3% × стоимость работ × дни, не более стоимости работ, "
+                    f"ст. 28 ч. 5 ЗоЗПП)."
+                )
+            except Exception:
+                pass
+
+    elif violation == "overcharge":
+        try:
+            work = Decimal(str(data["work_price"]))
+            agreed = Decimal(str(data["agreed_price"]))
+            diff = max(work - agreed, Decimal("0"))
+            data["calculated_overcharge_diff"] = _fmt(diff)
+            data["calculated_overcharge_section"] = (
+                f"Цена в договоре составляла {_fmt(agreed)} руб., "
+                f"фактически выставлен счёт на {_fmt(work)} руб. "
+                f"Разница {_fmt(diff)} руб. — незаконное завышение цены "
+                f"(ст. 709 ГК РФ, ст. 16 ЗоЗПП)."
+            )
+        except Exception:
+            pass
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
     "shop": calculate_shop,
+    "auto_repair": calculate_auto_repair,
 }
