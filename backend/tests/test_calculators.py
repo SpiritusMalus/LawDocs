@@ -9,6 +9,7 @@ from app.services.calculators import (
     SITUATION_CALCULATORS,
     calculate_ddu_delay,
     calculate_ddu_termination,
+    calculate_shop,
 )
 
 
@@ -159,3 +160,82 @@ def test_registry_has_ddu_delay():
 def test_registry_has_ddu_termination():
     assert "ddu_termination" in SITUATION_CALCULATORS
     assert SITUATION_CALCULATORS["ddu_termination"] is calculate_ddu_termination
+
+
+# ---------------------------------------------------------------------------
+# calculate_shop
+# ---------------------------------------------------------------------------
+
+_SHOP_TODAY = date(2026, 5, 24)
+_SHOP_START = date(2026, 4, 14)   # 40 days before _SHOP_TODAY
+_SHOP_DAYS = (_SHOP_TODAY - _SHOP_START).days  # == 40
+
+
+class TestCalculateShop:
+    def _base(self, **overrides) -> dict:
+        data = {
+            "product_price": "10000",
+            "appeal_date": _SHOP_START.isoformat(),
+        }
+        data.update(overrides)
+        return data
+
+    def _run(self, data):
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = _SHOP_TODAY
+            mock_date.fromisoformat = date.fromisoformat
+            return calculate_shop(data)
+
+    def test_correct_penalty_days(self):
+        result = self._run(self._base())
+        assert result["calculated_penalty_days"] == str(_SHOP_DAYS)
+
+    def test_correct_penalty(self):
+        # 10000 × 1% × 40 = 4000.00
+        result = self._run(self._base())
+        assert result["calculated_penalty"] == "4000.00"
+
+    def test_penalty_capped_at_product_price(self):
+        # 10000 × 1% × 200 = 20000 → capped at 10000.00
+        data = self._base(appeal_date=date(2026, 1, 1).isoformat())
+        with patch("app.services.calculators.date") as mock_date:
+            mock_date.today.return_value = date(2026, 10, 1)
+            mock_date.fromisoformat = date.fromisoformat
+            result = calculate_shop(data)
+        assert Decimal(result["calculated_penalty"]) == Decimal("10000.00")
+
+    def test_penalty_start_date_takes_priority_over_appeal_date(self):
+        data = self._base(
+            appeal_date=date(2026, 1, 1).isoformat(),  # old → many days
+            penalty_start_date=_SHOP_START.isoformat(),  # 40 days
+        )
+        result = self._run(data)
+        assert result["calculated_penalty_days"] == str(_SHOP_DAYS)
+
+    def test_no_date_returns_empty_section(self):
+        data = {"product_price": "10000"}
+        result = calculate_shop(data)
+        assert result["calculated_penalty_section"] == ""
+        assert "calculated_penalty_days" not in result
+        assert "calculated_penalty" not in result
+
+    def test_missing_price_returns_empty_section(self):
+        data = {"appeal_date": _SHOP_START.isoformat()}
+        result = self._run(data)
+        assert result["calculated_penalty_section"] == ""
+
+    def test_section_contains_days_and_amount(self):
+        result = self._run(self._base())
+        assert str(_SHOP_DAYS) in result["calculated_penalty_section"]
+        assert "4000.00" in result["calculated_penalty_section"]
+
+    def test_does_not_mutate_input(self):
+        original = self._base()
+        copy = dict(original)
+        self._run(original)
+        assert original == copy
+
+
+def test_registry_has_shop():
+    assert "shop" in SITUATION_CALCULATORS
+    assert SITUATION_CALCULATORS["shop"] is calculate_shop

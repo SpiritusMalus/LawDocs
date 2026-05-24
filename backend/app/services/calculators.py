@@ -108,7 +108,32 @@ def calculate_ddu_termination(form_data: dict) -> dict:
     return data
 
 
+def calculate_shop(form_data: dict) -> dict:
+    """Претензия в магазин: неустойка 1%/день по ст. 23 ЗоЗПП."""
+    data = dict(form_data)
+    start = _parse_date(data.get("penalty_start_date")) or _parse_date(data.get("appeal_date"))
+    if not start:
+        data["calculated_penalty_section"] = ""
+        return data
+    delay_days = max((date.today() - start).days, 0)
+    try:
+        price = Decimal(str(data["product_price"]))
+        penalty = min(price * Decimal("0.01") * Decimal(delay_days), price)
+    except Exception:
+        data["calculated_penalty_section"] = ""
+        return data
+    data["calculated_penalty_days"] = str(delay_days)
+    data["calculated_penalty"] = _fmt(penalty)
+    data["calculated_penalty_section"] = (
+        f"За {delay_days} дней просрочки исполнения требования "
+        f"неустойка составляет {_fmt(penalty)} руб. "
+        f"(не более стоимости товара, ст. 23 ЗоЗПП)."
+    )
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
+    "shop": calculate_shop,
 }
