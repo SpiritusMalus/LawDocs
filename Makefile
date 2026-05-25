@@ -3,7 +3,7 @@ COMPOSE  = $(DOCKER) compose
 PYTEST   = backend/.venv/bin/pytest
 UV       = $(HOME)/.local/bin/uv
 
-.PHONY: dev dev-down test test-v test-k install help
+.PHONY: dev dev-down test test-v test-k test-frontend install help
 
 ## Поднять весь стек локально (бэк + фронт + postgres)
 dev:
@@ -19,6 +19,11 @@ install:
 ## Запустить все тесты (требует запущенного Docker)
 test:
 	cd backend && .venv/bin/pytest
+
+## Vitest unit тесты frontend (запускает временный node:20-alpine контейнер)
+test-frontend:
+	$(DOCKER) run --rm -v "$(PWD)/frontend:/app" -w /app node:20-alpine \
+		sh -c "npm ci --silent && npx vitest run"
 
 ## Запустить тесты с подробным выводом
 test-v:
