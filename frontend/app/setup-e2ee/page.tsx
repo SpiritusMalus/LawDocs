@@ -31,6 +31,9 @@ export default function SetupE2EEPage() {
   const [phrase, setPhrase] = useState("");
   const [acknowledged, setAcknowledged] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phraseCopied, setPhraseCopied] = useState(false);
+  const [phraseInput, setPhraseInput] = useState("");
+  const [phraseConfirmed, setPhraseConfirmed] = useState(false);
 
   const keypairRef = useRef<{ publicKey: string; privateKey: string } | null>(null);
 
@@ -101,6 +104,20 @@ export default function SetupE2EEPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function copyPhraseToClipboard() {
+    try {
+      await navigator.clipboard.writeText(phrase);
+      setPhraseCopied(true);
+    } catch (e) {
+      console.error("Failed to copy phrase", e);
+    }
+  }
+
+  function validatePhraseInput(input: string) {
+    setPhraseInput(input);
+    setPhraseConfirmed(input === phrase);
+  }
+
   return (
     <main className="bg-gray-50 min-h-[calc(100vh-4rem)] flex items-center justify-center px-4">
       <div className="w-full max-w-lg">
@@ -129,14 +146,51 @@ export default function SetupE2EEPage() {
                 </p>
               </div>
 
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4">
-                <p className="text-xs text-gray-500 mb-2 uppercase tracking-wide font-medium">
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
+                <p className="text-xs text-gray-500 uppercase tracking-wide font-medium">
                   Ваша фраза восстановления
                 </p>
                 <p className="font-mono text-lg text-gray-900 tracking-wider select-all break-all">
                   {phrase}
                 </p>
+                <button
+                  onClick={copyPhraseToClipboard}
+                  className={`w-full text-sm py-2 px-3 rounded border font-medium transition ${
+                    phraseCopied
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100"
+                  }`}
+                >
+                  {phraseCopied ? "✓ Скопировано" : "📋 Скопировать фразу"}
+                </button>
               </div>
+
+              {phraseCopied && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    Подтвердите фразу (вставьте скопированное)
+                  </label>
+                  <input
+                    type="text"
+                    value={phraseInput}
+                    onChange={(e) => validatePhraseInput(e.target.value)}
+                    placeholder="Вставьте фразу сюда…"
+                    className={`w-full px-3 py-2 border rounded-lg font-mono text-sm transition ${
+                      phraseConfirmed
+                        ? "border-green-300 bg-green-50"
+                        : phraseInput
+                        ? "border-red-300 bg-red-50"
+                        : "border-gray-300"
+                    }`}
+                  />
+                  {phraseInput && !phraseConfirmed && (
+                    <p className="text-xs text-red-600">Фраза не совпадает. Проверьте ввод.</p>
+                  )}
+                  {phraseConfirmed && (
+                    <p className="text-xs text-green-600">✓ Фраза подтверждена</p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-3">
                 <button
@@ -146,22 +200,9 @@ export default function SetupE2EEPage() {
                   Дополнительно: скачать ключ-файл (для восстановления без фразы)
                 </button>
 
-                <label className="flex items-start gap-3 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={acknowledged}
-                    onChange={(e) => setAcknowledged(e.target.checked)}
-                    className="mt-0.5 h-4 w-4 rounded border-gray-300"
-                  />
-                  <span className="text-sm text-gray-700">
-                    Я сохранил фразу восстановления в надёжном месте и понимаю,
-                    что без неё документы нельзя будет восстановить
-                  </span>
-                </label>
-
                 <Button
                   onClick={handleSave}
-                  disabled={!acknowledged}
+                  disabled={!phraseConfirmed}
                   className="w-full"
                 >
                   Продолжить
