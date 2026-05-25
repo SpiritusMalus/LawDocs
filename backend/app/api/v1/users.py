@@ -19,6 +19,7 @@ class UserMeOut(BaseModel):
     email: str
     name: str | None
     completed_orders_count: int
+    public_key: str | None = None
 
 
 class UserUpdate(BaseModel):
