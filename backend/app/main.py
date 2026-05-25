@@ -122,6 +122,19 @@ async def _auto_retry_loop() -> None:
         try:
             from app.services.generation import run_document_generation
             async with AsyncSessionLocal() as db:
+                # Watchdog: заказы stuck в "generating" >30 мин → failed
+                # (сервер упал во время генерации; используем paid_at как proxy,
+                # т.к. generating всегда наступает после оплаты)
+                watchdog_cutoff = datetime.now(UTC) - timedelta(minutes=30)
+                await db.execute(
+                    update(Order)
+                    .where(
+                        Order.status == "generating",
+                        Order.paid_at < watchdog_cutoff,
+                    )
+                    .values(status="failed")
+                )
+
                 result = await db.execute(
                     select(Order)
                     .where(
