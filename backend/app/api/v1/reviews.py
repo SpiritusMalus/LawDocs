@@ -2,7 +2,7 @@ import logging
 import secrets
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from jose import JWTError, jwt
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.core.security import ALGORITHM
 from app.core.validators import strip_whitespace
 from app.models.order import Order
@@ -84,7 +85,9 @@ class AdminTokenOut(BaseModel):
 
 
 @router.post("/admin/token", response_model=AdminTokenOut)
+@limiter.limit("5/minute")
 async def create_admin_session(
+    request: Request,
     x_admin_secret: str | None = Header(default=None),
 ) -> AdminTokenOut:
     if not settings.ADMIN_SECRET or not secrets.compare_digest(

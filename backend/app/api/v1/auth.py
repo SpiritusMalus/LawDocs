@@ -262,18 +262,14 @@ async def recover_access(
         result = await db.execute(select(User).where(User.email == email_normalized))
         user = result.scalar_one_or_none()
 
-        if not user:
-            logger.warning("recover_access_user_not_found", extra={"action": "recover_access", "email_domain": email_normalized.split("@")[-1], "ip": ip})
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Пользователь не найден",
-            )
-
-        if not user.private_key_backup_encrypted:
-            logger.warning("recover_access_no_backup", extra={"action": "recover_access", "user_id": str(user.id), "ip": ip})
+        if not user or not user.private_key_backup_encrypted:
+            if not user:
+                logger.warning("recover_access_user_not_found", extra={"action": "recover_access", "email_domain": email_normalized.split("@")[-1], "ip": ip})
+            else:
+                logger.warning("recover_access_no_backup", extra={"action": "recover_access", "user_id": str(user.id), "ip": ip})
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="У вас нет сохранённого backup ключа",
+                detail="Backup ключ недоступен",
             )
 
         try:
