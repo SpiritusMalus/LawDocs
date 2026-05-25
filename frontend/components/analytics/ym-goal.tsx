@@ -2,6 +2,12 @@
 
 import { useEffect } from "react";
 
+declare global {
+  interface Window {
+    ym?: (id: number, action: string, goal: string, params?: Record<string, unknown>) => void;
+  }
+}
+
 export function YmGoal({ goal }: { goal: string }) {
   useEffect(() => {
     const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
