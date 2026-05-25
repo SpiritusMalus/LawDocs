@@ -1,21 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { E2EEClient } from "@/lib/e2ee-client";
 import { Button } from "@/components/ui/button";
 
 type Step = "form" | "recovering" | "done" | "error";
+type RecoveryMethod = "phrase" | "keyfile";
 
 export default function RecoveryPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [email, setEmail] = useState("");
   const [phrase, setPhrase] = useState("");
+  const [method, setMethod] = useState<RecoveryMethod>("phrase");
   const [step, setStep] = useState<Step>("form");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleRecover(e: React.FormEvent) {
-    e.preventDefault();
+  async function recoverViaPhrase() {
     setStep("recovering");
     setError(null);
 
@@ -43,9 +45,14 @@ export default function RecoveryPage() {
         phrase
       );
 
-      // Получаем public_key из приватного через nacl
-      // (для простоты — получить при setup'е. Пока просто сохраняем privateKey)
       E2EEClient.savePrivateKeyToLocalStorage(privateKey);
+
+      const meRes = await fetch("/api/user/me");
+      if (!meRes.ok) throw new Error("Не удалось получить публичный ключ");
+      const userData = await meRes.json() as { public_key?: string };
+      if (userData.public_key) {
+        E2EEClient.savePublicKeyToLocalStorage(userData.public_key);
+      }
 
       setStep("done");
       setTimeout(() => router.replace("/"), 2000);
@@ -53,6 +60,52 @@ export default function RecoveryPage() {
       setError(e instanceof Error ? e.message : "Неизвестная ошибка");
       setStep("error");
     }
+  }
+
+  async function recoverViaKeyFile(file: File) {
+    setStep("recovering");
+    setError(null);
+
+    try {
+      const text = await file.text();
+      const keyData = JSON.parse(text) as {
+        privateKey?: string;
+        publicKey?: string;
+      };
+
+      if (!keyData.privateKey) {
+        throw new Error("Файл не содержит приватный ключ");
+      }
+
+      E2EEClient.savePrivateKeyToLocalStorage(keyData.privateKey);
+
+      if (keyData.publicKey) {
+        E2EEClient.savePublicKeyToLocalStorage(keyData.publicKey);
+      }
+
+      setStep("done");
+      setTimeout(() => router.replace("/"), 2000);
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        setError("Неверный формат файла. Это должен быть lawdocs-key.json");
+      } else {
+        setError(e instanceof Error ? e.message : "Неизвестная ошибка");
+      }
+      setStep("error");
+    }
+  }
+
+  async function handleRecover(e: React.FormEvent) {
+    e.preventDefault();
+    if (method === "phrase") {
+      await recoverViaPhrase();
+    }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    recoverViaKeyFile(file);
   }
 
   return (
@@ -65,8 +118,8 @@ export default function RecoveryPage() {
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Восстановление доступа</h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  Введите email и фразу восстановления — ключ будет расшифрован в вашем браузере.
-                  Фраза не передаётся на сервер.
+                  Восстановите ключ, используя фразу восстановления или ключ-файл.
+                  Всё происходит в вашем браузере, ничего не передаётся на сервер.
                 </p>
               </div>
 
@@ -83,33 +136,84 @@ export default function RecoveryPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleRecover} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Email</label>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setMethod("phrase"); setError(null); }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    method === "phrase"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Фраза
+                </button>
+                <button
+                  onClick={() => { setMethod("keyfile"); setError(null); }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    method === "keyfile"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  Ключ-файл
+                </button>
+              </div>
+
+              {method === "phrase" && (
+                <form onSubmit={handleRecover} className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="your@email.com"
+                      className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Фраза восстановления</label>
+                    <input
+                      type="text"
+                      required
+                      value={phrase}
+                      onChange={(e) => setPhrase(e.target.value)}
+                      placeholder="xxxx — xxxx — xxxx — xxxx"
+                      className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <Button type="submit" className="w-full">
+                    Восстановить ключ
+                  </Button>
+                </form>
+              )}
+
+              {method === "keyfile" && (
+                <div className="space-y-4">
                   <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    onChange={handleFileSelect}
+                    className="hidden"
                   />
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full py-8 border-2 border-dashed border-gray-300 rounded-lg hover:border-primary hover:bg-primary/5 transition-colors"
+                  >
+                    <p className="text-sm font-medium text-gray-700">
+                      Нажмите, чтобы выбрать lawdocs-key.json
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      или перетащите файл
+                    </p>
+                  </button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Файл обработается локально, ничего не будет загружено на сервер
+                  </p>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">Фраза восстановления</label>
-                  <input
-                    type="text"
-                    required
-                    value={phrase}
-                    onChange={(e) => setPhrase(e.target.value)}
-                    placeholder="xxxx — xxxx — xxxx — xxxx"
-                    className="w-full h-10 px-3 rounded-lg border border-gray-200 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  />
-                </div>
-                <Button type="submit" className="w-full">
-                  Восстановить ключ
-                </Button>
-              </form>
+              )}
             </>
           )}
 
