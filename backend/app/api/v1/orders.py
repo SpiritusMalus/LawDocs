@@ -155,7 +155,9 @@ async def pay_order(
 
 
 @router.post("/{order_id}/retry")
+@limiter.limit("3/minute")
 async def retry_order(
+    request: Request,
     order_id: str,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
