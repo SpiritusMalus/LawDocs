@@ -28,7 +28,8 @@ const TRUST_ITEMS = [
 
 export function TrustBlock() {
   return (
-    <section className="bg-white py-16 px-4">
+    <section className="bg-white py-16 px-4" aria-labelledby="trust-heading">
+      <h2 id="trust-heading" className="sr-only">Гарантии сервиса</h2>
       <div className="max-w-(--l-content) mx-auto">
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {TRUST_ITEMS.map((item) => {
@@ -36,12 +37,12 @@ export function TrustBlock() {
             return (
               <div
                 key={item.title}
-                className="rounded-2xl border border-gray-200 p-6 hover:border-blue-200 hover:shadow-sm transition-all"
+                className="rounded-2xl border border-gray-200 p-6 hover:border-blue-200 hover:shadow-sm transition-colors"
               >
-                <Icon className="h-8 w-8 text-blue-600 mb-3" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                <Icon className="h-8 w-8 text-blue-600 mb-3" aria-hidden="true" />
+                <p className="text-lg font-semibold text-gray-900 mb-2">
                   {item.title}
-                </h3>
+                </p>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   {item.description}
                 </p>

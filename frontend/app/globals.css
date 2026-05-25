@@ -138,6 +138,9 @@
     @apply font-sans;
     scroll-behavior: smooth;
   }
+  h1, h2, h3, h4, h5, h6 {
+    text-wrap: balance;
+  }
   /* Consistent keyboard focus ring on all interactive elements (FINDING-005) */
   a:focus-visible {
     @apply outline-2 outline-offset-2 outline-ring rounded-sm;

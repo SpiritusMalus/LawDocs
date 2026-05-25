@@ -71,7 +71,7 @@ export function SituationsGrid() {
             >
               <button
                 onClick={() => setActiveCategory(null)}
-                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                className={`shrink-0 px-4 min-h-11 rounded-full text-sm font-medium transition-colors ${
                   activeCategory === null
                     ? "bg-blue-600 text-white"
                     : "bg-gray-100 text-gray-600 hover:bg-gray-200"
@@ -83,13 +83,13 @@ export function SituationsGrid() {
                 <button
                   key={catId}
                   onClick={() => setActiveCategory(catId as SituationCategory)}
-                  className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  className={`shrink-0 px-4 min-h-11 rounded-full text-sm font-medium transition-colors ${
                     activeCategory === catId
                       ? "bg-blue-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
                 >
-                  {cat.icon} {cat.label}
+                  <span aria-hidden="true">{cat.icon}</span> {cat.label}
                 </button>
               ))}
             </div>
@@ -107,7 +107,7 @@ export function SituationsGrid() {
             return (
               <div key={catId}>
                 <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <span>{cat.icon}</span> {cat.label}
+                  <span aria-hidden="true">{cat.icon}</span> {cat.label}
                 </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {items.map((s) => (
