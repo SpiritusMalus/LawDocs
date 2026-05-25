@@ -50,9 +50,12 @@ export default function RecoveryPage() {
       const meRes = await fetch("/api/user/me");
       if (!meRes.ok) throw new Error("Не удалось получить публичный ключ");
       const userData = await meRes.json() as { public_key?: string };
-      if (userData.public_key) {
-        E2EEClient.savePublicKeyToLocalStorage(userData.public_key);
+
+      if (!userData.public_key) {
+        throw new Error("Recovery failed: public_key not available from server. Please contact support.");
       }
+
+      E2EEClient.savePublicKeyToLocalStorage(userData.public_key);
 
       setStep("done");
       setTimeout(() => router.replace("/"), 2000);
@@ -77,11 +80,12 @@ export default function RecoveryPage() {
         throw new Error("Файл не содержит приватный ключ");
       }
 
-      E2EEClient.savePrivateKeyToLocalStorage(keyData.privateKey);
-
-      if (keyData.publicKey) {
-        E2EEClient.savePublicKeyToLocalStorage(keyData.publicKey);
+      if (!keyData.publicKey) {
+        throw new Error("Файл не содержит публичный ключ");
       }
+
+      E2EEClient.savePrivateKeyToLocalStorage(keyData.privateKey);
+      E2EEClient.savePublicKeyToLocalStorage(keyData.publicKey);
 
       setStep("done");
       setTimeout(() => router.replace("/"), 2000);
