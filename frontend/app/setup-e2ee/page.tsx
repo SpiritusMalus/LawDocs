@@ -25,7 +25,8 @@ function generatePhrase(): string {
 export default function SetupE2EEPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const nextUrl = params.get("next") ?? "/";
+  const rawNext = params.get("next") ?? "/";
+  const nextUrl = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   const [step, setStep] = useState<Step>("generating");
   const [phrase, setPhrase] = useState("");
