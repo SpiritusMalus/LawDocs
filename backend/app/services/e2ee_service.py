@@ -1,7 +1,7 @@
 import base64
 import hashlib
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 
 
 class E2EEService:
@@ -13,22 +13,20 @@ class E2EEService:
         return hashlib.sha256(email.encode()).hexdigest()
 
     @staticmethod
-    def encrypt_with_fernet(data: str, key: str) -> str:
+    def encrypt_with_fernet(data: str, key: str | MultiFernet) -> str:
         """Шифрует данные Fernet ключом (используется на сервере для backup)"""
         try:
-            cipher = Fernet(key.encode() if isinstance(key, str) else key)
-            encrypted = cipher.encrypt(data.encode())
-            return encrypted.decode()
+            cipher: Fernet | MultiFernet = key if isinstance(key, MultiFernet) else Fernet(key.encode())
+            return cipher.encrypt(data.encode()).decode()
         except Exception as e:
             raise ValueError(f"Encryption failed: {str(e)}")
 
     @staticmethod
-    def decrypt_with_fernet(encrypted_data: str, key: str) -> str:
+    def decrypt_with_fernet(encrypted_data: str, key: str | MultiFernet) -> str:
         """Расшифровывает Fernet данные на сервере"""
         try:
-            cipher = Fernet(key.encode() if isinstance(key, str) else key)
-            decrypted = cipher.decrypt(encrypted_data.encode())
-            return decrypted.decode()
+            cipher: Fernet | MultiFernet = key if isinstance(key, MultiFernet) else Fernet(key.encode())
+            return cipher.decrypt(encrypted_data.encode()).decode()
         except Exception as e:
             raise ValueError(f"Decryption failed: {str(e)}")
 

@@ -54,9 +54,19 @@ class Settings(BaseSettings):
     # Frontend URL (for magic link redirects)
     FRONTEND_URL: str = "https://law-docs.ru"
 
-    # Шифрование ПДн в form_data (152-ФЗ)
+    # Шифрование ПДн в form_data (152-ФЗ) и E2EE backup wrapping
     # Генерация: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-    FERNET_KEY: str = ""
+    # Ротация: FERNET_KEYS=new_key,old_key — первый ключ шифрует, все расшифровывают
+    FERNET_KEY: str = ""   # backward compat (один ключ)
+    FERNET_KEYS: str = ""  # приоритет: comma-separated, первый = primary
+
+    @property
+    def fernet_keys_list(self) -> list[str]:
+        if self.FERNET_KEYS:
+            return [k.strip() for k in self.FERNET_KEYS.split(",") if k.strip()]
+        if self.FERNET_KEY:
+            return [self.FERNET_KEY]
+        return []
 
     # Telegram-алерты (опционально — если пусто, алерты отключены)
     TELEGRAM_BOT_TOKEN: str = ""
