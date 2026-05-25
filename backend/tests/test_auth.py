@@ -131,7 +131,7 @@ async def test_request_magic_link_sends_email(
     client: AsyncClient,
     db_session: AsyncSession,
 ):
-    with patch("app.api.v1.auth.send_magic_link", new_callable=AsyncMock) as mock_mail:
+    with patch("app.services.auth_service.send_magic_link", new_callable=AsyncMock) as mock_mail:
         resp = await client.post(
             "/api/v1/auth/magic-link",
             json={"email": "new@example.com"},
