@@ -1,23 +1,24 @@
 import json
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from sqlalchemy import Text
 from sqlalchemy.types import TypeDecorator
 
-_fernet: Fernet | None = None
+_fernet: MultiFernet | None = None
 
 
-def _get_fernet() -> Fernet:
+def _get_fernet() -> MultiFernet:
     global _fernet
     if _fernet is None:
         from app.core.config import settings
-        if not settings.FERNET_KEY:
+        keys = settings.fernet_keys_list
+        if not keys:
             raise RuntimeError(
-                "FERNET_KEY не задан. Сгенерируйте ключ:\n"
+                "FERNET_KEY (или FERNET_KEYS) не задан. Сгенерируйте ключ:\n"
                 "  python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\"\n"
                 "и добавьте FERNET_KEY=<ключ> в .env"
             )
-        _fernet = Fernet(settings.FERNET_KEY.encode())
+        _fernet = MultiFernet([Fernet(k.encode()) for k in keys])
     return _fernet
 
 

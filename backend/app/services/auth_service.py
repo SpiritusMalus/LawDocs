@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
+from app.core.fernet import _get_fernet
 from app.core.security import create_access_token, generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
@@ -106,7 +107,7 @@ async def setup_e2ee(user: User, body: E2EESetupRequest, ip: str, db: AsyncSessi
 
         try:
             server_encrypted_backup = E2EEService.encrypt_with_fernet(
-                body.encrypted_backup, settings.FERNET_KEY
+                body.encrypted_backup, _get_fernet()
             )
             user.private_key_backup_encrypted = server_encrypted_backup
         except Exception as e:
@@ -164,7 +165,7 @@ async def recover_access(email_normalized: str, ip: str, db: AsyncSession) -> Re
 
         try:
             blob_encrypted_by_phrase = E2EEService.decrypt_with_fernet(
-                user.private_key_backup_encrypted, settings.FERNET_KEY
+                user.private_key_backup_encrypted, _get_fernet()
             )
 
             await AuditLogger.log_access(

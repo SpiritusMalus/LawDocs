@@ -198,9 +198,9 @@ async def _law_monitor_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.APP_ENV == "production" and not settings.FERNET_KEY:
+    if settings.APP_ENV == "production" and not settings.fernet_keys_list:
         raise RuntimeError(
-            "FERNET_KEY не задан в production. "
+            "FERNET_KEY (или FERNET_KEYS) не задан в production. "
             "Сгенерируйте: python -c \"from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())\""
         )
     configs_dir = Path(__file__).parent / "situations" / "configs"
