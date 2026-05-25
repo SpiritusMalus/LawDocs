@@ -40,6 +40,7 @@ from httpx import AsyncClient, ASGITransport
 from app.core.database import Base, get_db
 from app.main import app
 from app.models.document import Document  # noqa: F401 — register with Base.metadata
+from app.models.audit_log import AuditLog  # noqa: F401 — register with Base.metadata
 from app.models.order import Order
 from app.models.user import User
 from app.situations.registry import registry
