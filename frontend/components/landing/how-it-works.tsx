@@ -36,7 +36,7 @@ export function HowItWorks() {
           {STEPS.map(({ title, desc }, i) => (
             <ScrollReveal key={title} delay={i * 80}>
               <div className="relative">
-                <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 h-full hover:border-primary/20 hover:shadow-md transition-all">
+                <div className="bg-gray-50 rounded-2xl border border-gray-100 p-6 h-full hover:border-primary/20 hover:shadow-md transition-[border-color,box-shadow]">
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-gray-900 flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold text-white">0{i + 1}</span>
