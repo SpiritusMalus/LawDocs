@@ -94,6 +94,36 @@ async def export_my_data(
     )
 
 
+class ProcessingRestrictionOut(BaseModel):
+    processing_restricted: bool
+    processing_restricted_at: datetime | None = None
+
+
+@router.post("/me/restrict-processing", response_model=ProcessingRestrictionOut)
+async def restrict_processing(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProcessingRestrictionOut:
+    now = datetime.now(timezone.utc)
+    current_user.processing_restricted = True
+    current_user.processing_restricted_at = now
+    await db.commit()
+    logger.info(f"User {current_user.id} restricted data processing")
+    return ProcessingRestrictionOut(processing_restricted=True, processing_restricted_at=now)
+
+
+@router.delete("/me/restrict-processing", response_model=ProcessingRestrictionOut)
+async def unrestrict_processing(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> ProcessingRestrictionOut:
+    current_user.processing_restricted = False
+    current_user.processing_restricted_at = None
+    await db.commit()
+    logger.info(f"User {current_user.id} lifted data processing restriction")
+    return ProcessingRestrictionOut(processing_restricted=False, processing_restricted_at=None)
+
+
 @router.delete("/me", status_code=204)
 async def delete_me(
     db: AsyncSession = Depends(get_db),

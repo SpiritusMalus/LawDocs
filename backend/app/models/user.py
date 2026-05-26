@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Integer, String, func
+from sqlalchemy import Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -29,6 +29,8 @@ class User(Base):
     consent_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     consent_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     consent_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    processing_restricted: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    processing_restricted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 

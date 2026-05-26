@@ -15,6 +15,7 @@ interface UserData {
   email: string;
   name: string | null;
   completed_orders_count: number;
+  processing_restricted?: boolean;
 }
 
 async function fetchUser(token: string): Promise<UserData | null> {
@@ -48,7 +49,7 @@ export default async function ProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900">Профиль</h1>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <ProfileForm initialName={user.name} email={user.email} />
+          <ProfileForm initialName={user.name} email={user.email} processingRestricted={user.processing_restricted ?? false} />
         </div>
         <div className="mt-4">
           <Link
