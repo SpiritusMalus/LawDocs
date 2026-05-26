@@ -1,11 +1,15 @@
 import logging
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.core.validators import strip_whitespace
+from app.models.document import Document
+from app.models.order import Order
+from app.models.review import OrderReview
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -49,3 +53,25 @@ async def update_me(
     if old_name != current_user.name:
         logger.info(f"User {current_user.id} updated name: {old_name!r} → {current_user.name!r}")
     return current_user
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Response:
+    user_id = current_user.id
+    # anonymize reviews so public testimonials remain intact
+    await db.execute(update(OrderReview).where(OrderReview.user_id == user_id).values(user_id=None, name=None))
+    # delete documents and orders
+    orders_result = await db.execute(select(Order).where(Order.user_id == user_id))
+    for order in orders_result.scalars().all():
+        doc_result = await db.execute(select(Document).where(Document.order_id == order.id))
+        doc = doc_result.scalar_one_or_none()
+        if doc:
+            await db.delete(doc)
+        await db.delete(order)
+    await db.delete(current_user)
+    await db.commit()
+    logger.info(f"User {user_id} deleted their account")
+    return Response(status_code=204)
