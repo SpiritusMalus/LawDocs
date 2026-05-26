@@ -49,8 +49,8 @@ export default async function RootLayout({
               m[i].l=1*new Date();
               for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
               k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})
-              (window, document,'script','https://mc.yandex.ru/metrika/tag.js','ym');
-              ym(${ymCounterId}, 'init', { webvisor:true, clickmap:true, accurateTrackBounce:true, trackLinks:true });
+              (window, document,'script','/ym-ru/metrika/tag.js','ym');
+              ym(${ymCounterId}, 'init', { webvisor:false, clickmap:true, accurateTrackBounce:true, trackLinks:true });
             `}
           </Script>
         )}
