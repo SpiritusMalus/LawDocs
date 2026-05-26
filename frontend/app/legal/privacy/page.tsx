@@ -310,21 +310,6 @@ export default function PrivacyPage() {
         <li>Обработка прекращается немедленно</li>
       </ul>
 
-      <h3 className="text-base font-semibold text-gray-700 mt-3 mb-1">Пожаловаться в Роскомнадзор</h3>
-      <ul className="list-disc pl-6 text-gray-700 space-y-1 text-sm">
-        <li>Если считаете, что нарушаем закон</li>
-        <li>
-          <a
-            href="https://rkn.gov.ru/personal-data/"
-            className="underline"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            https://rkn.gov.ru/personal-data/
-          </a>
-        </li>
-      </ul>
-
       <h2 className="text-xl font-semibold mt-8 mb-3">9. СПЕЦИАЛЬНЫЕ ВОПРОСЫ ПО E2EE</h2>
 
       <h3 className="text-base font-semibold text-gray-700 mt-4 mb-2">Что если я переустановлю браузер?</h3>
@@ -363,47 +348,7 @@ export default function PrivacyPage() {
         <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>
       </p>
       <p className="text-gray-700 mt-2">Мы ответим в течение 30 дней.</p>
-
-      <h3 className="text-base font-semibold text-gray-700 mt-4 mb-2">Если вы недовольны нашей защитой ПД</h3>
-      <p className="text-gray-700 text-sm">
-        Роскомнадзор:{" "}
-        <a
-          href="https://rkn.gov.ru/personal-data/"
-          className="underline"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          https://rkn.gov.ru/personal-data/
-        </a>
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">11. ИЗМЕНЕНИЯ В ДОКУМЕНТЕ</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Мы можем обновить этот документ. При серьёзных изменениях уведомим вас по email за 30 дней.
-      </p>
-      <table className="w-full text-sm text-gray-700 border-collapse mt-3">
-        <thead>
-          <tr className="border-b border-gray-300">
-            <th className="py-2 pr-4 text-left font-medium text-gray-600">Версия</th>
-            <th className="py-2 pr-4 text-left font-medium text-gray-600">Дата</th>
-            <th className="py-2 text-left font-medium text-gray-600">Что изменилось</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="border-b border-gray-200">
-            <td className="py-2 pr-4">1.0</td>
-            <td className="py-2 pr-4">2024</td>
-            <td className="py-2">Первая версия с простым шифрованием</td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-4">2.0</td>
-            <td className="py-2 pr-4">25 мая 2026 г.</td>
-            <td className="py-2">Переход на End-to-End Encryption (E2EE)</td>
-          </tr>
-        </tbody>
-      </table>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">12. СОГЛАСИЕ</h2>
+      <h2 className="text-xl font-semibold mt-8 mb-3">11. СОГЛАСИЕ</h2>
       <p className="text-gray-700 leading-relaxed">
         Нажимая «Оформить претензию» вы подтверждаете что:
       </p>
