@@ -40,6 +40,8 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
     });
   }
 
+  const [isExporting, startExportTransition] = useTransition();
+
   function handleDeleteAccount() {
     if (!window.confirm("Удалить аккаунт? Все ваши заказы будут удалены безвозвратно.")) return;
     startDeleteTransition(async () => {
@@ -49,6 +51,35 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
         return;
       }
       router.push("/");
+    });
+  }
+
+  function handleRevokeConsent() {
+    if (!window.confirm("Отозвать согласие на обработку персональных данных? Аккаунт и все заказы будут удалены безвозвратно.")) return;
+    startDeleteTransition(async () => {
+      const res = await fetch("/api/user/me", { method: "DELETE" });
+      if (!res.ok) {
+        setError("Не удалось отозвать согласие. Попробуйте ещё раз.");
+        return;
+      }
+      router.push("/");
+    });
+  }
+
+  function handleExportData() {
+    startExportTransition(async () => {
+      const res = await fetch("/api/user/data-export");
+      if (!res.ok) {
+        setError("Не удалось выгрузить данные. Попробуйте ещё раз.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "my-data.json";
+      a.click();
+      URL.revokeObjectURL(url);
     });
   }
 
@@ -99,19 +130,45 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
         )}
       </div>
     </form>
-    <div className="mt-8 pt-6 border-t border-gray-100">
-      <p className="text-sm text-gray-500 mb-3">
-        После удаления аккаунта все ваши заказы будут удалены безвозвратно.
-      </p>
-      <Button
-        type="button"
-        variant="outline"
-        disabled={isDeleting}
-        onClick={handleDeleteAccount}
-        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-      >
-        {isDeleting ? "Удаляем..." : "Удалить аккаунт"}
-      </Button>
+    <div className="mt-8 pt-6 border-t border-gray-100 space-y-6">
+      <div>
+        <p className="text-sm text-gray-500 mb-3">
+          Скачайте копию всех ваших данных, хранящихся на сервисе.
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isExporting}
+          onClick={handleExportData}
+        >
+          {isExporting ? "Подготавливаем..." : "Скачать мои данные"}
+        </Button>
+      </div>
+      <div>
+        <p className="text-sm text-gray-500 mb-3">
+          После удаления аккаунта все ваши заказы будут удалены безвозвратно.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isDeleting}
+            onClick={handleDeleteAccount}
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+          >
+            {isDeleting ? "Удаляем..." : "Удалить аккаунт"}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isDeleting}
+            onClick={handleRevokeConsent}
+            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+          >
+            {isDeleting ? "Отзываем..." : "Отозвать согласие на обработку данных"}
+          </Button>
+        </div>
+      </div>
     </div>
     </>
   );

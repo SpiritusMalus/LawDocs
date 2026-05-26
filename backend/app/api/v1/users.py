@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -53,6 +54,44 @@ async def update_me(
     if old_name != current_user.name:
         logger.info(f"User {current_user.id} updated name: {old_name!r} → {current_user.name!r}")
     return current_user
+
+
+class OrderExport(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    situation_id: str
+    status: str
+    amount: int
+    created_at: datetime
+    paid_at: datetime | None = None
+
+
+class DataExport(BaseModel):
+    exported_at: datetime
+    user: dict
+    orders: list[OrderExport]
+
+
+@router.get("/me/data-export", response_model=DataExport)
+async def export_my_data(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> DataExport:
+    orders_result = await db.execute(select(Order).where(Order.user_id == current_user.id))
+    orders = orders_result.scalars().all()
+    return DataExport(
+        exported_at=datetime.now(timezone.utc),
+        user={
+            "id": current_user.id,
+            "email": current_user.email,
+            "name": current_user.name,
+            "created_at": current_user.created_at.isoformat() if current_user.created_at else None,
+            "consent_version": current_user.consent_version,
+            "consent_timestamp": current_user.consent_timestamp.isoformat() if current_user.consent_timestamp else None,
+        },
+        orders=list(orders),
+    )
 
 
 @router.delete("/me", status_code=204)
