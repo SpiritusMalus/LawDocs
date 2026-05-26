@@ -367,6 +367,28 @@ def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) ->
     pdf.ln(line_h)
 
 
+# ── Постобработка текста LLM ──────────────────────────────────
+
+_SECTION_LABEL_RE = re.compile(r'^[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,38}:$')
+_DATE_SIG_RE      = re.compile(r'^(\d+\.\s*)?дата\s+и\s+подпись\.?$', re.IGNORECASE)
+
+
+def _clean_llm_text(text: str) -> str:
+    """Убирает артефакты которые GigaChat выводит вопреки FORMAT_RULES."""
+    lines = text.split("\n")
+    cleaned = []
+    for line in lines:
+        s = line.strip()
+        if _DATE_SIG_RE.match(s):
+            continue
+        if _SECTION_LABEL_RE.match(s):
+            continue
+        cleaned.append(line)
+    result = "\n".join(cleaned)
+    result = re.sub(r'-{2,}', '—', result)
+    return result
+
+
 # ── PDF renderer ──────────────────────────────────────────────
 
 def make_pdf(text: str, out_path: Path) -> None:
@@ -506,6 +528,7 @@ async def main() -> None:
                     print(f"    Ответ: {text[:300]!r}")
                     continue
 
+            text = _clean_llm_text(text)
             make_pdf(text, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:
