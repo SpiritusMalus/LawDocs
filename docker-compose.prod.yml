@@ -44,6 +44,23 @@ services:
     depends_on:
       - backend
 
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lawdocs
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: lawdocs
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./scripts/backup.sh:/backup.sh:ro
+      - lawdocs_backups:/backups
+    depends_on:
+      postgres:
+        condition: service_healthy
+    entrypoint: >
+      sh -c "echo '0 2 * * * POSTGRES_USER=lawdocs POSTGRES_DB=lawdocs PGPASSWORD=$$POSTGRES_PASSWORD PGHOST=postgres sh /backup.sh >> /var/log/backup.log 2>&1' | crontab - && crond -f -l 6"
+
   nginx:
     image: nginx:alpine
     restart: unless-stopped
@@ -64,3 +81,4 @@ services:
 volumes:
   postgres_data:
   lawdocs_documents:
+  lawdocs_backups:

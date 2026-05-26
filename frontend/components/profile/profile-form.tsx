@@ -10,14 +10,17 @@ import { Button } from "@/components/ui/button";
 interface ProfileFormProps {
   initialName: string | null;
   email: string;
+  processingRestricted: boolean;
 }
 
-export function ProfileForm({ initialName, email }: ProfileFormProps) {
+export function ProfileForm({ initialName, email, processingRestricted }: ProfileFormProps) {
   const [name, setName] = useState(initialName ?? "");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleteTransition] = useTransition();
+  const [isRestricting, startRestrictTransition] = useTransition();
+  const [restricted, setRestricted] = useState(processingRestricted);
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
@@ -63,6 +66,23 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
         return;
       }
       router.push("/");
+    });
+  }
+
+  function handleToggleRestriction() {
+    const msg = restricted
+      ? "Разрешить обработку персональных данных?"
+      : "Ограничить обработку персональных данных? Новые заказы станут недоступны до снятия ограничения.";
+    if (!window.confirm(msg)) return;
+    startRestrictTransition(async () => {
+      const res = await fetch("/api/user/restrict-processing", {
+        method: restricted ? "DELETE" : "POST",
+      });
+      if (!res.ok) {
+        setError("Не удалось изменить настройку. Попробуйте ещё раз.");
+        return;
+      }
+      setRestricted(!restricted);
     });
   }
 
@@ -131,6 +151,26 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
       </div>
     </form>
     <div className="mt-8 pt-6 border-t border-gray-100 space-y-6">
+      <div>
+        <p className="text-sm text-gray-500 mb-3">
+          {restricted
+            ? "Обработка ваших персональных данных ограничена. Новые заказы недоступны."
+            : "Вы можете временно ограничить обработку ваших персональных данных (ст. 21 152-ФЗ)."}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={isRestricting}
+          onClick={handleToggleRestriction}
+          className={restricted ? "text-green-600 border-green-200 hover:bg-green-50 hover:border-green-300" : ""}
+        >
+          {isRestricting
+            ? "Применяем..."
+            : restricted
+            ? "Разрешить обработку данных"
+            : "Ограничить обработку данных"}
+        </Button>
+      </div>
       <div>
         <p className="text-sm text-gray-500 mb-3">
           Скачайте копию всех ваших данных, хранящихся на сервисе.

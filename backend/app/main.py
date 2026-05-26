@@ -282,7 +282,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -298,4 +298,16 @@ app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "situations_loaded": len(registry)}
+    db_ok = False
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(select(func.now()))
+            db_ok = True
+    except Exception:
+        pass
+    status = "ok" if db_ok else "degraded"
+    return {
+        "status": status,
+        "db": "ok" if db_ok else "error",
+        "situations_loaded": len(registry),
+    }

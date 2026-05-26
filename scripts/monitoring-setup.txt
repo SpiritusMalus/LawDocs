@@ -1,0 +1,24 @@
+LawDocs 24/7 Monitoring — UptimeRobot Setup
+===========================================
+
+Endpoint: https://law-docs.ru/health
+Expected response: {"status": "ok", ...}
+HTTP status: 200
+
+UptimeRobot settings:
+  Monitor type: HTTP(s)
+  URL: https://law-docs.ru/health
+  Monitoring interval: 5 minutes
+  Alert contacts: leos2111@gmail.com
+
+Keyword monitor (optional, catches degraded state):
+  Keyword: "status":"ok"
+  Alert if keyword NOT found
+
+Health endpoint returns:
+  status: "ok" | "degraded"
+  db: "ok" | "error"
+  situations_loaded: <int>
+
+Returns HTTP 200 in both ok and degraded states so UptimeRobot
+can distinguish "site down" (no response) from "db issue" (degraded).
