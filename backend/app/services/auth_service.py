@@ -118,6 +118,7 @@ async def setup_e2ee(user: User, body: E2EESetupRequest, ip: str, db: AsyncSessi
 
         user.consent_timestamp = datetime.now(UTC)
         user.consent_ip = ip
+        user.consent_version = "2.0"
 
         await db.commit()
 
