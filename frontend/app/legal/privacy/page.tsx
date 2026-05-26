@@ -51,11 +51,7 @@ export default function PrivacyPage() {
           </tr>
           <tr className="border-b border-gray-200">
             <td className="py-2 pr-4 font-medium text-gray-600 whitespace-nowrap align-top">Контакт по ПД</td>
-            <td className="py-2 text-gray-400">[ЗАПОЛНИТЬ: email и телефон]</td>
-          </tr>
-          <tr>
-            <td className="py-2 pr-4 font-medium text-gray-600 whitespace-nowrap align-top">Ответственное лицо</td>
-            <td className="py-2 text-gray-400">[ЗАПОЛНИТЬ: ФИ и должность]</td>
+            <td className="py-2 text-gray-400">law-docs@gmail.com</td>
           </tr>
         </tbody>
       </table>
@@ -267,12 +263,17 @@ export default function PrivacyPage() {
           </tr>
           <tr>
             <td className="py-2 pr-4 font-medium">Правоохранительные органы</td>
-            <td className="py-2 pr-4">По запросу суда</td>
+            <td className="py-2 pr-4">По решению суда</td>
             <td className="py-2">Требуется ордер</td>
           </tr>
         </tbody>
       </table>
       <p className="text-gray-700 mt-3">
+        <strong>Важно про суд и РКН:</strong> Даже при наличии судебного решения мы можем передать
+        только то, что хранится на сервере — зашифрованные данные. Ключей для расшифровки у нас нет,
+        поэтому передать открытые данные физически невозможно.
+      </p>
+      <p className="text-gray-700 mt-2">
         <strong>НЕ передаём:</strong> За границу, в соцсети, рекламным сетям.
       </p>
 
