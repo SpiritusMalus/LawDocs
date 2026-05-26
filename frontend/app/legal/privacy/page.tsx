@@ -46,10 +46,6 @@ export default function PrivacyPage() {
             <td className="py-2">504414138460</td>
           </tr>
           <tr className="border-b border-gray-200">
-            <td className="py-2 pr-4 font-medium text-gray-600 whitespace-nowrap align-top">Адрес</td>
-            <td className="py-2 text-gray-400">[ЗАПОЛНИТЬ: юридический адрес]</td>
-          </tr>
-          <tr className="border-b border-gray-200">
             <td className="py-2 pr-4 font-medium text-gray-600 whitespace-nowrap align-top">Контакт по ПД</td>
             <td className="py-2 text-gray-400">law-docs@gmail.com</td>
           </tr>
@@ -365,15 +361,6 @@ export default function PrivacyPage() {
       <p className="text-gray-700">
         <strong>Email:</strong>{" "}
         <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>
-      </p>
-      <p className="text-gray-700">
-        <strong>Телефон:</strong> <span className="text-gray-400">[ЗАПОЛНИТЬ]</span>
-      </p>
-      <p className="text-gray-700">
-        <strong>Адрес:</strong> <span className="text-gray-400">[ЗАПОЛНИТЬ: юридический адрес]</span>
-      </p>
-      <p className="text-gray-700">
-        <strong>Рабочие часы:</strong> <span className="text-gray-400">[ЗАПОЛНИТЬ: например «Пн-Пт 10:00-18:00 МСК»]</span>
       </p>
       <p className="text-gray-700 mt-2">Мы ответим в течение 30 дней.</p>
 
