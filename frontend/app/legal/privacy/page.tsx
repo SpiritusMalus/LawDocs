@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <p className="text-sm text-gray-400 mb-8">Версия: 2.0 (End-to-End Encryption)</p>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
-        <p className="font-semibold text-gray-800 mb-2">🔑 Краткое резюме для спешащих</p>
+        <p className="font-semibold text-gray-800 mb-2">Краткое резюме для спешащих</p>
         <p className="text-gray-700 text-sm">
           <strong>Коротко:</strong> Мы собираем минимум данных, всё шифруем (особенно чувствительное),
           вы всегда можете удалить аккаунт, и даже мы не можем прочитать ваши данные (это хорошо).
@@ -30,7 +30,30 @@ export default function PrivacyPage() {
         </p>
       </div>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">1. КТО ОБРАБАТЫВАЕТ ВАШИ ДАННЫЕ</h2>
+      <nav className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
+        <p className="font-semibold text-gray-700 mb-3 text-sm">Содержание</p>
+        <ol className="space-y-1">
+          {[
+            ["#s1", "1. Кто обрабатывает ваши данные"],
+            ["#s2", "2. Какие данные мы собираем"],
+            ["#s3", "3. Как мы защищаем ваши данные"],
+            ["#s4", "4. Почему мы обрабатываем данные"],
+            ["#s5", "5. Для чего нужны наши данные"],
+            ["#s6", "6. Сроки хранения"],
+            ["#s7", "7. Кому мы передаём данные"],
+            ["#s8", "8. Ваши права"],
+            ["#s9", "9. Специальные вопросы по E2EE"],
+            ["#s10", "10. Связь с нами"],
+            ["#s11", "11. Итоговое подтверждение"],
+          ].map(([href, label]) => (
+            <li key={href}>
+              <a href={href} className="text-sm text-blue-600 hover:underline">{label}</a>
+            </li>
+          ))}
+        </ol>
+      </nav>
+
+      <h2 id="s1" className="text-xl font-semibold mt-8 mb-3">1. Кто обрабатывает ваши данные</h2>
       <table className="w-full text-sm text-gray-700 border-collapse mb-4">
         <tbody>
           <tr className="border-b border-gray-200">
@@ -47,12 +70,14 @@ export default function PrivacyPage() {
           </tr>
           <tr className="border-b border-gray-200">
             <td className="py-2 pr-4 font-medium text-gray-600 whitespace-nowrap align-top">Контакт по ПД</td>
-            <td className="py-2 text-gray-400">law-docs@gmail.com</td>
+            <td className="py-2">
+              <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>
+            </td>
           </tr>
         </tbody>
       </table>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">2. КАКИЕ ДАННЫЕ МЫ СОБИРАЕМ</h2>
+      <h2 id="s2" className="text-xl font-semibold mt-8 mb-3">2. Какие данные мы собираем</h2>
 
       <p className="font-medium text-gray-700 mt-4 mb-2">При регистрации</p>
       <ul className="list-disc pl-6 text-gray-700 space-y-1">
@@ -86,9 +111,9 @@ export default function PrivacyPage() {
         <li>Биометрические данные</li>
       </ul>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">3. КАК МЫ ЗАЩИЩАЕМ ВАШИ ДАННЫЕ</h2>
+      <h2 id="s3" className="text-xl font-semibold mt-8 mb-3">3. Как мы защищаем ваши данные</h2>
 
-      <h3 className="text-lg font-semibold mt-4 mb-2">End-to-End Encryption (E2EE) — ОСНОВНАЯ ЗАЩИТА</h3>
+      <h3 className="text-lg font-semibold mt-4 mb-2">End-to-End Encryption (E2EE) — основная защита</h3>
 
       <p className="font-medium text-gray-700 mb-2">Что это значит по-русски:</p>
       <ol className="list-decimal pl-6 text-gray-700 space-y-3">
@@ -150,7 +175,7 @@ export default function PrivacyPage() {
         </tbody>
       </table>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">4. ПОЧЕМУ МЫ ОБРАБАТЫВАЕМ ДАННЫЕ</h2>
+      <h2 id="s4" className="text-xl font-semibold mt-8 mb-3">4. Почему мы обрабатываем данные</h2>
       <p className="text-gray-700 leading-relaxed">
         <strong>На основании:</strong> Вашего явного согласия (чекбокс «Я согласен с политикой»)
       </p>
@@ -172,7 +197,7 @@ export default function PrivacyPage() {
         <strong>Вы можете отозвать согласие в любой момент</strong> — в личном кабинете или по email.
       </p>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">5. ДЛЯ ЧЕГО НУЖНЫ НАШИ ДАННЫЕ</h2>
+      <h2 id="s5" className="text-xl font-semibold mt-8 mb-3">5. Для чего нужны наши данные</h2>
       <table className="w-full text-sm text-gray-700 border-collapse">
         <thead>
           <tr className="border-b border-gray-300">
@@ -195,12 +220,12 @@ export default function PrivacyPage() {
           <tr className="border-b border-gray-200">
             <td className="py-2 pr-4">Отправка документа</td>
             <td className="py-2 pr-4">Email</td>
-            <td className="py-2 whitespace-nowrap">До времени заказа</td>
+            <td className="py-2 whitespace-nowrap">До отправки документа</td>
           </tr>
           <tr className="border-b border-gray-200">
             <td className="py-2 pr-4">Обработка платежа</td>
             <td className="py-2 pr-4">Email + сумма</td>
-            <td className="py-2 whitespace-nowrap">До времени платежа</td>
+            <td className="py-2 whitespace-nowrap">До завершения платежа</td>
           </tr>
           <tr className="border-b border-gray-200">
             <td className="py-2 pr-4">Налоговый учёт</td>
@@ -223,7 +248,7 @@ export default function PrivacyPage() {
         <strong>Важно:</strong> Мы не продаём ваши данные, не используем для маркетинга и не передаём в соцсети.
       </p>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">6. СРОКИ ХРАНЕНИЯ</h2>
+      <h2 id="s6" className="text-xl font-semibold mt-8 mb-3">6. Сроки хранения</h2>
       <ul className="list-disc pl-6 text-gray-700 space-y-1">
         <li><strong>Email в аккаунте:</strong> До удаления аккаунта</li>
         <li><strong>Данные заказа:</strong> 3 года (потом автоматически удаляются)</li>
@@ -232,7 +257,7 @@ export default function PrivacyPage() {
         <li><strong>Cookies:</strong> 13 месяцев</li>
       </ul>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">7. КОМУ МЫ ПЕРЕДАЁМ ДАННЫЕ</h2>
+      <h2 id="s7" className="text-xl font-semibold mt-8 mb-3">7. Кому мы передаём данные</h2>
       <table className="w-full text-sm text-gray-700 border-collapse">
         <thead>
           <tr className="border-b border-gray-300">
@@ -273,7 +298,7 @@ export default function PrivacyPage() {
         <strong>НЕ передаём:</strong> За границу, в соцсети, рекламным сетям.
       </p>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">8. ВАШИ ПРАВА</h2>
+      <h2 id="s8" className="text-xl font-semibold mt-8 mb-3">8. Ваши права</h2>
       <p className="text-gray-700 leading-relaxed mb-3">Вы можете:</p>
 
       <h3 className="text-base font-semibold text-gray-700 mt-3 mb-1">Получить доступ к своим данным</h3>
@@ -310,7 +335,7 @@ export default function PrivacyPage() {
         <li>Обработка прекращается немедленно</li>
       </ul>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">9. СПЕЦИАЛЬНЫЕ ВОПРОСЫ ПО E2EE</h2>
+      <h2 id="s9" className="text-xl font-semibold mt-8 mb-3">9. Специальные вопросы по E2EE</h2>
 
       <h3 className="text-base font-semibold text-gray-700 mt-4 mb-2">Что если я переустановлю браузер?</h3>
       <p className="text-gray-700 text-sm leading-relaxed">
@@ -341,16 +366,22 @@ export default function PrivacyPage() {
         для расшифровки на сервере нет. Физически невозможно расшифровать без вашего браузера.
       </p>
 
-      <h2 className="text-xl font-semibold mt-8 mb-3">10. СВЯЗЬ С НАМИ</h2>
+      <h2 id="s10" className="text-xl font-semibold mt-8 mb-3">10. Связь с нами</h2>
       <p className="text-gray-700 leading-relaxed mb-3">По вопросам персональных данных:</p>
       <p className="text-gray-700">
         <strong>Email:</strong>{" "}
         <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>
       </p>
+      <p className="text-gray-700 mt-2">
+        Реквизиты и полная информация об Исполнителе — на странице{" "}
+        <Link href="/about" className="underline">О сервисе</Link>.
+      </p>
       <p className="text-gray-700 mt-2">Мы ответим в течение 30 дней.</p>
-      <h2 className="text-xl font-semibold mt-8 mb-3">11. СОГЛАСИЕ</h2>
+
+      <h2 id="s11" className="text-xl font-semibold mt-8 mb-3">11. Итоговое подтверждение</h2>
       <p className="text-gray-700 leading-relaxed">
-        Нажимая «Оформить претензию» вы подтверждаете что:
+        Механика получения согласия описана в{" "}
+        <a href="#s4" className="underline">разделе 4</a>. Нажимая «Оформить претензию», вы подтверждаете что:
       </p>
       <ul className="list-disc pl-6 text-gray-700 space-y-1">
         <li>Прочитали эту политику</li>
