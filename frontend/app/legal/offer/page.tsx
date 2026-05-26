@@ -11,6 +11,27 @@ export default function OfferPage() {
       <h1 className="text-3xl font-bold mb-2">Договор-оферта</h1>
       <p className="text-sm text-gray-400 mb-8">Редакция от 18 мая 2026 г.</p>
 
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
+        <p className="font-semibold text-gray-800 mb-3">Главное для вас</p>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Стоимость</p>
+            <p className="text-lg font-semibold text-gray-800">199 ₽</p>
+            <p className="text-xs text-gray-500">один документ</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Срок получения</p>
+            <p className="text-lg font-semibold text-gray-800">10 мин</p>
+            <p className="text-xs text-gray-500">после оплаты</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-1">Возврат</p>
+            <p className="text-lg font-semibold text-gray-800">7 дней</p>
+            <p className="text-xs text-gray-500">если не подошло</p>
+          </div>
+        </div>
+      </div>
+
       <p className="text-gray-700 leading-relaxed">
         Индивидуальный предприниматель Тихоненко Евгений Юрьевич (ИНН 504414138460,
         ОГРНИП 326508100294665, далее — Исполнитель) предлагает любому дееспособному
@@ -75,6 +96,12 @@ export default function OfferPage() {
         Полные реквизиты — на странице{" "}
         <Link href="/about" className="underline">О сервисе</Link>.
       </p>
+
+      <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-500 not-prose">
+        <p>Редакция от 18 мая 2026 г.</p>
+        <p>Статус: Опубликована и действует</p>
+        <p>Соответствие: ГК РФ · ФЗ «О защите прав потребителей»</p>
+      </div>
     </article>
   );
 }
