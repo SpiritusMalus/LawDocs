@@ -47,6 +47,7 @@ logging.basicConfig(level=logging.INFO, handlers=[_handler], force=True)
 _cleanup_logger = logging.getLogger("cleanup")
 _law_monitor_logger = logging.getLogger("law_monitor")
 _auto_retry_logger = logging.getLogger("auto_retry")
+_retention_logger = logging.getLogger("data_retention")
 
 _MAX_AUTO_RETRIES = 5
 _AUTO_RETRY_INTERVAL = 15 * 60  # 15 минут
@@ -196,6 +197,51 @@ async def _law_monitor_loop() -> None:
             _law_monitor_logger.exception("law_monitor_failed")
 
 
+async def _data_retention_loop() -> None:
+    """Ежедневно в 03:00 UTC удаляет заказы и их документы старше 3 лет (152-ФЗ / PP-4)."""
+    while True:
+        now = datetime.now(UTC)
+        next_run = datetime(now.year, now.month, now.day, 3, 0, tzinfo=UTC)
+        if next_run <= now:
+            next_run += timedelta(days=1)
+        await asyncio.sleep((next_run - now).total_seconds())
+        try:
+            from app.models.document import Document
+            cutoff = datetime.now(UTC) - timedelta(days=3 * 365)
+            async with AsyncSessionLocal() as db:
+                old_order_ids_result = await db.execute(
+                    select(Order.id).where(
+                        Order.status.in_(["done", "failed"]),
+                        func.coalesce(Order.paid_at, Order.created_at) < cutoff,
+                    )
+                )
+                old_order_ids = [row[0] for row in old_order_ids_result.fetchall()]
+
+                if old_order_ids:
+                    doc_result = await db.execute(
+                        delete(Document).where(Document.order_id.in_(old_order_ids)).returning(Document.order_id)
+                    )
+                    deleted_docs = doc_result.rowcount
+
+                    order_result = await db.execute(
+                        delete(Order).where(Order.id.in_(old_order_ids)).returning(Order.id)
+                    )
+                    deleted_orders = order_result.rowcount
+
+                    await db.commit()
+                    _retention_logger.info(
+                        "data_retention_done",
+                        extra={
+                            "action": "data_retention_done",
+                            "deleted_orders": deleted_orders,
+                            "deleted_documents": deleted_docs,
+                            "cutoff": cutoff.isoformat(),
+                        },
+                    )
+        except Exception:
+            _retention_logger.exception("data_retention_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     if settings.APP_ENV == "production" and not settings.FERNET_KEY:
@@ -208,10 +254,12 @@ async def lifespan(app: FastAPI):
     task = asyncio.create_task(_cleanup_draft_orders())
     law_task = asyncio.create_task(_law_monitor_loop())
     retry_task = asyncio.create_task(_auto_retry_loop())
+    retention_task = asyncio.create_task(_data_retention_loop())
     yield
     task.cancel()
     law_task.cancel()
     retry_task.cancel()
+    retention_task.cancel()
 
 
 app = FastAPI(

@@ -28,6 +28,7 @@ class User(Base):
     private_key_backup_encrypted: Mapped[str | None] = mapped_column(String, nullable=True)
     consent_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     consent_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    consent_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
