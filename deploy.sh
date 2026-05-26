@@ -7,19 +7,19 @@ MODE=${1:-full}
 case "$MODE" in
   full)
     echo "🔨 Full rebuild (no cache)..."
-    dc down
-    dc up -d --build
+    docker compose down
+    docker compose up -d --build
     ;;
   cache)
     echo "⚡ Build with cache..."
-    dc down
-    dc build
-    dc up -d
+    docker compose down
+    docker compose build
+    docker compose up -d
     ;;
   code)
     echo "🔄 Code restart (no rebuild)..."
-    dc down
-    dc up -d
+    docker compose down
+    docker compose up -d
     ;;
   *)
     echo "Usage: $0 [full|cache|code]"
