@@ -27,3 +27,15 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "upstream_error" }, { status: 502 });
   }
 }
+
+export async function DELETE() {
+  try {
+    const result = await authFetch("/api/v1/users/me", { method: "DELETE" });
+    if (!result.ok) return result.error;
+    const response = new NextResponse(null, { status: 204 });
+    response.cookies.delete("access_token");
+    return response;
+  } catch {
+    return NextResponse.json({ error: "upstream_error" }, { status: 502 });
+  }
+}

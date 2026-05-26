@@ -17,6 +17,7 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
   const router = useRouter();
 
   function handleSubmit(e: React.FormEvent) {
@@ -39,7 +40,20 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
     });
   }
 
+  function handleDeleteAccount() {
+    if (!window.confirm("Удалить аккаунт? Все ваши заказы будут удалены безвозвратно.")) return;
+    startDeleteTransition(async () => {
+      const res = await fetch("/api/user/me", { method: "DELETE" });
+      if (!res.ok) {
+        setError("Не удалось удалить аккаунт. Попробуйте ещё раз.");
+        return;
+      }
+      router.push("/");
+    });
+  }
+
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-5">
       <div>
         <Label htmlFor="email" className="text-sm text-gray-500 mb-1.5 block">
@@ -85,5 +99,20 @@ export function ProfileForm({ initialName, email }: ProfileFormProps) {
         )}
       </div>
     </form>
+    <div className="mt-8 pt-6 border-t border-gray-100">
+      <p className="text-sm text-gray-500 mb-3">
+        После удаления аккаунта все ваши заказы будут удалены безвозвратно.
+      </p>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={isDeleting}
+        onClick={handleDeleteAccount}
+        className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+      >
+        {isDeleting ? "Удаляем..." : "Удалить аккаунт"}
+      </Button>
+    </div>
+    </>
   );
 }
