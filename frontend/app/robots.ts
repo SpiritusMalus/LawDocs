@@ -8,6 +8,16 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
+        disallow: ["/thanks"],
+      },
+      // или точечно разрешить Claude:
+      {
+        userAgent: ["ClaudeBot", "anthropic-ai"],
+        allow: "/",
+      },
+      {
+        userAgent: "*",
+        allow: "/",
         disallow: ["/legal/", "/thanks"],
       },
     ],
