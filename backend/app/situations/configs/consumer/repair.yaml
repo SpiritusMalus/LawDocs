@@ -11,7 +11,7 @@ system_prompt: |
 
   Структура документа:
   1. Шапка: «[contractor_name], [contractor_address]» / «От: [full_name], [contact_address], [phone], [email]»
-  2. Заголовок: ПРЕТЕНЗИЯ о ненадлежащем качестве выполненных работ
+  2. Заголовок: ПРЕТЕНЗИЯ
   3. Описание договора:
      — дата заключения договора (contract_date)
      — если указан contract_number — ссылка «по договору подряда № contract_number»

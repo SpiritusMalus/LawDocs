@@ -285,6 +285,7 @@
   termination_reason: delay_2months
   cb_rate: 21
   problem_desc: "Срок передачи по договору — 30 сентября 2025 года. Квартира не передана, просрочка превышает 7 месяцев. Уведомлений о переносе срока от застройщика не поступало."
+  bank_details: "ПАО «Сбербанк», БИК 044525225, р/с 40817810099910000000, к/с 30101810400000000225"
 
 - _id: neighbor_flood
   _filename: obrazec_neighbor_flood.pdf
@@ -367,7 +368,6 @@
   user_phone: "+7 (999) 999-99-99"
   user_email: ivanov@example.ru
   insurance_company: "СПАО «СОГАЗ», ИНН 7736035485, 107078, г. Москва, пер. Гарднера, д. 1, стр. 1"
-  insurance_address: "107078, г. Москва, пер. Гарднера, д. 1, стр. 1"
   policy_number: "ААВ 0000000001"
   incident_date: 15.03.2026
   incident_location: "Московская обл., г. Мытищи, Ярославское ш., у д. 111"
@@ -378,6 +378,9 @@
   violation_type: "занижение страховой выплаты"
   paid_amount: 88000
   refusal_reason: "Страховая ссылается на собственную экспертизу (88 000 руб.), наша независимая экспертиза — 156 000 руб."
+  underpayment_amount: 68000
+  overdue_days: 47
+  penalty_amount: 31960
 
 - _id: gibdd
   _filename: obrazec_gibdd_fine.pdf
