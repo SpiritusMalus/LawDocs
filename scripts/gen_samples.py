@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 from app.services.text_cleanup import (
+    _HEADER_LINE_RE, _HEADER_MARKER_RE,
     clean_llm_text, fix_dashes, has_quality_artifacts, reorder_header_before_title
 )
 
@@ -327,6 +328,25 @@ def _split_document(lines: list[str]) -> tuple[list[str], str, list[str], list[s
         header = lines[:title_idx]
         title  = lines[title_idx].strip()
         after  = lines[title_idx + 1:]
+        # GigaChat иногда ставит часть шапки (от кого, адрес отправителя) после заголовка.
+        # Подбираем строки шапки из начала after до первой "не-шапочной" строки.
+        extra_header: list[str] = []
+        skip = 0
+        for ln in after:
+            s = ln.strip()
+            if not s:
+                skip += 1
+                continue
+            if (_HEADER_MARKER_RE.match(s) or _HEADER_LINE_RE.match(s)
+                    or s.startswith('«') or (len(s) < 80 and ',' in s and not s[0].isdigit())):
+                extra_header.append(ln.rstrip())
+                skip = 0
+            else:
+                break
+            skip = 0
+        if extra_header:
+            header = [l for l in header if l.strip()] + extra_header
+            after = after[len(extra_header) + skip:]
     else:
         header = []
         title  = ""
