@@ -5,11 +5,15 @@
 import asyncio
 import os
 import re
+import sys
 import uuid
 import yaml
 import httpx
 from fpdf import FPDF
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+from app.services.text_cleanup import clean_llm_text, fix_dashes
 
 ROOT       = Path(__file__).parent.parent
 ENV_FILE   = ROOT / "backend" / ".env"
@@ -393,108 +397,12 @@ def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) ->
 
 
 # ── Постобработка текста LLM ──────────────────────────────────
-
-_SECTION_LABEL_RE       = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
-_DATE_SIG_RE            = re.compile(r'^(\d+[\.\)]?\s*)?дата\s+(и\s+)?подпись[:\.]?\s*$', re.IGNORECASE)
-_CITY_LINE_RE           = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
-_DOC_DATE_RE            = re.compile(
-    r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|'
-    r'июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*(г\.?|года)?\s*$',
-    re.IGNORECASE,
-)
-_SHORT_DATE_LINE_RE     = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
-_MARKDOWN_RE            = re.compile(r'^#{1,3}\s|^\*{1,3}[^\*]|^-{3,}$')
-_TITLE_WITH_SUBTITLE_RE = re.compile(
-    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
-    re.IGNORECASE,
-)
-_ALL_CAPS_RE            = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
-_SECTION_PREFIX_RE      = re.compile(
-    r'^(' + _SECTION_LABELS + r')\s*:\s*',
-    re.IGNORECASE,
-)
-
-
-def _clean_llm_text(text: str) -> str:
-    """Детерминированно убирает артефакты GigaChat независимо от промпта."""
-    lines = text.split("\n")
-    cleaned: list[str] = []
-    prev_was_title = False
-
-    for line in lines:
-        s = line.strip()
-
-        if not s:
-            prev_was_title = False
-            cleaned.append(line)
-            continue
-
-        if s in _TITLE_WORDS:
-            prev_was_title = True
-            cleaned.append(line)
-            continue
-
-        # «ПРЕТЕНЗИЯ о возврате...» — оставляем только само слово
-        m = _TITLE_WITH_SUBTITLE_RE.match(s)
-        if m:
-            cleaned.append(m.group(1).upper())
-            prev_was_title = True
-            continue
-
-        # Строка сразу после заголовка — пояснение типа «о возврате денежных средств»
-        if prev_was_title:
-            if s[0].islower():
-                continue
-            if _TITLE_WITH_SUBTITLE_RE.match(s):
-                continue
-
-        prev_was_title = False
-
-        # «Шапка: Руководителю...» → убираем префикс, оставляем содержимое
-        m = _SECTION_PREFIX_RE.match(s)
-        if m:
-            remainder = s[m.end():].strip()
-            if not remainder:
-                continue
-            line = line[len(s) - len(remainder):]
-            s = remainder
-
-        if _DATE_SIG_RE.match(s):
-            continue
-        if _SECTION_LABEL_RE.match(s):
-            continue
-        if _CITY_LINE_RE.match(s):
-            continue
-        if _DOC_DATE_RE.match(s):
-            continue
-        if _SHORT_DATE_LINE_RE.match(s):
-            continue
-        if _MARKDOWN_RE.match(s):
-            continue
-        # ЗАГЛАВНЫЕ строки (не заголовок документа) → обычный регистр
-        if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
-            cleaned.append(line.replace(s, s.capitalize()))
-            continue
-
-        # Убираем markdown-жирный и курсив внутри строки
-        # Блок подписи (_ / _) не трогаем — он не является markdown
-        line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
-        if not re.search(r'^_+\s*/\s*_+$', s):
-            line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
-
-        cleaned.append(line)
-
-    result = "\n".join(cleaned)
-    result = re.sub(r'-{2,}', '—', result)
-    result = re.sub(r'\n{3,}', '\n\n', result)
-    return result
+# (all patterns and functions moved to app.services.text_cleanup)
 
 
 # ── PDF renderer ──────────────────────────────────────────────
 
 def make_pdf(text: str, out_path: Path) -> None:
-    # Постобработка: два и более дефиса подряд → длинное тире
-    text = re.sub(r'-{2,}', '—', text)
 
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.add_font("A",          fname=ARIAL)
@@ -629,7 +537,8 @@ async def main() -> None:
                     print(f"    Ответ: {text[:300]!r}")
                     continue
 
-            text = _clean_llm_text(text)
+            text = clean_llm_text(text)
+            text = fix_dashes(text)
             make_pdf(text, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:

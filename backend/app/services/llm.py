@@ -15,6 +15,7 @@ import httpx
 
 from app.core.config import settings
 from app.services.pii_classifier import split_for_llm
+from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
 
 logger = logging.getLogger(__name__)
 
@@ -202,145 +203,13 @@ def _is_gigachat_refusal(text: str) -> bool:
 
 
 # ── Постобработка и валидация ответа GigaChat ─────────────────────────────────
-
-_SECTION_LABEL_RE   = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
-_DATE_SIG_RE        = re.compile(r'^(\d+[\.\)]?\s*)?дата\s+(и\s+)?подпись[:\.]?\s*$', re.IGNORECASE)
-_CITY_LINE_RE       = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
-_DOC_DATE_RE        = re.compile(
-    r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|'
-    r'июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*(г\.?|года)?\s*$',
-    re.IGNORECASE,
-)
-_SHORT_DATE_LINE_RE = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
-_MARKDOWN_RE        = re.compile(r'^#{1,3}\s|^\*{1,3}[^\*]|^-{3,}$')
-_TITLE_WORDS        = frozenset({"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"})
-# «ПРЕТЕНЗИЯ о возврате...» — подзаголовок в одну строку с заголовком
-_TITLE_WITH_SUBTITLE_RE = re.compile(
-    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
-    re.IGNORECASE,
-)
-# Строка только из заглавных букв (>= 10 символов) — ИТОГО К ВЫПЛАТЕ, ТРЕБУЮ и т.п.
-_ALL_CAPS_RE        = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
-
-_SECTION_LABELS = (
-    r'Шапка|Описание|Обоснование(?:\s+по\s+причине)?|Требование|Нарушение|Обстоятельства|Правовое\s+обоснование|'
-    r'Расчёт|Предупреждение|Приложени[ея]|Вводная|Реквизиты|Содержательная(?:\s+часть)?|'
-    r'Основание\s+несогласия'
-)
-
-_QUALITY_ARTIFACTS = (
-    # нумерованные метки разделов в начале строки
-    re.compile(
-        r'^\d+[\.\)]\s+(' + _SECTION_LABELS + r')',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    # ненумерованные метки разделов в начале строки
-    re.compile(
-        r'^(' + _SECTION_LABELS + r')\s*:',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    # условные конструкции из инструкции попали в документ
-    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
-    # markdown-жирный или курсив внутри строки
-    re.compile(r'\*{2,}[^\*]+\*{2,}'),
-    # технические переменные формы в тексте документа
-    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
-)
-
-# Метка раздела слитая с содержимым: «Шапка: Руководителю...» → «Руководителю...»
-_SECTION_PREFIX_RE = re.compile(
-    r'^(' + _SECTION_LABELS + r')\s*:\s*',
-    re.IGNORECASE,
-)
-
-
-def _clean_llm_text(text: str) -> str:
-    """Детерминированно убирает артефакты GigaChat независимо от промпта."""
-    lines = text.split("\n")
-    cleaned: list[str] = []
-    prev_was_title = False
-
-    for line in lines:
-        s = line.strip()
-
-        if not s:
-            prev_was_title = False
-            cleaned.append(line)
-            continue
-
-        # Строка сразу после заголовка — убираем любой подзаголовок:
-        # строчная буква, «ПРЕТЕНЗИЯ о чём-то», или короткая фраза с заглавной (≤ 60 символов)
-        if prev_was_title:
-            if s[0].islower():
-                continue
-            if _TITLE_WITH_SUBTITLE_RE.match(s):
-                continue
-            if s not in _TITLE_WORDS and len(s) <= 60 and not s[0].isdigit():
-                continue
-
-        if s in _TITLE_WORDS:
-            prev_was_title = True
-            cleaned.append(line)
-            continue
-
-        # Строка «ПРЕТЕНЗИЯ о чём-то» — оставляем только само слово
-        m = _TITLE_WITH_SUBTITLE_RE.match(s)
-        if m:
-            cleaned.append(m.group(1).upper())
-            prev_was_title = True
-            continue
-
-        prev_was_title = False
-
-        # «Шапка: Руководителю...» → убираем префикс, оставляем содержимое
-        m = _SECTION_PREFIX_RE.match(s)
-        if m:
-            # Если после метки ничего нет — строка пустая, пропускаем
-            remainder = s[m.end():].strip()
-            if not remainder:
-                continue
-            line = line[len(s) - len(remainder):]
-            s = remainder
-
-        if _DATE_SIG_RE.match(s):
-            continue
-        if _SECTION_LABEL_RE.match(s):
-            continue
-        if _CITY_LINE_RE.match(s):
-            continue
-        if _DOC_DATE_RE.match(s):
-            continue
-        if _SHORT_DATE_LINE_RE.match(s):
-            continue
-        if _MARKDOWN_RE.match(s):
-            continue
-        # Строка полностью из заглавных (длинная) — например ИТОГО К ВЫПЛАТЕ
-        if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
-            # Приводим к обычному регистру: первая заглавная, остальные строчные
-            cleaned.append(line.replace(s, s.capitalize()))
-            continue
-
-        # Убираем markdown-жирный внутри строки: **слово** → слово
-        # Блок подписи (_ / _) не трогаем — он не является markdown
-        line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
-        if not re.search(r'^_+\s*/\s*_+$', s):
-            line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
-
-        cleaned.append(line)
-
-    result = "\n".join(cleaned)
-    # Двойные и более дефисы → длинное тире
-    result = re.sub(r'-{2,}', '—', result)
-    # Множественные пустые строки → не более двух подряд
-    result = re.sub(r'\n{3,}', '\n\n', result)
-    return result
+# (all patterns and logic moved to app.services.text_cleanup)
 
 
 def _has_quality_artifacts(text: str) -> bool:
     """Проверяет, содержит ли текст типичные артефакты GigaChat."""
-    for pattern in _QUALITY_ARTIFACTS:
-        if pattern.search(text):
-            return True
+    if not has_quality_artifacts(text):
+        return False
     # Слишком короткий — не документ
     if len(text.strip()) < 300:
         return True
@@ -467,7 +336,9 @@ def _pre_substitute_prompt(system_prompt: str, form_data: dict) -> str:
 
 def _post_substitute_output(text: str, form_data: dict) -> str:
     """Подставляет ПДн в ГОТОВЫЙ текст документа от GigaChat (полный режим)."""
-    return _substitute_field_placeholders(text, form_data)
+    text = _substitute_field_placeholders(text, form_data)
+    text = fix_dashes(text)
+    return text
 
 
 async def fill_instruction(situation_id: str, form_data: dict) -> str:
@@ -539,5 +410,5 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
             f"GigaChat отказал в генерации документа для ситуации '{situation_id}'. "
             "Ответ содержит отказ вместо документа."
         )
-    text = _clean_llm_text(text)
+    text = clean_llm_text(text)
     return _post_substitute_output(text, form_data)
