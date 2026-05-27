@@ -527,7 +527,35 @@ async def main() -> None:
             make_pdf(text, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:
-            print(f"❌  {e}")
+            print(f"\n    ⚠  ошибка ({e!r}), повтор через 3с…", flush=True)
+            await asyncio.sleep(3)
+            try:
+                if python_template:
+                    if sid in _HYBRID_ENRICHERS:
+                        form_data = _HYBRID_ENRICHERS[sid](form_data)
+                    narrative_fields = config.get("narrative_fields", [])
+                    narrative_prompt = config.get("narrative_prompt", "")
+                    raw_narrative = " ".join(
+                        str(form_data.get(f, "")) for f in narrative_fields if form_data.get(f)
+                    )
+                    if raw_narrative and narrative_prompt:
+                        polished = await call_giga(token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}")
+                        polished = raw_narrative if _is_refusal(polished) else polished
+                    else:
+                        polished = raw_narrative
+                    text = pre_substitute_prompt(python_template, form_data)
+                    text = text.replace("{{llm_narrative}}", polished)
+                else:
+                    sp = FORMAT_RULES + "\n" + pre_substitute_prompt(config.get("system_prompt", ""), form_data)
+                    up = build_user_prompt(sid, form_data)
+                    text = await call_giga(token, sp, up, validate=True)
+                text = reorder_header_before_title(text)
+                text = clean_llm_text(text)
+                text = fix_dashes(text)
+                make_pdf(text, OUT_DIR / filename)
+                print(f"✓  {filename}  (retry)")
+            except Exception as e2:
+                print(f"❌  {sid}: {e2!r}")
 
     print(f"\nГотово → frontend/public/samples/")
 

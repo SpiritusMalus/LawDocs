@@ -108,23 +108,37 @@ async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool
     async def _once(extra_feedback: str = "") -> str:
         # Токен перезапрашивается каждый раз — защита от истечения между retry
         fresh_token = await _get_gigachat_token()
-        async with httpx.AsyncClient(verify=_get_verify()) as client:
-            resp = await client.post(
-                f"{GIGACHAT_API_URL}/chat/completions",
-                headers={"Authorization": f"Bearer {fresh_token}"},
-                json={
-                    "model": "GigaChat",
-                    "messages": [
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt + extra_feedback},
-                    ],
-                    "temperature": 0.2,
-                    "max_tokens": 4096,
-                },
-                timeout=60,
-            )
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
+        for net_attempt in range(1, 3):
+            try:
+                async with httpx.AsyncClient(verify=_get_verify()) as client:
+                    resp = await client.post(
+                        f"{GIGACHAT_API_URL}/chat/completions",
+                        headers={"Authorization": f"Bearer {fresh_token}"},
+                        json={
+                            "model": "GigaChat",
+                            "messages": [
+                                {"role": "system", "content": system_prompt},
+                                {"role": "user", "content": user_prompt + extra_feedback},
+                            ],
+                            "temperature": 0.2,
+                            "max_tokens": 4096,
+                        },
+                        timeout=60,
+                    )
+                    resp.raise_for_status()
+                    return resp.json()["choices"][0]["message"]["content"]
+            except (httpx.TimeoutException, httpx.NetworkError) as e:
+                if net_attempt == 2:
+                    raise
+                logger.warning("GigaChat network error (attempt %d): %s, retrying", net_attempt, e)
+                await asyncio.sleep(2)
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code in (500, 502, 503) and net_attempt < 2:
+                    logger.warning("GigaChat %d (attempt %d), retrying", e.response.status_code, net_attempt)
+                    await asyncio.sleep(2)
+                    continue
+                raise
+        raise RuntimeError("unreachable")
 
     text = await _once()
 
@@ -229,7 +243,7 @@ async def _call_yandex_review(draft: str) -> tuple[str, bool]:
     for attempt in range(1, 3):
         try:
             response = await client.chat.completions.create(
-                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
+                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
                 messages=[
                     {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
                     {"role": "user", "content": draft},
