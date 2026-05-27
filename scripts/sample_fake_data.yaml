@@ -223,7 +223,7 @@
   user_address: "100007, г. Москва, ул. Образцовая, д. 43, кв. 21"
   user_phone: "+7 (999) 888-88-88"
   user_email: ivanova@example.ru
-  clinic_name: "АО «ГК «СМ-Клиника»»"
+  clinic_name: "АО «ГК «СМ-Клиника»"
   clinic_address: "г. Москва, Старопетровский пр., д. 7А, стр. 1"
   treatment_date: 10.04.2026
   insurance_type: "ОМС (полис имеется)"

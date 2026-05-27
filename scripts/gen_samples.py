@@ -346,17 +346,32 @@ def strip_leaked_header(body: str, header: list[str], title: str) -> str:
 
 # ── PDF renderer ──────────────────────────────────────────────
 
+class _SamplePDF(FPDF):
+    """FPDF с footer-дисклеймером на каждой странице."""
+
+    def footer(self) -> None:
+        self.set_y(-(self.b_margin))
+        self.set_draw_color(180, 180, 180)
+        self.line(25, self.get_y() - 2, 190, self.get_y() - 2)
+        self.set_font("A", size=8)
+        self.set_text_color(120, 120, 120)
+        self.cell(0, 4, "Образец. Не является юридической консультацией. "
+                        "Персональные данные вымышлены. law-docs.ru", align="L")
+        self.set_text_color(0, 0, 0)
+
+
 def make_pdf(
     header: list[str],
     title: str,
     body: str,
     out_path: Path,
 ) -> None:
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf = _SamplePDF(orientation="P", unit="mm", format="A4")
     pdf.add_font("A",          fname=ARIAL)
     pdf.add_font("A", style="B", fname=ARIAL_B)
     pdf.set_margins(left=25, top=25, right=20)
-    pdf.set_auto_page_break(auto=True, margin=20)
+    # margin=25 оставляет место для footer (~10мм) + подпись (~15мм)
+    pdf.set_auto_page_break(auto=True, margin=25)
     pdf.add_page()
 
     # watermark
@@ -385,16 +400,6 @@ def make_pdf(
             pdf.ln(1)
 
     _render_sig_block(pdf)
-    pdf.ln(6)
-
-    y = pdf.get_y() + 2
-    pdf.set_draw_color(180, 180, 180)
-    pdf.line(25, y, 190, y)
-    pdf.set_y(y + 3)
-    pdf.set_font("A", size=8)
-    pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(0, 4.5, "Образец. Не является юридической консультацией. "
-                            "Персональные данные вымышлены. law-docs.ru")
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     pdf.output(str(out_path))
