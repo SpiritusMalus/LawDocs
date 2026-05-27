@@ -1,17 +1,20 @@
 """
-Unified text cleanup for LLM outputs.
+Text cleanup for LLM-generated document body.
 
+Cleans only the body text (no header/title — those are built deterministically).
 Used by:
-- backend/app/services/llm.py (API document generation)
-- scripts/gen_samples.py (sample PDF generation)
-
-Single source of truth for all text postprocessing rules.
+- backend/app/services/llm.py
+- scripts/gen_samples.py
 """
 
 import re
-from datetime import date
 
-_TITLE_WORDS = frozenset({"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"})
+_ORG_ABBREVS = frozenset({"ООО", "АО", "ПАО", "ГБУ", "МБУ", "ИП", "ФГУП", "МУП", "ГБУЗ", "ФКУ", "НКО", "КФХ", "ФССП", "ФАС", "РПН"})
+
+_ORG_BOUNDARY = r'(?<![А-ЯЁа-яёA-Za-z])'
+_ORG_BOUNDARY_END = r'(?![А-ЯЁа-яёA-Za-z])'
+
+_INLINE_CAPS_RE = re.compile(r'\b([А-ЯЁ]{3,})\b')
 
 _SECTION_LABELS = (
     r'Шапка|Описание|Обоснование(?:\s+по\s+причине)?|Требование|Нарушение|Обстоятельства|Правовое\s+обоснование|'
@@ -19,12 +22,12 @@ _SECTION_LABELS = (
     r'Основание\s+несогласия'
 )
 
-_TITLE_WITH_SUBTITLE_RE = re.compile(
-    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
+_SECTION_LABEL_RE = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
+
+_SECTION_PREFIX_RE = re.compile(
+    r'^(' + _SECTION_LABELS + r')\s*:\s*',
     re.IGNORECASE,
 )
-
-_SECTION_LABEL_RE = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
 
 _DATE_SIG_RE = re.compile(
     r'^(\d+[\.\)]?\s*)?'
@@ -37,8 +40,6 @@ _DATE_SIG_RE = re.compile(
     re.IGNORECASE,
 )
 
-_CITY_LINE_RE = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
-
 _DOC_DATE_RE = re.compile(
     r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|'
     r'июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*(г\.?|года)?\s*$',
@@ -49,137 +50,20 @@ _SHORT_DATE_LINE_RE = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
 
 _MARKDOWN_RE = re.compile(r'^#{1,3}\s|^\*{1,3}[^\*]|^-{3,}$')
 
+_TITLE_WORDS = frozenset({"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"})
+
+_TITLE_WITH_SUBTITLE_RE = re.compile(
+    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
+    re.IGNORECASE,
+)
+
 _ALL_CAPS_RE = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
 
 _TITLE_CASE_MIN_WORDS = 4
 
-_HEADER_MARKER_RE = re.compile(
-    r'^(Мировому\s|В\s+районный|В\s+суд|Начальнику|Руководителю|Генеральному|'
-    r'Директору|Президенту|Председателю|'
-    r'От\s*:|Взыскатель\s*:|Должник\s*:|Дело\s*№)',
-    re.IGNORECASE,
-)
-
-
-_QUOTE_STRIP_RE = re.compile(r'^[«"\']|[»"\']$')
-
-# Строки которые явно относятся к шапке (адрес, телефон, email, реквизиты, «От:», «Дело №»)
-_HEADER_LINE_RE = re.compile(
-    r'''(?x)
-    ^ («|")?                          # возможная кавычка-обёртка GigaChat
-    (
-        \d{6},                        # почтовый индекс
-      | тел\.?\s                       # тел. / тел
-      | [+]?7[\s(]\d                  # телефон
-      | \+7                           # телефон
-      | [a-zA-Z0-9._%+-]+@            # email
-      | г\.\s                         # г. Москва
-      | ул\.\s                        # ул. Ленина
-      | пр\.\s|пр-т\s                 # проспект
-      | д\.\s                         # д. 1
-      | кв\.\s                        # кв. 1
-      | ИНН\s                         # ИНН
-      | Дело\s*№                      # Дело №
-      | От\s*:                        # От:
-      | Взыскатель\s*:                # Взыскатель:
-      | Должник\s*:                   # Должник:
-    )
-    ''',
-    re.IGNORECASE,
-)
-
-# Строки тела — явно начало тела документа
-_BODY_START_RE = re.compile(
-    r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)',
-    re.IGNORECASE,
-)
-
-
-def reorder_header_before_title(text: str) -> str:
-    """Если заголовок документа стоит перед шапкой — переставляет шапку наверх.
-
-    GigaChat часто выдаёт: ЗАГОЛОВОК → пустые строки → шапка → тело.
-    Функция собирает шапку (блок маркерных строк после заголовка), пропуская
-    пустые строки внутри блока, и переставляет её перед заголовком.
-    """
-    lines = text.split('\n')
-    title_idx = next((i for i, l in enumerate(lines) if l.strip() in _TITLE_WORDS), None)
-    if title_idx is None:
-        return text
-    non_empty_before = [l for l in lines[:title_idx] if l.strip()]
-    if non_empty_before:
-        return text  # порядок уже верный
-
-    # Ищем шапку после заголовка — пропускаем ведущие пустые строки
-    after = lines[title_idx + 1:]
-    header_lines: list[str] = []
-    rest_start = 0
-    found_marker = False
-    consecutive_empty = 0
-
-    for j, line in enumerate(after):
-        s = _QUOTE_STRIP_RE.sub('', line.strip())
-
-        if not s:
-            if not found_marker:
-                continue  # пустые строки до маркера — пропускаем
-            # Пустая строка внутри найденной шапки: продолжаем только если
-            # следующая строка тоже шапка (смотрим вперёд)
-            # Помечаем позицию — если следующая строка не шапка, останавливаемся
-            consecutive_empty += 1
-            continue
-
-        consecutive_empty = 0
-
-        # Явный признак начала тела
-        if _BODY_START_RE.match(s) or len(s) > 120:
-            rest_start = j
-            break
-
-        if not found_marker:
-            if _HEADER_MARKER_RE.match(s):
-                found_marker = True
-                header_lines.append(line.rstrip())
-                rest_start = j + 1
-            else:
-                # Непустая строка не совпала с маркером — шапки нет
-                break
-        else:
-            # После маркера: всё кроме явного начала тела идёт в шапку
-            # Тело начинается с длинного предложения без адресных признаков
-            is_body = (
-                not _HEADER_LINE_RE.match(s)
-                and not _HEADER_MARKER_RE.match(s)
-                and not s.startswith('«')
-                and len(s) > 60
-            )
-            if is_body:
-                rest_start = j
-                break
-            header_lines.append(line.rstrip())
-            rest_start = j + 1
-
-    if not header_lines:
-        return text
-    rest_lines = after[rest_start:]
-    return '\n'.join(lines[:title_idx] + header_lines + [''] + [lines[title_idx]] + rest_lines)
-
-
-_ORG_ABBREVS = frozenset({"ООО", "АО", "ПАО", "ГБУ", "МБУ", "ИП", "ФГУП", "МУП", "ГБУЗ", "ФКУ", "НКО", "КФХ", "ФССП", "ФАС", "РПН"})
-
-_INLINE_CAPS_RE = re.compile(r'\b([А-ЯЁ]{3,})\b')
-
-# \b не работает для кириллицы в Python — используем lookaround
-_ORG_BOUNDARY = r'(?<![А-ЯЁа-яёA-Za-z])'
-_ORG_BOUNDARY_END = r'(?![А-ЯЁа-яёA-Za-z])'
-
 
 def _fix_inline_caps(s: str) -> str:
-    """Приводит случайные ALL_CAPS-слова внутри строки к нижнему регистру.
-
-    Сохраняет аббревиатуры из regexps и _ORG_ABBREVS.
-    Не трогает строки, которые сами по себе являются заголовком документа.
-    """
+    """Приводит случайные ALL_CAPS-слова внутри строки к нижнему регистру. Сохраняет аббревиатуры."""
     if s in _TITLE_WORDS:
         return s
 
@@ -205,138 +89,51 @@ def _is_title_case_line(s: str) -> bool:
 
 
 def _to_sentence_case(s: str) -> str:
-    """Title Case → sentence case. Сохраняет аббревиатуры (ФЗ, ГК, ООО, ИП)."""
+    """Title Case → sentence case. Сохраняет аббревиатуры."""
     abbrevs = re.findall(r'\b[А-ЯЁA-Z]{2,5}(?:-\d+)?\b', s)
     result = s[0].upper() + s[1:].lower() if s else s
-    # capitalize после ". "
     result = re.sub(r'(\.\s+)([а-яёa-z])', lambda m: m.group(1) + m.group(2).upper(), result)
     for abbr in abbrevs:
         result = result.replace(abbr.lower(), abbr, 1)
-    # Восстанавливаем аббревиатуры организационно-правовых форм которые могли
-    # быть написаны неверно (Ооо → ООО, Ао → АО и т.д.)
     for org in _ORG_ABBREVS:
         result = re.sub(_ORG_BOUNDARY + org[0] + org[1:].lower() + _ORG_BOUNDARY_END, org, result)
         result = re.sub(_ORG_BOUNDARY + org.lower() + _ORG_BOUNDARY_END, org, result)
     return result
 
-_SECTION_PREFIX_RE = re.compile(
-    r'^(' + _SECTION_LABELS + r')\s*:\s*',
-    re.IGNORECASE,
-)
-
-_QUALITY_ARTIFACTS = (
-    re.compile(
-        r'^\d+[\.\)]\s+(' + _SECTION_LABELS + r')',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    re.compile(
-        r'^(' + _SECTION_LABELS + r')\s*:',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
-    re.compile(r'\*{2,}[^\*]+\*{2,}'),
-    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls|fine_number|gibdd_unit)\b'),
-    re.compile(r'-{2,}'),  # двойное тире
-    # Заголовок стоит раньше шапки — сигнал к retry
-    re.compile(
-        r'(?m)^\s*(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s*\n'
-        r'(?:.*\n)*?(?:Мировому|Начальнику|Руководителю|От\s*:)',
-        re.IGNORECASE,
-    ),
-)
-
 
 def clean_llm_text(text: str) -> str:
-    """Deterministically removes GigaChat artifacts regardless of prompt.
+    """Чистит тело документа от LLM-артефактов.
 
-    Handles:
-    - Section labels and metadata
-    - Post-title subtitles (≤60 chars)
-    - Dates and signatures
-    - All-caps lines (converts to normal case)
-    - Markdown formatting
-    - Duplicated titles
+    Не трогает структуру — шапка и заголовок уже отделены.
+    Убирает: метки разделов, markdown, даты составления, ALL_CAPS внутри предложений,
+    Title Case артефакты, строки с подписью.
     """
     lines = text.split("\n")
     cleaned: list[str] = []
-    prev_was_title = False
-    title_seen = False
 
     for line in lines:
         s = line.strip()
 
-        # Снимаем кавычки-обёртки GigaChat со строк шапки
-        if not title_seen:
-            if s.startswith('«'):
-                s = s[1:].strip()
-                # Хвостовая » — обёртка (не часть названия «ООО»): убираем если нет внутренних «
-                if s.endswith('»') and '«' not in s:
-                    s = s[:-1].strip()
-                line = s
-            elif s.endswith('»') and '«' not in s:
-                # Хвост многострочного блока в кавычках
-                s = s[:-1].strip()
-                line = s
-            elif s.startswith('"') and s.endswith('"'):
-                s = s[1:-1].strip()
-                line = s
-
         if not s:
-            # Empty line: keep it, but don't reset prev_was_title
-            # so post-title protection extends through empty lines
             cleaned.append(line)
             continue
 
-        # Post-title subtitle removal: any line ≤60 chars after title
-        # (except another title word, except numeric lines like "1. Something")
-        if prev_was_title:
-            if s[0].islower():
-                continue
-            if _TITLE_WITH_SUBTITLE_RE.match(s):
-                continue
-            if s not in _TITLE_WORDS and len(s) <= 60 and not s[0].isdigit():
-                continue
-            # If we got here, line is substantial enough to keep
-            prev_was_title = False
-
-        if s in _TITLE_WORDS:
-            # First title word → keep. Duplicates → remove.
-            if title_seen:
-                continue
-            title_seen = True
-            prev_was_title = True
-            cleaned.append(line)
+        # Пропускаем заголовок документа если LLM всё же его написал
+        if s in _TITLE_WORDS or _TITLE_WITH_SUBTITLE_RE.match(s):
             continue
 
-        # "ПРЕТЕНЗИЯ о возврате..." → keep only title word
-        m = _TITLE_WITH_SUBTITLE_RE.match(s)
-        if m:
-            if title_seen:
-                continue
-            title_seen = True
-            cleaned.append(m.group(1).upper())
-            prev_was_title = True
-            continue
-
-        prev_was_title = False
-
-        # "Шапка: Руководителю..." → remove prefix, keep content
+        # "Шапка: Руководителю..." → убираем префикс, оставляем содержание
         m = _SECTION_PREFIX_RE.match(s)
         if m:
             remainder = s[m.end():].strip()
             if not remainder:
                 continue
-            line = line[len(s) - len(remainder):]
+            line = remainder
             s = remainder
 
         if _DATE_SIG_RE.match(s):
             continue
         if _SECTION_LABEL_RE.match(s):
-            continue
-        # Single section label word (without colon) → remove if it's a known label
-        if s in _SECTION_LABELS.split('|') and not s.endswith(':'):
-            continue
-        if _CITY_LINE_RE.match(s):
             continue
         if _DOC_DATE_RE.match(s):
             continue
@@ -345,47 +142,39 @@ def clean_llm_text(text: str) -> str:
         if _MARKDOWN_RE.match(s):
             continue
 
-        # ALL_CAPS lines (not a document title) → normal case
-        # Properly: capitalize each word, handle patronymic names and multi-word phrases
+        # ALL_CAPS строки → word-case
         if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
             words_result = []
             for word in s.split():
                 clean_word = re.sub(r'[«»"\']', '', word)
                 if clean_word in _ORG_ABBREVS:
-                    words_result.append(word)  # сохраняем как есть вместе с кавычками
+                    words_result.append(word)
                 else:
                     words_result.append(word.capitalize())
-            proper_case = " ".join(words_result)
-            cleaned.append(line.replace(s, proper_case))
+            cleaned.append(" ".join(words_result))
             continue
 
-        # Title Case lines (GigaChat-артефакт) → sentence case
+        # Title Case → sentence case
         if _is_title_case_line(s):
-            cleaned.append(line.replace(s, _to_sentence_case(s)))
+            cleaned.append(_to_sentence_case(s))
             continue
 
-        # Remove markdown bold/italic inside lines
-        # Don't touch signature block (_ / _)
+        # Убираем markdown bold/italic
         line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
         if not re.search(r'^_+\s*/\s*_+$', s):
             line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
 
-        # Fix inline ALL_CAPS words (e.g. "блокирован БАНКом" → "блокирован банком")
-        # Don't apply to header lines (before title) — handled separately
-        if title_seen and s not in _TITLE_WORDS:
-            fixed = _fix_inline_caps(line.strip())
-            line = line.replace(line.strip(), fixed) if fixed != line.strip() else line
+        # Inline ALL_CAPS слова → строчные (внутри предложений)
+        fixed = _fix_inline_caps(line.strip())
+        line = line.replace(line.strip(), fixed) if fixed != line.strip() else line
 
         cleaned.append(line)
 
     result = "\n".join(cleaned)
     result = re.sub(r'\n{3,}', '\n\n', result)
-    # Capitalize первой буквы каждой строки шапки если она строчная
-    # (GigaChat пишет адресные строки типа "московская обл." в нижнем регистре)
-    # Capitalize только кириллических строчных букв в начале строки
-    # (не трогаем email, латинские строки)
+    # Capitalize первой кириллической буквы строки
     result = re.sub(r'(?m)^([а-яё])', lambda m: m.group(1).upper(), result)
-    # Финальный pass: восстанавливаем аббревиатуры ООО/АО/ПАО/ГБУ независимо от регистра
+    # Восстанавливаем аббревиатуры
     for org in _ORG_ABBREVS:
         result = re.sub(_ORG_BOUNDARY + org[0] + org[1:].lower() + _ORG_BOUNDARY_END, org, result)
         result = re.sub(_ORG_BOUNDARY + org.lower() + _ORG_BOUNDARY_END, org, result)
@@ -393,19 +182,26 @@ def clean_llm_text(text: str) -> str:
 
 
 def fix_dashes(text: str) -> str:
-    """Convert double/multiple dashes and en-dashes to em-dash (—).
-
-    Should be called once at the very end of processing chain,
-    after all other cleanup is done.
-    """
-    text = re.sub(r'-{2,}', '—', text)  # -- → —
-    text = re.sub(r'–{2,}', '—', text)  # –– → —
-    text = re.sub(r'[-–][-–]+', '—', text)  # смешанные
-    # Одиночный дефис в начале строки как пункт перечисления → длинное тире
+    """Заменяет двойные/тройные дефисы и en-dash на длинное тире (—)."""
+    text = re.sub(r'-{2,}', '—', text)
+    text = re.sub(r'–{2,}', '—', text)
+    text = re.sub(r'[-–][-–]+', '—', text)
     text = re.sub(r'(?m)^- ', '— ', text)
     return text
 
 
+_QUALITY_ARTIFACTS = (
+    re.compile(
+        r'^(' + _SECTION_LABELS + r')\s*:',
+        re.IGNORECASE | re.MULTILINE,
+    ),
+    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'\*{2,}[^\*]+\*{2,}'),
+    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls|fine_number|gibdd_unit)\b'),
+    re.compile(r'-{2,}'),
+)
+
+
 def has_quality_artifacts(text: str) -> bool:
-    """Check if text contains known quality issues that warrant retry."""
+    """True если текст содержит известные артефакты качества (повод для retry)."""
     return any(pattern.search(text) for pattern in _QUALITY_ARTIFACTS)

@@ -78,57 +78,28 @@ def _text_to_docx(text: str) -> bytes:
     return buf.getvalue()
 
 
-_TITLE_WORDS   = {"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО"}
-_DATE_RE       = re.compile(
-    r"\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|"
-    r"июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*года",
-    re.IGNORECASE,
-)
-_SIG_RE        = re.compile(r"_{4,}")
-_DATE_SHORT_RE = re.compile(r"^\s*\d{1,2}\.\d{2}\.\d{4}\s*$")
+def _build_header(header_fields: list, form_data: dict) -> list[str]:
+    """Детерминированно строит строки шапки из header_fields конфига и form_data.
 
+    Персональные данные берутся напрямую из form_data — в LLM не уходят.
+    Пустые поля пропускаются.
+    """
+    lines: list[str] = []
+    for hf in header_fields:
+        field = hf.field if hasattr(hf, "field") else hf.get("field", "")
+        label = hf.label if hasattr(hf, "label") else hf.get("label")
+        prefix = hf.prefix if hasattr(hf, "prefix") else hf.get("prefix")
 
-def _split_document(
-    lines: list[str],
-) -> tuple[list[str], str, list[str], list[str]]:
-    """Делит строки на (шапка, заголовок, тело, блок_подписи)."""
-    title_idx: int | None = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped in _TITLE_WORDS or any(stripped.startswith(t + " ") for t in _TITLE_WORDS):
-            title_idx = i
-            break
+        value = str(form_data.get(field, "")).strip()
+        if not value:
+            continue
 
-    sig_start: int | None = None
-    search_from = max(0, len(lines) - 14)
-    for i in range(search_from, len(lines)):
-        if (_SIG_RE.search(lines[i])
-                or _DATE_RE.search(lines[i])
-                or _DATE_SHORT_RE.match(lines[i])):
-            sig_start = i
-            break
-
-    if title_idx is not None:
-        header = lines[:title_idx]
-        title  = lines[title_idx].strip()
-        after  = lines[title_idx + 1:]
-    else:
-        header = []
-        title  = ""
-        after  = lines
-
-    if sig_start is not None:
-        body_end = sig_start - (title_idx + 1 if title_idx is not None else 0)
-        body = after[:body_end]
-        sig  = after[body_end:]
-    else:
-        body = after
-        sig  = []
-
-    while body and not body[-1].strip():
-        body.pop()
-
-    return header, title, body, sig
+        if prefix:
+            value = prefix + value
+        if label:
+            lines.append(label)
+        lines.append(value)
+    return lines
 
 
 def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> None:
@@ -165,16 +136,41 @@ def _render_sig_block(pdf: "FPDF", line_h: float = 6.0) -> None:
     pdf.ln(line_h)
 
 
-def _docx_to_pdf(docx_bytes: bytes) -> bytes:
+def _docx_to_pdf_legacy(docx_bytes: bytes) -> bytes:
+    """Legacy: конвертирует готовый .docx (шаблонный путь) в PDF через fpdf.
+
+    Используется только когда для ситуации есть .docx-шаблон.
+    Структура документа берётся из docx как есть — без парсинга шапки.
+    """
     import io as _io
     from docx import Document as DocxDoc
     from fpdf import FPDF
 
     doc = DocxDoc(_io.BytesIO(docx_bytes))
-    raw_lines = [
-        re.sub(r'(?<!\-)\-\-(?!\-)', '—', para.text)
-        for para in doc.paragraphs
-    ]
+    lines = [re.sub(r'(?<!\-)\-\-(?!\-)', '—', p.text) for p in doc.paragraphs]
+
+    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    pdf.add_page()
+    pdf.add_font("FreeSans", fname="/usr/share/fonts/truetype/freefont/FreeSans.ttf")
+    pdf.add_font("FreeSans", style="B", fname="/usr/share/fonts/truetype/freefont/FreeSansBold.ttf")
+    pdf.set_margins(left=25, top=25, right=20)
+    pdf.set_auto_page_break(auto=True, margin=20)
+    pdf.set_font("FreeSans", size=11)
+
+    for line in lines:
+        if not line.strip():
+            pdf.ln(3)
+        else:
+            pdf.multi_cell(0, 6, line)
+            pdf.ln(1)
+
+    _render_sig_block(pdf)
+    return bytes(pdf.output())
+
+
+def _render_pdf(header: list[str], title: str, body: str) -> bytes:
+    """Рендерит PDF из готовых частей: шапка (детерминированная), заголовок, тело."""
+    from fpdf import FPDF
 
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.add_page()
@@ -187,8 +183,6 @@ def _docx_to_pdf(docx_bytes: bytes) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_font("FreeSans", size=11)
 
-    header, title, body, sig = _split_document(raw_lines)
-
     if header:
         _render_right_block(pdf, header)
         pdf.ln(4)
@@ -199,14 +193,13 @@ def _docx_to_pdf(docx_bytes: bytes) -> bytes:
         pdf.set_font("FreeSans", size=11)
         pdf.ln(4)
 
-    for line in body:
+    for line in body.split("\n"):
         if not line.strip():
             pdf.ln(3)
             continue
         pdf.multi_cell(0, 6, line)
         pdf.ln(1)
 
-    # Блок подписи рендерится всегда — даже если LLM не вывел строку подписи
     _render_sig_block(pdf)
 
     return bytes(pdf.output())
@@ -290,33 +283,41 @@ async def generate_instruction(
 async def generate_document(
     order_id: str,
     situation_id: str,
-    content: str,
+    body: str,
+    header: list[str],
+    title: str,
     form_data: dict | None = None,
 ) -> tuple[str, str]:
     """
     Builds .docx and .pdf, uploads to S3.
+
+    body — только текст тела (от LLM), без шапки и заголовка.
+    header — строки шапки, построенные детерминированно из form_data.
+    title — заголовок документа (ПРЕТЕНЗИЯ / ЖАЛОБА / ЗАЯВЛЕНИЕ).
+
     Returns (docx_key, pdf_key).
     """
     safe_sid = _sanitize_situation_id(situation_id)
     safe_oid = _sanitize_order_id(order_id)
 
     fd = form_data or {}
-    template_path = _find_template(safe_sid, fd)
     loop = asyncio.get_running_loop()
 
+    template_path = _find_template(safe_sid, fd)
     if template_path:
         now = datetime.now(UTC)
         context = {
             **fd,
-            "ai_narrative": content,
+            "ai_narrative": body,
             "today": f"{now.day} {['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.month - 1]} {now.year} года",
         }
         docx_bytes = await loop.run_in_executor(None, _render_template, template_path, context)
         logger.info("Rendered template %s for order %s", template_path.name, safe_oid)
+        pdf_bytes = await loop.run_in_executor(None, _docx_to_pdf_legacy, docx_bytes)
     else:
-        docx_bytes = await loop.run_in_executor(None, _text_to_docx, content)
-
-    pdf_bytes = await loop.run_in_executor(None, _docx_to_pdf, docx_bytes)
+        full_text = "\n".join(header) + f"\n\n{title}\n\n" + body if header else f"{title}\n\n{body}"
+        docx_bytes = await loop.run_in_executor(None, _text_to_docx, full_text)
+        pdf_bytes = await loop.run_in_executor(None, _render_pdf, header, title, body)
 
     date_str = datetime.now(UTC).strftime("%Y%m%d")
     docx_key = s3_key(safe_oid, f"pretenziya_{safe_sid}_{date_str}.docx")
