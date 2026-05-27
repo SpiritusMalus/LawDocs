@@ -214,7 +214,8 @@ async def get_token(auth_key: str) -> str:
 
 _RETRY_FEEDBACK = (
     "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
-    "- НЕ пиши нумерованные метки разделов (1. Шапка:, 7. Требование: и т.п.)\n"
+    "- НЕ пиши метки разделов ни с номером, ни без: «Шапка:», «Описание:», «Требование:», «Нарушение:», «Расчёт:», «Предупреждение:», «Реквизиты:» и любые подобные — пиши сразу содержание без метки\n"
+    "- НЕ пиши условные конструкции («Если X = Y», «если указан...», «если есть...») — просто применяй их молча\n"
     "- НЕ пиши дату составления документа\n"
     "- НЕ пиши 'Дата и подпись'\n"
     "- НЕ используй **жирный** или *курсив*\n"
@@ -222,8 +223,21 @@ _RETRY_FEEDBACK = (
     "- Заголовок документа — одно слово без пояснений: ПРЕТЕНЗИЯ (не 'ПРЕТЕНЗИЯ о возврате...')"
 )
 
+_SECTION_LABELS = (
+    r'Шапка|Описание|Требование|Нарушение|Обстоятельства|Правовое\s+обоснование|'
+    r'Расчёт|Предупреждение|Приложени[ея]|Вводная|Реквизиты|Содержательная(?:\s+часть)?'
+)
+
 _QUALITY_ARTIFACTS = (
-    re.compile(r'^\d+[\.\)]\s+(Шапка|Заголовок|Описание|Нарушение|Требование|Обстоятельства|Правовое\s+обоснование|Приложен|Расчёт|Вводная)', re.IGNORECASE | re.MULTILINE),
+    re.compile(
+        r'^\d+[\.\)]\s+(' + _SECTION_LABELS + r')',
+        re.IGNORECASE | re.MULTILINE,
+    ),
+    re.compile(
+        r'^(' + _SECTION_LABELS + r')\s*:',
+        re.IGNORECASE | re.MULTILINE,
+    ),
+    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
     re.compile(r'\*{2,}[^\*]+\*{2,}'),
     re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
 )
@@ -394,6 +408,10 @@ _TITLE_WITH_SUBTITLE_RE = re.compile(
     re.IGNORECASE,
 )
 _ALL_CAPS_RE            = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
+_SECTION_PREFIX_RE      = re.compile(
+    r'^(' + _SECTION_LABELS + r')\s*:\s*',
+    re.IGNORECASE,
+)
 
 
 def _clean_llm_text(text: str) -> str:
@@ -424,6 +442,15 @@ def _clean_llm_text(text: str) -> str:
 
         prev_was_title = False
 
+        # «Шапка: Руководителю...» → убираем префикс, оставляем содержимое
+        m = _SECTION_PREFIX_RE.match(s)
+        if m:
+            remainder = s[m.end():].strip()
+            if not remainder:
+                continue
+            line = line[len(s) - len(remainder):]
+            s = remainder
+
         if _DATE_SIG_RE.match(s):
             continue
         if _SECTION_LABEL_RE.match(s):
@@ -442,8 +469,10 @@ def _clean_llm_text(text: str) -> str:
             continue
 
         # Убираем markdown-жирный и курсив внутри строки
+        # Блок подписи (_ / _) не трогаем — он не является markdown
         line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
-        line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
+        if not re.search(r'^_+\s*/\s*_+$', s):
+            line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
 
         cleaned.append(line)
 
