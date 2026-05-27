@@ -61,19 +61,95 @@ def _ddu_neustoyka(price: Decimal, rate: Decimal, days: int) -> Decimal:
 def calculate_ddu_delay(form_data: dict) -> dict:
     """Претензия за просрочку передачи квартиры по ДДУ."""
     data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    developer = str(data.get("developer_name") or "").strip()
+    contract_number = str(data.get("contract_number") or "").strip()
+    contract_date = str(data.get("contract_date") or "").strip()
+    apartment_address = str(data.get("apartment_address") or "").strip()
+
+    # Intro
+    intro = "Между мной и застройщиком"
+    if developer:
+        intro = f"Между мной и {developer}"
+    if contract_number:
+        intro += f" заключён договор участия в долевом строительстве № {contract_number}"
+    else:
+        intro += " заключён договор участия в долевом строительстве"
+    if contract_date:
+        intro += f" от {contract_date}"
+    if apartment_address:
+        intro += f". Объект долевого строительства: {apartment_address}"
+    intro += "."
+    data["calculated_intro_section"] = intro
+
     planned = _parse_date(data.get("planned_transfer_date"))
     actual = _parse_date(data.get("actual_transfer_date")) or date.today()
     if not planned:
         return data
     delay_days = max((actual - planned).days, 0)
+
+    planned_str = str(data.get("planned_transfer_date") or "").strip()
+    actual_str = str(data.get("actual_transfer_date") or "").strip()
+    if actual_str:
+        viol = (
+            f"Согласно договору квартира должна была быть передана {planned_str}. "
+            f"Фактически квартира передана {actual_str}. "
+            f"Просрочка составила {delay_days} дн."
+        )
+    else:
+        viol = (
+            f"Согласно договору квартира должна была быть передана {planned_str}. "
+            f"По состоянию на дату составления настоящей претензии квартира не передана. "
+            f"Просрочка составляет {delay_days} дн."
+        )
+    data["calculated_violation_section"] = viol
+
+    data["calculated_legal_section"] = (
+        "В соответствии с частью 2 статьи 6 Федерального закона от 30.12.2004 "
+        "№ 214-ФЗ «Об участии в долевом строительстве» в случае нарушения "
+        "предусмотренного договором срока передачи объекта долевого строительства "
+        "застройщик уплачивает участнику долевого строительства неустойку в размере "
+        "одной сто пятидесятой ставки рефинансирования Центрального банка РФ, "
+        "действующей на день исполнения обязательства, от цены договора за каждый "
+        "день просрочки. В силу пункта 6 статьи 13 Закона РФ от 07.02.1992 № 2300-1 "
+        "«О защите прав потребителей» при удовлетворении судом требований потребителя "
+        "с застройщика взыскивается штраф в размере пятидесяти процентов от суммы, "
+        "присуждённой потребителю."
+    )
+
     try:
         price = Decimal(str(data["contract_price"]))
         rate = Decimal(str(data["cb_rate"]))
         neustoyka = _ddu_neustoyka(price, rate, delay_days)
     except Exception:
         return data
+
     data["calculated_delay_days"] = str(delay_days)
     data["calculated_neustoyka"] = _fmt(neustoyka)
+
+    data["calculated_amount_section"] = (
+        f"Расчёт неустойки: {_fmt(price)} руб. × {rate}% / 100 / 150 × "
+        f"{delay_days} дн. = {_fmt(neustoyka)} руб."
+    )
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу выплатить неустойку в размере "
+        f"{_fmt(neustoyka)} руб. в течение десяти календарных дней с даты получения "
+        f"настоящей претензии."
+        + (
+            " Прошу также передать объект долевого строительства в разумный срок."
+            if not actual_str else ""
+        )
+        + " В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        "обратиться с иском в суд, а также с жалобой в Роспотребнадзор и "
+        "Министерство строительства и жилищно-коммунального хозяйства РФ."
+    )
+
     return data
 
 
@@ -109,28 +185,201 @@ def calculate_ddu_termination(form_data: dict) -> dict:
     return data
 
 
+_SHOP_VIOLATION_SECTIONS = {
+    "defect": (
+        "Приобретённый товар оказался ненадлежащего качества: "
+        "в нём выявлены недостатки, которые не были оговорены продавцом при продаже."
+    ),
+    "return14": (
+        "Продавец отказывает в возврате товара надлежащего качества "
+        "в установленный законом четырнадцатидневный срок."
+    ),
+    "warranty": (
+        "Продавец (изготовитель) уклоняется от проведения гарантийного ремонта "
+        "товара либо нарушает установленные законом сроки его выполнения."
+    ),
+}
+
+_SHOP_LEGAL_SECTIONS = {
+    "defect": (
+        "В соответствии со статьёй 18 Закона РФ от 07.02.1992 № 2300-1 «О защите "
+        "прав потребителей» потребитель в случае обнаружения в товаре недостатков, "
+        "если они не были оговорены продавцом, по своему выбору вправе потребовать "
+        "замены на товар той же марки, соразмерного уменьшения покупной цены, "
+        "незамедлительного безвозмездного устранения недостатков, возмещения "
+        "расходов на их исправление, а также возврата уплаченной суммы. Согласно "
+        "статье 475 Гражданского кодекса Российской Федерации покупатель вправе "
+        "отказаться от исполнения договора купли-продажи и потребовать возврата "
+        "уплаченной за товар суммы. Статья 23 Закона РФ от 07.02.1992 № 2300-1 "
+        "устанавливает неустойку за нарушение сроков удовлетворения требований "
+        "потребителя в размере одного процента цены товара за каждый день просрочки."
+    ),
+    "return14": (
+        "В соответствии со статьёй 25 Закона РФ от 07.02.1992 № 2300-1 «О защите "
+        "прав потребителей» потребитель вправе обменять непродовольственный товар "
+        "надлежащего качества на аналогичный товар у продавца, у которого этот товар "
+        "был приобретён, в течение четырнадцати дней, не считая дня его покупки, "
+        "если указанный товар не подошёл по форме, габаритам, фасону, расцветке, "
+        "размеру или комплектации. При отсутствии аналогичного товара потребитель "
+        "вправе возвратить приобретённый товар продавцу и получить уплаченную "
+        "за него денежную сумму."
+    ),
+    "warranty": (
+        "В соответствии со статьёй 18 Закона РФ от 07.02.1992 № 2300-1 «О защите "
+        "прав потребителей» продавец обязан принять товар ненадлежащего качества "
+        "и провести гарантийный ремонт. Статья 20 того же Закона устанавливает, "
+        "что недостатки должны быть устранены незамедлительно. Согласно статье 23 "
+        "за нарушение срока проведения гарантийного ремонта продавец уплачивает "
+        "потребителю неустойку в размере одного процента цены товара за каждый "
+        "день просрочки."
+    ),
+}
+
+_SHOP_DEMAND_SECTIONS = {
+    "refund": "возвратить уплаченную за товар сумму",
+    "replace": "заменить товар на аналогичный надлежащего качества",
+    "repair": "провести гарантийный ремонт товара в установленный законом срок",
+}
+
+
 def calculate_shop(form_data: dict) -> dict:
     """Претензия в магазин: неустойка 1%/день по ст. 23 ЗоЗПП."""
     data = dict(form_data)
-    start = _parse_date(data.get("penalty_start_date")) or _parse_date(data.get("appeal_date"))
-    if not start:
-        data["calculated_penalty_section"] = ""
-        return data
-    delay_days = max((date.today() - start).days, 0)
+    data["calculated_penalty_section"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    store_name = str(data.get("store_name") or "").strip()
+    product_name = str(data.get("product_name") or "").strip()
+    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    problem_type = str(data.get("problem_type") or "").strip()
+    demand = str(data.get("demand") or "").strip()
+
     try:
-        price = Decimal(str(data["product_price"]))
-        penalty = min(price * Decimal("0.01") * Decimal(delay_days), price)
+        price = Decimal(str(data.get("product_price") or "0"))
     except Exception:
-        data["calculated_penalty_section"] = ""
-        return data
-    data["calculated_penalty_days"] = str(delay_days)
-    data["calculated_penalty"] = _fmt(penalty)
-    data["calculated_penalty_section"] = (
-        f"За {delay_days} дней просрочки исполнения требования "
-        f"неустойка составляет {_fmt(penalty)} руб. "
-        f"(не более стоимости товара, ст. 23 ЗоЗПП)."
+        price = Decimal("0")
+
+    # Intro
+    intro = "Мной приобретён товар"
+    if product_name:
+        intro = f"Мной приобретён товар: {product_name}"
+    if store_name:
+        intro += f" в магазине «{store_name}»"
+    if purchase_date_str:
+        intro += f" {purchase_date_str}"
+    if price > 0:
+        intro += f", стоимостью {_fmt(price)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    data["calculated_violation_section"] = _SHOP_VIOLATION_SECTIONS.get(
+        problem_type,
+        "Продавец нарушил права потребителя при продаже товара или рассмотрении рекламации.",
     )
+
+    data["calculated_legal_section"] = _SHOP_LEGAL_SECTIONS.get(
+        problem_type, _SHOP_LEGAL_SECTIONS["defect"]
+    )
+
+    # Penalty
+    start = _parse_date(data.get("penalty_start_date")) or _parse_date(data.get("appeal_date"))
+    penalty = Decimal("0")
+    if start and price > 0:
+        delay_days = max((date.today() - start).days, 0)
+        penalty = min(price * Decimal("0.01") * Decimal(delay_days), price)
+        data["calculated_penalty_days"] = str(delay_days)
+        data["calculated_penalty"] = _fmt(penalty)
+        data["calculated_penalty_section"] = (
+            f"За {delay_days} дней просрочки исполнения требования "
+            f"неустойка составляет {_fmt(penalty)} руб. "
+            f"(1% × {_fmt(price)} руб. × {delay_days} дней, не более стоимости товара, "
+            f"статья 23 Закона РФ от 07.02.1992 № 2300-1)."
+        )
+
+    # Demand
+    demand_text = _SHOP_DEMAND_SECTIONS.get(demand, "удовлетворить настоящую претензию")
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу {demand_text} в течение десяти дней "
+        f"с даты получения настоящей претензии (статья 22 Закона РФ от 07.02.1992 № 2300-1)."
+        + (f" Прошу также выплатить неустойку в размере {_fmt(penalty)} руб." if penalty > 0 else "")
+        + " В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться "
+        "с иском в суд. При удовлетворении судом требований с ответчика будет взыскан штраф "
+        "в размере пятидесяти процентов от присуждённой суммы (статья 13 Закона РФ от 07.02.1992 "
+        "№ 2300-1), а также компенсация морального вреда."
+    )
+
     return data
+
+
+_AUTO_REPAIR_VIOLATION_SECTIONS = {
+    "bad_quality": (
+        "Автосервис выполнил работу некачественно: после возврата автомобиля "
+        "были выявлены недостатки, свидетельствующие о ненадлежащем исполнении "
+        "договора возмездного оказания услуг."
+    ),
+    "delay": (
+        "Автосервис нарушил срок выдачи автомобиля: по условиям договора "
+        "автомобиль должен был быть возвращён в оговорённую дату, "
+        "однако по состоянию на дату настоящей претензии выдан не был."
+    ),
+    "overcharge": (
+        "Автосервис в одностороннем порядке завысил стоимость работ: "
+        "выставленный счёт превышает первоначально согласованную цену "
+        "без письменного согласия заказчика."
+    ),
+}
+
+_AUTO_REPAIR_LEGAL_SECTIONS = {
+    "bad_quality": (
+        "В соответствии с пунктом 1 статьи 29 Закона РФ от 07.02.1992 № 2300-1 "
+        "«О защите прав потребителей» при обнаружении недостатков выполненной "
+        "работы потребитель вправе потребовать безвозмездного устранения "
+        "недостатков выполненной работы, уменьшения цены выполненной работы "
+        "либо возмещения понесённых им расходов. На основании статей 722 и 723 "
+        "Гражданского кодекса РФ подрядчик несёт ответственность за ненадлежащее "
+        "качество работ в течение гарантийного срока, а при его отсутствии — "
+        "в течение двух лет с момента передачи результата работ."
+    ),
+    "delay": (
+        "В соответствии с пунктом 5 статьи 28 Закона РФ от 07.02.1992 № 2300-1 "
+        "«О защите прав потребителей» в случае нарушения установленных сроков "
+        "выполнения работы исполнитель уплачивает потребителю за каждый день "
+        "просрочки неустойку в размере трёх процентов цены выполнения работы, "
+        "но не более цены выполнения отдельного вида работы. На основании "
+        "статьи 709 Гражданского кодекса РФ исполнитель обязан передать "
+        "результат работы в оговорённый срок."
+    ),
+    "overcharge": (
+        "В соответствии со статьёй 709 Гражданского кодекса РФ, если договором "
+        "подряда предусмотрена твёрдая цена, подрядчик не вправе требовать её "
+        "увеличения без письменного согласия заказчика. Согласно статье 16 "
+        "Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей» условия "
+        "договора, ущемляющие права потребителя по сравнению с правилами, "
+        "установленными законом, недействительны."
+    ),
+}
+
+_AUTO_REPAIR_DEMAND_SECTIONS = {
+    "fix": (
+        "безвозмездно устранить выявленные недостатки в выполненной работе "
+        "в течение десяти дней с даты получения настоящей претензии "
+        "(пункт 1 статьи 29, статья 22 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+    "refund": (
+        "возвратить уплаченную стоимость работ в течение десяти дней с даты "
+        "получения настоящей претензии (пункт 1 статьи 29, статья 22 Закона РФ "
+        "от 07.02.1992 № 2300-1)"
+    ),
+    "reduce_price": (
+        "уменьшить стоимость выполненных работ на соответствующую сумму в течение "
+        "десяти дней с даты получения настоящей претензии (пункт 1 статьи 29, "
+        "статья 22 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+}
 
 
 def calculate_auto_repair(form_data: dict) -> dict:
@@ -138,41 +387,116 @@ def calculate_auto_repair(form_data: dict) -> dict:
     data = dict(form_data)
     data["calculated_penalty_section"] = ""
     data["calculated_overcharge_section"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
 
     violation = str(data.get("violation_type", ""))
+    service_name = str(data.get("service_name") or "").strip()
+    car_model = str(data.get("car_model") or "").strip()
+    car_plate = str(data.get("car_plate") or "").strip()
+    service_date = str(data.get("service_date") or "").strip()
+
+    try:
+        price = Decimal(str(data.get("work_price") or "0"))
+    except Exception:
+        price = Decimal("0")
+
+    # Intro
+    intro = f"Я сдал(-а) автомобиль {car_model}" if car_model else "Я сдал(-а) автомобиль"
+    if car_plate:
+        intro += f" (г/н {car_plate})"
+    if service_name:
+        intro += f" в автосервис «{service_name}»"
+    if service_date:
+        intro += f" {service_date}"
+    if price > 0:
+        intro += f" для выполнения работ на сумму {_fmt(price)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Violation
+    data["calculated_violation_section"] = _AUTO_REPAIR_VIOLATION_SECTIONS.get(
+        violation,
+        "Автосервис нарушил обязательства по договору возмездного оказания услуг.",
+    )
+
+    # Legal
+    data["calculated_legal_section"] = _AUTO_REPAIR_LEGAL_SECTIONS.get(
+        violation,
+        (
+            "В соответствии со статьёй 29 Закона РФ от 07.02.1992 № 2300-1 "
+            "«О защите прав потребителей» потребитель вправе требовать "
+            "устранения недостатков или возврата уплаченной суммы."
+        ),
+    )
+
+    # Amount calc
+    amount_parts = []
+    total = Decimal("0")
 
     if violation == "delay":
         planned = _parse_date(data.get("planned_date"))
-        if planned:
+        if planned and price > 0:
             delay_days = max((date.today() - planned).days, 0)
-            try:
-                price = Decimal(str(data["work_price"]))
-                penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
-                data["calculated_delay_days"] = str(delay_days)
-                data["calculated_penalty"] = _fmt(penalty)
-                data["calculated_penalty_section"] = (
-                    f"За {delay_days} дней просрочки выдачи автомобиля "
-                    f"неустойка составляет {_fmt(penalty)} руб. "
-                    f"(3% × стоимость работ × дни, не более стоимости работ, "
-                    f"ст. 28 ч. 5 ЗоЗПП)."
-                )
-            except Exception:
-                pass
+            penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+            data["calculated_delay_days"] = str(delay_days)
+            data["calculated_penalty"] = _fmt(penalty)
+            data["calculated_penalty_section"] = (
+                f"За {delay_days} дней просрочки выдачи автомобиля "
+                f"неустойка составляет {_fmt(penalty)} руб. "
+                f"(3% × {_fmt(price)} руб. × {delay_days} дней, не более стоимости работ, "
+                f"ст. 28 ч. 5 ЗоЗПП)."
+            )
+            total += penalty
+            amount_parts.append(
+                f"неустойка за {delay_days} дн.: 3% × {_fmt(price)} × {delay_days} = {_fmt(penalty)} руб."
+            )
 
     elif violation == "overcharge":
         try:
-            work = Decimal(str(data["work_price"]))
             agreed = Decimal(str(data["agreed_price"]))
-            diff = max(work - agreed, Decimal("0"))
+            diff = max(price - agreed, Decimal("0"))
             data["calculated_overcharge_diff"] = _fmt(diff)
             data["calculated_overcharge_section"] = (
                 f"Цена в договоре составляла {_fmt(agreed)} руб., "
-                f"фактически выставлен счёт на {_fmt(work)} руб. "
+                f"фактически выставлен счёт на {_fmt(price)} руб. "
                 f"Разница {_fmt(diff)} руб. — незаконное завышение цены "
                 f"(ст. 709 ГК РФ, ст. 16 ЗоЗПП)."
             )
+            total += diff
+            amount_parts.append(f"незаконное завышение цены: {_fmt(diff)} руб.")
         except Exception:
             pass
+
+    elif violation == "bad_quality" and price > 0:
+        total += price
+        amount_parts.append(f"стоимость работ к возврату: {_fmt(price)} руб.")
+
+    if amount_parts:
+        data["calculated_amount_section"] = (
+            "Расчёт суммы требования: "
+            + "; ".join(amount_parts)
+            + f". Итого: {_fmt(total)} руб."
+        )
+        data["calculated_total"] = _fmt(total)
+
+    # Demand
+    demand = str(data.get("demand") or "").strip()
+    demand_text = _AUTO_REPAIR_DEMAND_SECTIONS.get(
+        demand,
+        f"выплатить {_fmt(total)} руб." if total > 0 else "удовлетворить настоящую претензию",
+    )
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу {demand_text}. "
+        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"обратиться с иском в суд. Согласно пункту 6 статьи 13 Закона РФ от 07.02.1992 "
+        f"№ 2300-1 «О защите прав потребителей» при удовлетворении судом требований "
+        f"потребителя с ответчика взыскивается штраф в размере пятидесяти процентов "
+        f"от суммы, присуждённой потребителю, а также компенсация морального вреда."
+    )
 
     return data
 
@@ -207,53 +531,161 @@ def _parse_subscription_days(text: str | None) -> int | None:
     return None
 
 
+_GYM_REFUND_LEGAL_SECTIONS = {
+    "club_closed": (
+        "В соответствии со статьёй 451 Гражданского кодекса Российской Федерации "
+        "существенное изменение обстоятельств, из которых стороны исходили при "
+        "заключении договора, является основанием для его изменения или расторжения. "
+        "Согласно статье 32 Закона РФ от 07.02.1992 № 2300-1 «О защите прав "
+        "потребителей» при расторжении договора услугодатель обязан возвратить "
+        "потребителю уплаченную сумму за вычетом фактически понесённых расходов."
+    ),
+    "terms_changed": (
+        "В соответствии с пунктом 1 статьи 16 Закона РФ от 07.02.1992 № 2300-1 "
+        "«О защите прав потребителей» условия договора, ущемляющие права "
+        "потребителя по сравнению с правилами, установленными законами или иными "
+        "правовыми актами Российской Федерации в области защиты прав потребителей, "
+        "признаются недействительными. Согласно статье 32 того же Закона потребитель "
+        "вправе отказаться от исполнения договора об оказании услуг в любое время."
+    ),
+    "medical": (
+        "В соответствии со статьёй 32 Закона РФ от 07.02.1992 № 2300-1 «О защите "
+        "прав потребителей» потребитель вправе отказаться от исполнения договора "
+        "об оказании услуг в любое время при условии оплаты исполнителю фактически "
+        "понесённых им расходов. Наличие медицинских противопоказаний является "
+        "объективным основанием для расторжения договора."
+    ),
+    "voluntary": (
+        "В соответствии со статьёй 32 Закона РФ от 07.02.1992 № 2300-1 «О защите "
+        "прав потребителей» и статьёй 782 Гражданского кодекса Российской Федерации "
+        "потребитель вправе отказаться от исполнения договора об оказании услуг в "
+        "любое время при условии оплаты исполнителю фактически понесённых им расходов "
+        "по исполнению обязательств по данному договору. Клуб обязан возвратить "
+        "уплаченную сумму за вычетом стоимости фактически оказанных услуг."
+    ),
+}
+
+_GYM_REFUND_LEGAL_DEFAULT = (
+    "В соответствии со статьёй 32 Закона РФ от 07.02.1992 № 2300-1 «О защите прав "
+    "потребителей» потребитель вправе отказаться от исполнения договора об оказании "
+    "услуг в любое время при условии оплаты исполнителю фактически понесённых им "
+    "расходов. Фитнес-клуб обязан возвратить уплаченную сумму пропорционально "
+    "неиспользованному периоду."
+)
+
+
 def calculate_gym_refund(form_data: dict) -> dict:
     """Фитнес-клуб: возврат за неиспользованный период абонемента (ст. 32 ЗоЗПП)."""
     data = dict(form_data)
     data["calculated_refund_section"] = ""
     data["calculated_refund_amount"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
 
-    # Пользователь указал сумму вручную — используем её напрямую
+    club_name = str(data.get("club_name") or "").strip()
+    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    subscription_period = str(data.get("subscription_period") or "").strip()
+    reason = str(data.get("reason") or "").strip()
+
     try:
-        user_amount = Decimal(str(data["refund_amount"]))
+        sub_price = Decimal(str(data.get("subscription_price") or "0"))
+    except Exception:
+        sub_price = Decimal("0")
+
+    # Intro
+    intro = f"Мной приобретён абонемент"
+    if club_name:
+        intro += f" в фитнес-клубе «{club_name}»"
+    if purchase_date_str:
+        intro += f" {purchase_date_str}"
+    if subscription_period:
+        intro += f", сроком {subscription_period}"
+    if sub_price > 0:
+        intro += f", стоимостью {_fmt(sub_price)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    reason_labels = {
+        "club_closed": "Фитнес-клуб прекратил оказание услуг (закрылся или перенёс деятельность), что лишает потребителя возможности воспользоваться оплаченным абонементом.",
+        "terms_changed": "Фитнес-клуб в одностороннем порядке изменил условия предоставления услуг, ухудшив положение потребителя по сравнению с условиями договора.",
+        "medical": "Потребителю выявлены медицинские противопоказания к занятиям физической культурой, исключающие возможность использования абонемента.",
+        "voluntary": "Потребитель принял решение об отказе от дальнейшего использования фитнес-услуг и расторжении договора в соответствии с действующим законодательством.",
+    }
+    data["calculated_violation_section"] = reason_labels.get(
+        reason, "Потребитель требует расторжения договора и возврата денежных средств за неиспользованный период абонемента."
+    )
+
+    data["calculated_legal_section"] = _GYM_REFUND_LEGAL_SECTIONS.get(reason, _GYM_REFUND_LEGAL_DEFAULT)
+
+    # Amount calc — приоритет: ручная сумма, потом пропорция
+    refund = Decimal("0")
+    try:
+        user_amount = Decimal(str(data.get("refund_amount") or "0"))
         if user_amount > 0:
-            data["calculated_refund_amount"] = _fmt(user_amount)
-            data["calculated_refund_section"] = (
-                f"Сумма к возврату за неиспользованный период: "
-                f"{_fmt(user_amount)} руб."
-            )
-            return data
+            refund = user_amount
+            data["calculated_refund_amount"] = _fmt(refund)
+            data["calculated_refund_section"] = f"Сумма к возврату за неиспользованный период: {_fmt(refund)} руб."
+            data["calculated_amount_section"] = data["calculated_refund_section"]
     except Exception:
         pass
 
-    # Рассчитываем пропорционально
-    purchase = _parse_date(data.get("purchase_date"))
-    refund_request = _parse_date(data.get("refund_request_date")) or date.today()
-    total_days = _parse_subscription_days(data.get("subscription_period"))
+    if refund == 0:
+        purchase = _parse_date(data.get("purchase_date"))
+        refund_request = _parse_date(data.get("refund_request_date")) or date.today()
+        total_days = _parse_subscription_days(data.get("subscription_period"))
 
-    if not purchase or not total_days or total_days <= 0:
-        return data
+        if purchase and total_days and total_days > 0 and sub_price > 0:
+            end_date = purchase + timedelta(days=total_days)
+            unused_days = max((end_date - refund_request).days, 0)
+            refund = (sub_price / Decimal(total_days) * Decimal(unused_days)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+            data["calculated_total_days"] = str(total_days)
+            data["calculated_unused_days"] = str(unused_days)
+            data["calculated_refund_amount"] = _fmt(refund)
+            data["calculated_refund_section"] = (
+                f"Расчёт суммы к возврату: "
+                f"{_fmt(sub_price)} руб. / {total_days} дней × {unused_days} дней = "
+                f"{_fmt(refund)} руб."
+            )
+            data["calculated_amount_section"] = data["calculated_refund_section"]
 
-    end_date = purchase + timedelta(days=total_days)
-    unused_days = max((end_date - refund_request).days, 0)
-
-    try:
-        price = Decimal(str(data["subscription_price"]))
-        refund = (price / Decimal(total_days) * Decimal(unused_days)).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
+    # Demand
+    if refund > 0:
+        data["calculated_demand_section"] = (
+            f"На основании изложенного прошу расторгнуть договор на оказание "
+            f"физкультурно-оздоровительных услуг и возвратить уплаченные денежные средства "
+            f"в размере {_fmt(refund)} руб. в течение десяти дней с даты получения "
+            f"настоящей претензии (статья 31 Закона РФ от 07.02.1992 № 2300-1). "
+            f"При нарушении срока возврата буду начислять неустойку в размере трёх "
+            f"процентов от суммы задолженности за каждый день просрочки (статья 28 "
+            f"часть 5 Закона РФ от 07.02.1992 № 2300-1). При отказе — обращение в суд: "
+            f"штраф 50% от присуждённой суммы (статья 13 Закона), компенсация морального вреда."
         )
-    except Exception:
-        return data
 
-    data["calculated_total_days"] = str(total_days)
-    data["calculated_unused_days"] = str(unused_days)
-    data["calculated_refund_amount"] = _fmt(refund)
-    data["calculated_refund_section"] = (
-        f"Расчёт суммы к возврату: "
-        f"{_fmt(price)} руб. / {total_days} дней × {unused_days} дней = "
-        f"{_fmt(refund)} руб."
-    )
     return data
+
+
+_DTP_OSAGO_VIOLATION_SECTIONS = {
+    "delay": (
+        "Страховая компания не исполнила обязанность по выплате страхового "
+        "возмещения в установленный законом срок. По состоянию на дату "
+        "настоящей претензии выплата не произведена либо произведена с нарушением срока."
+    ),
+    "underestimate": (
+        "Страховая компания произвела выплату страхового возмещения в размере, "
+        "не соответствующем реальной стоимости восстановительного ремонта, "
+        "определённой по результатам независимой технической экспертизы."
+    ),
+    "refusal": (
+        "Страховая компания отказала в выплате страхового возмещения. "
+        "Отказ является незаконным, поскольку страховой случай наступил "
+        "и все документы, предусмотренные Правилами ОСАГО, были предоставлены."
+    ),
+}
 
 
 def calculate_dtp_osago(form_data: dict) -> dict:
@@ -264,8 +696,62 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     data["calculated_claim_amount"] = ""
     data["calculated_overdue_days"] = ""
     data["calculated_penalty"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
 
     violation = str(data.get("violation_type", ""))
+    insurance_company = str(data.get("insurance_company") or "").strip()
+    incident_date = str(data.get("incident_date") or "").strip()
+    incident_location = str(data.get("incident_location") or "").strip()
+    car_model = str(data.get("car_model") or "").strip()
+    car_plate = str(data.get("car_plate") or "").strip()
+    claim_date_str = str(data.get("claim_date") or "").strip()
+    policy_number = str(data.get("policy_number") or "").strip()
+
+    # Intro
+    intro_parts = []
+    if incident_date and incident_location:
+        intro_parts.append(f"{incident_date} по адресу: {incident_location} произошло ДТП")
+    elif incident_date:
+        intro_parts.append(f"{incident_date} произошло ДТП")
+    if car_model:
+        s = f"с участием моего транспортного средства {car_model}"
+        if car_plate:
+            s += f" (г/н {car_plate})"
+        intro_parts.append(s)
+    if policy_number:
+        intro_parts.append(f"виновник ДТП застрахован по полису ОСАГО {policy_number}")
+    if claim_date_str:
+        intro_parts.append(
+            f"Я обратился(-лась) в страховую компанию {insurance_company or ''} "
+            f"с заявлением о страховом возмещении {claim_date_str}".strip()
+        )
+    data["calculated_intro_section"] = ". ".join(intro_parts).capitalize() + "." if intro_parts else ""
+
+    # Violation
+    data["calculated_violation_section"] = _DTP_OSAGO_VIOLATION_SECTIONS.get(
+        violation,
+        "Страховая компания нарушила обязательства по выплате страхового возмещения.",
+    )
+
+    # Legal
+    data["calculated_legal_section"] = (
+        "В соответствии с частью 21 статьи 16.1 Федерального закона от 25.04.2002 "
+        "№ 40-ФЗ «Об обязательном страховании гражданской ответственности "
+        "владельцев транспортных средств» при несоблюдении срока осуществления "
+        "страховой выплаты страховщик за каждый день просрочки уплачивает "
+        "потерпевшему неустойку (пеню) в размере одного процента от определённого "
+        "в соответствии с настоящим Федеральным законом размера страхового "
+        "возмещения. Согласно пункту 3 статьи 16.1 того же закона при "
+        "удовлетворении судом требований потерпевшего — физического лица "
+        "об осуществлении страховой выплаты суд взыскивает со страховщика "
+        "штраф в размере пятидесяти процентов от разницы между совокупным "
+        "размером страховой выплаты, определённой судом, и размером страховой "
+        "выплаты, осуществлённой страховщиком в добровольном порядке."
+    )
 
     try:
         damage = Decimal(str(data["damage_amount"]))
@@ -277,7 +763,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     except Exception:
         paid = Decimal("0")
 
-    # Underpayment (underestimate branch)
+    # Underpayment
     if violation == "underestimate":
         underpayment = max(damage - paid, Decimal("0"))
         data["calculated_underpayment"] = _fmt(underpayment)
@@ -295,6 +781,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     # Penalty: claim_base × 1% × overdue_days (ст. 16.1 ч.21 ФЗ-40)
     # 20 рабочих дней ≈ 28 календарных дней
     claim_date = _parse_date(data.get("claim_date"))
+    penalty = Decimal("0")
     if claim_date:
         due_date = claim_date + timedelta(days=28)
         overdue_days = max((date.today() - due_date).days, 0)
@@ -308,6 +795,34 @@ def calculate_dtp_osago(form_data: dict) -> dict:
                 f"= {_fmt(penalty)} руб."
             )
 
+    # Amount section
+    amount_parts = []
+    if violation == "underestimate":
+        underpayment_val = max(damage - paid, Decimal("0"))
+        amount_parts.append(f"недоплата: {_fmt(damage)} − {_fmt(paid)} = {_fmt(underpayment_val)} руб.")
+    elif violation in ("delay", "refusal"):
+        amount_parts.append(f"страховое возмещение: {_fmt(claim_base)} руб.")
+    if penalty > 0:
+        amount_parts.append(f"пеня: {data.get('calculated_penalty', '')} руб.")
+    total = claim_base + penalty
+    if amount_parts:
+        data["calculated_amount_section"] = (
+            "Расчёт суммы требования: "
+            + "; ".join(amount_parts)
+            + f". Итого: {_fmt(total)} руб."
+        )
+
+    # Demand
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу выплатить страховое возмещение "
+        f"в размере {_fmt(claim_base)} руб."
+        + (f", а также неустойку в размере {_fmt(penalty)} руб." if penalty > 0 else "")
+        + " в течение десяти календарных дней с даты получения настоящей претензии. "
+        "В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        "обратиться к финансовому уполномоченному в соответствии с Федеральным законом "
+        "от 04.06.2018 № 123-ФЗ, а в последующем — с иском в суд."
+    )
+
     return data
 
 
@@ -316,18 +831,110 @@ def calculate_dtp_osago(form_data: dict) -> dict:
 _CB_RATE = Decimal("21")
 
 
+_EMPLOYER_VIOLATION_SECTIONS = {
+    "salary_delay": "Работодатель задержал выплату заработной платы сверх установленных статьёй 136 Трудового кодекса РФ сроков.",
+    "underpayment": "Работодатель произвёл неполный расчёт: заработная плата выплачена в размере, не соответствующем фактически отработанному времени и условиям трудового договора.",
+    "dismissal": "Работодатель произвёл незаконное увольнение без законного основания и без соблюдения установленной процедуры.",
+    "vacation": "Работодатель не выплатил отпускные (компенсацию за неиспользованный отпуск) в установленные законом сроки.",
+}
+
+_EMPLOYER_LEGAL_SECTIONS = {
+    "salary_delay": (
+        "В соответствии со статьёй 136 Трудового кодекса Российской Федерации "
+        "заработная плата выплачивается не реже чем каждые полмесяца в день, "
+        "установленный правилами внутреннего трудового распорядка, коллективным "
+        "договором, трудовым договором. Согласно статье 236 Трудового кодекса "
+        "РФ при нарушении работодателем установленного срока выплаты заработной "
+        "платы работодатель обязан выплатить их с уплатой процентов (денежной "
+        "компенсации) в размере не ниже одной сто пятидесятой действующей в "
+        "это время ключевой ставки Банка России от невыплаченных в срок сумм "
+        "за каждый день задержки."
+    ),
+    "underpayment": (
+        "В соответствии со статьёй 22 Трудового кодекса Российской Федерации "
+        "работодатель обязан выплачивать в полном размере причитающуюся работникам "
+        "заработную плату в сроки, установленные в соответствии с настоящим "
+        "Кодексом, коллективным договором, правилами внутреннего трудового "
+        "распорядка, трудовыми договорами. Согласно статье 236 ТК РФ при задержке "
+        "выплат работодатель уплачивает проценты в размере не ниже 1/150 ключевой "
+        "ставки ЦБ за каждый день просрочки."
+    ),
+    "vacation": (
+        "В соответствии со статьёй 140 Трудового кодекса Российской Федерации "
+        "при прекращении трудового договора выплата всех сумм, причитающихся "
+        "работнику от работодателя, производится в день увольнения работника. "
+        "Согласно статье 127 ТК РФ при увольнении работнику выплачивается "
+        "денежная компенсация за все неиспользованные отпуска. Статья 236 ТК РФ "
+        "устанавливает ответственность за задержку выплат: 1/150 ключевой ставки "
+        "ЦБ за каждый день просрочки."
+    ),
+}
+
+_EMPLOYER_LEGAL_DEFAULT = (
+    "В соответствии со статьями 136, 140 и 236 Трудового кодекса Российской "
+    "Федерации работодатель обязан выплачивать заработную плату в установленные "
+    "сроки и несёт ответственность за задержку выплат в виде уплаты денежной "
+    "компенсации в размере не ниже 1/150 действующей ключевой ставки Банка "
+    "России от задержанной суммы за каждый день просрочки."
+)
+
+
 def calculate_employer(form_data: dict) -> dict:
     """Претензия работодателю: компенсация 1/150 × ставки ЦБ за каждый день задержки (ст. 236 ТК РФ)."""
     data = dict(form_data)
     data["calculated_compensation_section"] = ""
     data["calculated_compensation"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    violation = str(data.get("violation_type") or "").strip()
+    company_name = str(data.get("company_name") or "").strip()
+    position = str(data.get("position") or "").strip()
+    hire_date = str(data.get("hire_date") or "").strip()
+    debt_period = str(data.get("debt_period") or "").strip()
+
+    # Intro
+    intro = "Я работаю"
+    if position:
+        intro += f" в должности {position}"
+    if company_name:
+        intro += f" в организации {company_name}"
+    if hire_date:
+        intro += f" с {hire_date}"
+    intro += "."
+    if debt_period:
+        intro += f" Задолженность образовалась за период: {debt_period}."
+    data["calculated_intro_section"] = intro
+
+    data["calculated_violation_section"] = _EMPLOYER_VIOLATION_SECTIONS.get(
+        violation,
+        "Работодатель нарушил трудовое законодательство в части выплаты денежных средств.",
+    )
+
+    data["calculated_legal_section"] = _EMPLOYER_LEGAL_SECTIONS.get(
+        violation, _EMPLOYER_LEGAL_DEFAULT
+    )
 
     last_paid = _parse_date(data.get("last_payment_date"))
     if not last_paid:
+        try:
+            debt = Decimal(str(data["debt_amount"]))
+            data["calculated_amount_section"] = f"Сумма задолженности: {_fmt(debt)} руб."
+            data["calculated_demand_section"] = (
+                f"На основании изложенного прошу выплатить задолженность в размере "
+                f"{_fmt(debt)} руб. в течение трёх рабочих дней с даты получения "
+                f"настоящей претензии. В случае неисполнения буду вынужден(-а) "
+                f"обратиться с жалобой в Государственную инспекцию труда "
+                f"(онлайнинспекция.рф) и с иском в суд."
+            )
+        except Exception:
+            pass
         return data
+
     delay_days = max((date.today() - last_paid).days, 0)
-    if delay_days == 0:
-        return data
 
     try:
         debt = Decimal(str(data["debt_amount"]))
@@ -345,7 +952,47 @@ def calculate_employer(form_data: dict) -> dict:
         f"{_fmt(compensation)} руб. (ст. 236 ТК РФ). "
         f"Итого к выплате: {_fmt(debt)} + {_fmt(compensation)} = {_fmt(total)} руб."
     )
+
+    data["calculated_amount_section"] = (
+        f"Расчёт компенсации по ст. 236 ТК РФ: "
+        f"{_fmt(debt)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дн. = {_fmt(compensation)} руб. "
+        f"Итого к выплате: {_fmt(debt)} + {_fmt(compensation)} = {_fmt(total)} руб."
+    )
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу выплатить задолженность по заработной плате "
+        f"в размере {_fmt(debt)} руб. и компенсацию за задержку в размере "
+        f"{_fmt(compensation)} руб., итого {_fmt(total)} руб., в течение трёх рабочих "
+        f"дней с даты получения настоящей претензии. В случае неисполнения буду "
+        f"вынужден(-а) обратиться с жалобой в Государственную инспекцию труда "
+        f"(онлайнинспекция.рф), прокуратуру, а также с иском в суд."
+    )
+
     return data
+
+
+_REPAIR_DEMAND_SECTIONS = {
+    "fix": (
+        "безвозмездно устранить выявленные недостатки в выполненной работе "
+        "в течение десяти дней с даты получения настоящей претензии "
+        "(статья 30 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+    "discount": (
+        "соразмерно уменьшить установленную за работу цену с возвратом "
+        "разницы в течение десяти дней с даты получения настоящей претензии "
+        "(пункт 1 статьи 29 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+    "third_party": (
+        "возместить расходы, понесённые мной на исправление недостатков "
+        "иным подрядчиком, в течение десяти дней с даты получения настоящей претензии "
+        "(пункт 1 статьи 29 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+    "refund": (
+        "расторгнуть договор подряда и возвратить уплаченную стоимость работ "
+        "в течение десяти дней с даты получения настоящей претензии "
+        "(пункт 3 статьи 29 Закона РФ от 07.02.1992 № 2300-1)"
+    ),
+}
 
 
 def calculate_repair(form_data: dict) -> dict:
@@ -353,27 +1000,151 @@ def calculate_repair(form_data: dict) -> dict:
     data = dict(form_data)
     data["calculated_penalty_section"] = ""
     data["calculated_penalty"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
 
-    discovery = _parse_date(data.get("defect_discovery_date"))
-    if not discovery:
-        return data
-    delay_days = max((date.today() - discovery).days, 0)
+    contractor_name = str(data.get("contractor_name") or "").strip()
+    work_type = str(data.get("work_type") or "").strip()
+    contract_date = str(data.get("contract_date") or "").strip()
+    contract_number = str(data.get("contract_number") or "").strip()
+    work_end_date = str(data.get("work_end_date") or "").strip()
+    defect_discovery_date_str = str(data.get("defect_discovery_date") or "").strip()
+    demand = str(data.get("demand") or "").strip()
 
     try:
-        price = Decimal(str(data["work_price"]))
-        penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+        price = Decimal(str(data.get("work_price") or "0"))
     except Exception:
-        return data
+        price = Decimal("0")
 
-    data["calculated_penalty_days"] = str(delay_days)
-    data["calculated_penalty"] = _fmt(penalty)
-    data["calculated_penalty_section"] = (
-        f"За {delay_days} дней с момента обнаружения недостатков "
-        f"неустойка составляет {_fmt(penalty)} руб. "
-        f"(3% × {_fmt(price)} руб. × {delay_days} дней, не более стоимости работ, "
-        f"ст. 28 ч. 5 ЗоЗПП)."
+    # Intro
+    intro = "Между мной и"
+    if contractor_name:
+        intro += f" {contractor_name}"
+    if contract_number:
+        intro += f" заключён договор подряда № {contract_number}"
+    elif contract_date:
+        intro += f" заключён договор подряда от {contract_date}"
+    else:
+        intro += " заключён договор подряда"
+    if work_type:
+        intro += f" на выполнение работ: {work_type}"
+    if price > 0:
+        intro += f", стоимостью {_fmt(price)} руб."
+    if work_end_date:
+        intro += f" Работы сданы {work_end_date}."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    data["calculated_violation_section"] = (
+        f"В выполненной работе выявлены недостатки."
+        + (f" Дата обнаружения: {defect_discovery_date_str}." if defect_discovery_date_str else "")
     )
+
+    data["calculated_legal_section"] = (
+        "В соответствии с пунктом 1 статьи 29 Закона РФ от 07.02.1992 № 2300-1 "
+        "«О защите прав потребителей» при обнаружении недостатков выполненной работы "
+        "потребитель вправе по своему выбору потребовать: безвозмездного устранения "
+        "недостатков выполненной работы; соответствующего уменьшения цены выполненной "
+        "работы; возмещения понесённых им расходов по устранению недостатков "
+        "выполненной работы своими силами или с помощью третьих лиц. На основании "
+        "статьи 723 Гражданского кодекса Российской Федерации подрядчик несёт "
+        "ответственность за ненадлежащее качество выполненных работ. Согласно "
+        "пункту 5 статьи 28 Закона РФ от 07.02.1992 № 2300-1 за каждый день "
+        "просрочки устранения недостатков исполнитель уплачивает неустойку "
+        "в размере трёх процентов цены выполнения работы."
+    )
+
+    # Penalty
+    discovery = _parse_date(data.get("defect_discovery_date"))
+    penalty = Decimal("0")
+    if discovery and price > 0:
+        delay_days = max((date.today() - discovery).days, 0)
+        penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+        data["calculated_penalty_days"] = str(delay_days)
+        data["calculated_penalty"] = _fmt(penalty)
+        data["calculated_penalty_section"] = (
+            f"За {delay_days} дней с момента обнаружения недостатков "
+            f"неустойка составляет {_fmt(penalty)} руб. "
+            f"(3% × {_fmt(price)} руб. × {delay_days} дней, не более стоимости работ, "
+            f"ст. 28 ч. 5 ЗоЗПП)."
+        )
+        data["calculated_amount_section"] = data["calculated_penalty_section"]
+
+    # Demand
+    demand_text = _REPAIR_DEMAND_SECTIONS.get(
+        demand,
+        f"устранить выявленные недостатки в течение десяти дней с даты получения настоящей претензии",
+    )
+    demand_section = f"На основании изложенного прошу {demand_text}."
+    if penalty > 0:
+        demand_section += f" Прошу также выплатить неустойку в размере {_fmt(penalty)} руб."
+    demand_section += (
+        " В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        "обратиться с иском в суд. При удовлетворении судом требований с ответчика "
+        "будет взыскан штраф в размере пятидесяти процентов от присуждённой суммы "
+        "(статья 13 Закона РФ от 07.02.1992 № 2300-1), а также компенсация морального вреда."
+    )
+    data["calculated_demand_section"] = demand_section
+
     return data
+
+
+_INSURANCE_LEGAL_SECTIONS = {
+    "osago": (
+        "В соответствии со статьёй 12 Федерального закона от 25.04.2002 № 40-ФЗ "
+        "«Об обязательном страховании гражданской ответственности владельцев "
+        "транспортных средств» страховщик обязан произвести страховую выплату "
+        "в течение двадцати календарных дней со дня принятия к рассмотрению "
+        "заявления потерпевшего. Согласно части 21 статьи 16.1 того же Федерального "
+        "закона при несоблюдении срока страховой выплаты страховщик уплачивает "
+        "неустойку в размере одного процента от суммы страхового возмещения за каждый "
+        "день просрочки. Согласно пункту 3 статьи 16.1 при удовлетворении судом "
+        "требований потерпевшего со страховщика взыскивается штраф в размере "
+        "пятидесяти процентов от разницы между совокупным размером страховой "
+        "выплаты, определённой судом, и размером, осуществлённым добровольно."
+    ),
+    "kasko": (
+        "В соответствии со статьёй 929 Гражданского кодекса Российской Федерации "
+        "по договору имущественного страхования страховщик обязуется при наступлении "
+        "страхового случая возместить страхователю или выгодоприобретателю убытки "
+        "в пределах определённой договором страховой суммы. Согласно статье 943 ГК РФ "
+        "условия, на которых заключается договор страхования, могут быть определены "
+        "в стандартных правилах страхования. В силу пункта 5 статьи 28 Закона РФ "
+        "от 07.02.1992 № 2300-1 «О защите прав потребителей» при нарушении сроков "
+        "исполнения обязательства исполнитель уплачивает неустойку в размере трёх "
+        "процентов цены услуги за каждый день просрочки."
+    ),
+    "other": (
+        "В соответствии со статьёй 929 Гражданского кодекса Российской Федерации "
+        "страховщик обязан при наступлении страхового случая выплатить страховое "
+        "возмещение в размере, предусмотренном договором страхования. Согласно "
+        "статье 4 Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей» "
+        "страховщик обязан оказывать услуги надлежащего качества. Статья 29 того "
+        "же Закона предоставляет потребителю право требовать возмещения причинённых "
+        "убытков в полном объёме."
+    ),
+}
+
+_INSURANCE_VIOLATION_SECTIONS = {
+    "underestimate": (
+        "Страховая компания произвела выплату в размере, не соответствующем "
+        "реальному ущербу: выплаченная сумма занижена по сравнению с оценкой "
+        "независимой технической экспертизы."
+    ),
+    "refusal": (
+        "Страховая компания отказала в осуществлении страховой выплаты. "
+        "Отказ является незаконным: страховой случай наступил, все предусмотренные "
+        "законом и правилами страхования документы были предоставлены страховщику."
+    ),
+    "delay": (
+        "Страховая компания нарушила установленный законом срок осуществления "
+        "страховой выплаты: по состоянию на дату настоящей претензии выплата "
+        "не произведена либо произведена с нарушением срока."
+    ),
+}
 
 
 def calculate_insurance(form_data: dict) -> dict:
@@ -383,10 +1154,46 @@ def calculate_insurance(form_data: dict) -> dict:
     data["calculated_penalty_section"] = ""
     data["calculated_underpayment"] = ""
     data["calculated_total"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    policy_type = str(data.get("policy_type") or "").strip()
+    incident_type = str(data.get("incident_type") or "").strip()
+    insurance_company = str(data.get("insurance_company") or "").strip()
+    policy_number = str(data.get("policy_number") or "").strip()
+    incident_date = str(data.get("incident_date") or "").strip()
+
+    # Intro
+    intro_parts = []
+    if policy_number and incident_date:
+        intro_parts.append(f"По полису № {policy_number} {incident_date} наступил страховой случай")
+    elif incident_date:
+        intro_parts.append(f"{incident_date} наступил страховой случай")
+    if insurance_company:
+        intro_parts.append(f"Я обратился(-лась) в страховую компанию {insurance_company} с заявлением о выплате страхового возмещения")
+    data["calculated_intro_section"] = ". ".join(intro_parts).capitalize() + "." if intro_parts else ""
+
+    data["calculated_violation_section"] = _INSURANCE_VIOLATION_SECTIONS.get(
+        incident_type,
+        "Страховая компания нарушила обязательства по договору страхования.",
+    )
+
+    data["calculated_legal_section"] = _INSURANCE_LEGAL_SECTIONS.get(
+        policy_type, _INSURANCE_LEGAL_SECTIONS["other"]
+    )
 
     try:
         actual = Decimal(str(data["actual_damage"]))
     except Exception:
+        data["calculated_demand_section"] = (
+            "На основании изложенного прошу произвести страховую выплату в полном "
+            "объёме, определённом по результатам независимой экспертизы, в течение "
+            "десяти рабочих дней с даты получения настоящей претензии. При отказе — "
+            "обращение с жалобой в Банк России и Российский союз автостраховщиков, "
+            "а также с иском в суд."
+        )
         return data
 
     try:
@@ -408,6 +1215,7 @@ def calculate_insurance(form_data: dict) -> dict:
     except Exception:
         overdue_days = 0
 
+    penalty = Decimal("0")
     if overdue_days > 0 and underpayment > 0:
         penalty = underpayment * Decimal("0.01") * Decimal(overdue_days)
         total = underpayment + penalty
@@ -421,39 +1229,171 @@ def calculate_insurance(form_data: dict) -> dict:
     elif underpayment > 0:
         data["calculated_total"] = _fmt(underpayment)
 
+    claim_total = underpayment + penalty
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу выплатить страховое возмещение "
+        f"в размере {_fmt(underpayment)} руб."
+        + (f", а также неустойку в размере {_fmt(penalty)} руб." if penalty > 0 else "")
+        + f", итого {_fmt(claim_total)} руб., в течение десяти рабочих дней с даты "
+        f"получения настоящей претензии. При отказе — обращение с жалобой в "
+        f"Банк России и Российский союз автостраховщиков, а также с иском в суд. "
+        f"При удовлетворении судом требований с ответчика будет взыскан штраф "
+        f"в размере пятидесяти процентов от присуждённой суммы, а также "
+        f"компенсация морального вреда и судебные расходы."
+    )
+
     return data
+
+
+_TELECOM_VIOLATION_SECTIONS = {
+    "no_service": (
+        "Оператор связи не оказывает услугу, предусмотренную договором: "
+        "услуга полностью недоступна с даты, указанной в настоящей претензии."
+    ),
+    "slow_speed": (
+        "Оператор связи оказывает услугу ненадлежащего качества: "
+        "фактическая скорость интернет-соединения систематически не соответствует "
+        "заявленной по договору."
+    ),
+    "illegal_charges": (
+        "Оператор связи произвёл несанкционированные списания денежных средств: "
+        "с лицевого счёта абонента списаны суммы за услуги, не предусмотренные "
+        "заключённым договором и не подключённые по инициативе абонента."
+    ),
+    "disconnected": (
+        "Оператор связи произвёл отключение услуг без законного основания "
+        "и без надлежащего уведомления абонента в установленном порядке."
+    ),
+}
+
+_TELECOM_LEGAL_SECTIONS = {
+    "no_service": (
+        "В соответствии со статьёй 44 Федерального закона от 07.07.2003 № 126-ФЗ "
+        "«О связи» оператор связи обязан оказывать услуги связи в соответствии "
+        "с законодательством Российской Федерации, национальными стандартами, "
+        "техническими нормами и правилами, лицензией, а также договором об оказании "
+        "услуг связи. Согласно пункту 1 статьи 4 и статье 29 Закона РФ от 07.02.1992 "
+        "№ 2300-1 «О защите прав потребителей» при оказании услуги ненадлежащего "
+        "качества потребитель вправе потребовать соразмерного уменьшения цены, "
+        "устранения недостатков или возврата уплаченных средств."
+    ),
+    "slow_speed": (
+        "В соответствии со статьёй 44 Федерального закона от 07.07.2003 № 126-ФЗ "
+        "«О связи» оператор обязан соблюдать технические нормы качества услуг. "
+        "Согласно статье 29 Закона РФ от 07.02.1992 № 2300-1 «О защите прав "
+        "потребителей» при оказании услуги ненадлежащего качества потребитель "
+        "вправе потребовать соразмерного уменьшения цены либо возврата уплаченных средств."
+    ),
+    "illegal_charges": (
+        "В соответствии со статьёй 54 Федерального закона от 07.07.2003 № 126-ФЗ "
+        "«О связи» оператор связи не вправе взимать с абонента плату за услуги, "
+        "не предусмотренные договором об оказании услуг связи. Согласно статье 16 "
+        "Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей» условия "
+        "договора, ущемляющие права потребителя, недействительны. Суммы, "
+        "взысканные с нарушением закона, подлежат возврату."
+    ),
+    "disconnected": (
+        "В соответствии со статьёй 44 Федерального закона от 07.07.2003 № 126-ФЗ "
+        "«О связи» оператор обязан оказывать услуги в соответствии с договором. "
+        "Одностороннее прекращение оказания услуг без законного основания нарушает "
+        "статью 29 Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей», "
+        "предоставляющую потребителю право требовать устранения нарушений и "
+        "возмещения убытков."
+    ),
+}
+
+_TELECOM_DEMAND_SECTIONS = {
+    "fix": "устранить неисправность и восстановить оказание услуги связи надлежащего качества",
+    "refund": "произвести перерасчёт и возвратить денежные средства за период отсутствия услуги",
+    "cancel_charges": "отменить незаконно начисленные платежи и возвратить списанные суммы",
+    "terminate": "расторгнуть договор об оказании услуг связи без применения штрафных санкций и возвратить остаток средств на лицевом счёте",
+}
 
 
 def calculate_telecom(form_data: dict) -> dict:
     """Претензия провайдеру: возврат пропорционально периоду отсутствия услуги (monthly_fee / 30 × дней)."""
     data = dict(form_data)
     data["calculated_refund_section"] = ""
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_legal_section"] = ""
+    data["calculated_demand_section"] = ""
 
-    problem_type = str(data.get("problem_type", ""))
-    if problem_type not in ("no_service", "slow_speed"):
-        return data
+    provider_name = str(data.get("provider_name") or "").strip()
+    contract_number = str(data.get("contract_number") or "").strip()
+    service_type = str(data.get("service_type") or "").strip()
+    problem_type = str(data.get("problem_type") or "").strip()
+    problem_start_date_str = str(data.get("problem_start_date") or "").strip()
+    demand = str(data.get("demand") or "").strip()
 
-    start = _parse_date(data.get("problem_start_date"))
-    if not start:
-        return data
-    days = max((date.today() - start).days, 0)
+    service_labels = {
+        "internet": "домашнего интернета",
+        "mobile": "мобильной связи",
+        "tv": "кабельного/спутникового телевидения",
+        "bundle": "пакета услуг связи",
+    }
 
-    try:
-        monthly = Decimal(str(data["monthly_fee"]))
-        if monthly <= 0:
-            return data
-        refund = (monthly / Decimal("30") * Decimal(days)).quantize(
-            Decimal("0.01"), rounding=ROUND_HALF_UP
-        )
-    except Exception:
-        return data
+    # Intro
+    intro = "Между мной и"
+    if provider_name:
+        intro += f" {provider_name}"
+    service_label = service_labels.get(service_type, "услуг связи")
+    if contract_number:
+        intro += f" заключён договор об оказании {service_label} № {contract_number}"
+    else:
+        intro += f" заключён договор об оказании {service_label}"
+    if problem_start_date_str:
+        intro += f". С {problem_start_date_str} оператор нарушает условия договора"
+    intro += "."
+    data["calculated_intro_section"] = intro
 
-    data["calculated_refund_days"] = str(days)
-    data["calculated_refund"] = _fmt(refund)
-    data["calculated_refund_section"] = (
-        f"За {days} дней отсутствия услуги сумма к возврату: "
-        f"{_fmt(monthly)} руб. / 30 × {days} дней = {_fmt(refund)} руб."
+    data["calculated_violation_section"] = _TELECOM_VIOLATION_SECTIONS.get(
+        problem_type,
+        "Оператор связи нарушил обязательства по договору об оказании услуг связи.",
     )
+
+    data["calculated_legal_section"] = _TELECOM_LEGAL_SECTIONS.get(
+        problem_type, _TELECOM_LEGAL_SECTIONS["no_service"]
+    )
+
+    # Refund calc (только для no_service / slow_speed)
+    refund = Decimal("0")
+    if problem_type in ("no_service", "slow_speed"):
+        start = _parse_date(data.get("problem_start_date"))
+        if start:
+            days = max((date.today() - start).days, 0)
+            try:
+                monthly = Decimal(str(data.get("monthly_fee") or "0"))
+                if monthly > 0:
+                    refund = (monthly / Decimal("30") * Decimal(days)).quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    )
+                    data["calculated_refund_days"] = str(days)
+                    data["calculated_refund"] = _fmt(refund)
+                    data["calculated_refund_section"] = (
+                        f"За {days} дней отсутствия / ненадлежащего оказания услуги "
+                        f"сумма к возврату: {_fmt(monthly)} руб. / 30 × {days} дней = "
+                        f"{_fmt(refund)} руб."
+                    )
+            except Exception:
+                pass
+
+    # Demand
+    demand_text = _TELECOM_DEMAND_SECTIONS.get(demand, "устранить нарушения условий договора об оказании услуг связи")
+    demand_section = (
+        f"На основании изложенного прошу {demand_text} в течение десяти дней "
+        f"с даты получения настоящей претензии."
+    )
+    if refund > 0 and demand in ("refund", "cancel_charges"):
+        demand_section += f" Сумма к возврату: {_fmt(refund)} руб."
+    demand_section += (
+        " В случае неисполнения требования буду вынужден(-а) обратиться "
+        "с жалобой в Роскомнадзор, а также с иском в суд. При удовлетворении "
+        "судом требований с ответчика будет взыскан штраф в размере пятидесяти "
+        "процентов от присуждённой суммы (статья 13 Закона РФ от 07.02.1992 № 2300-1)."
+    )
+    data["calculated_demand_section"] = demand_section
+
     return data
 
 
