@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str = ""
     EMAIL_FROM: str = "noreply@lawdocs.ru"
 
+    # YandexGPT — review агент (второй проход после GigaChat)
+    YANDEX_API_KEY: str = ""
+    YANDEX_FOLDER_ID: str = ""
+
     # GigaChat — Authorization Key из консоли разработчика (уже готовый Base64)
     GIGACHAT_AUTH_KEY: str = ""
     # Путь к PEM-файлу с CA Минцифры России для верификации TLS GigaChat.

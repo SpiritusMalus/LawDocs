@@ -12,6 +12,7 @@ import uuid
 from datetime import UTC, date, datetime
 
 import httpx
+from openai import AsyncOpenAI
 
 from app.core.config import settings
 from app.services.pii_classifier import split_for_llm
@@ -181,6 +182,45 @@ _FORMAT_RULES = """ПРАВИЛА ФОРМАТИРОВАНИЯ — строго 
     — НЕ разноси их на разные строки.
     — НЕ печатай никакого ФИО — ни до, ни после этой строки.
 """
+
+_REVIEW_SYSTEM_PROMPT = """Ты — редактор юридических документов. Тебе дан черновик официального документа (претензия, жалоба, заявление). Исправь его, строго соблюдая правила:
+
+ПРОВЕРЬ и ИСПРАВЬ:
+1. Структура: сначала шапка (кому/от кого), затем заголовок (ПРЕТЕНЗИЯ/ЖАЛОБА/ЗАЯВЛЕНИЕ), затем текст, в конце блок подписи
+2. Блок подписи — строго одна строка: _________________ / _________________
+3. Никаких меток разделов: «Шапка:», «Заголовок:», «Описание:», «Требование:» и т.п. — только содержание
+4. Никаких markdown: **жирный**, *курсив*, # заголовки, --- линии
+5. Никакого ЗАГЛАВНОГО текста внутри (кроме названия документа)
+6. Никаких условных конструкций («Если X = Y»)
+7. Никакой даты составления документа
+8. Квадратные скобки [field_name] — оставляй дословно, не заполняй
+9. Только длинное тире (—), не двойное (--)
+
+ВЕРНИ: только исправленный текст документа, без пояснений и комментариев."""
+
+
+async def _call_yandex_review(draft: str) -> str:
+    """Второй проход: YandexGPT исправляет форматирование черновика от GigaChat."""
+    if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+        logger.warning("YandexGPT not configured, skipping review pass")
+        return draft
+
+    client = AsyncOpenAI(
+        api_key=settings.YANDEX_API_KEY,
+        base_url="https://ai.api.cloud.yandex.net/v1",
+    )
+    response = await client.chat.completions.create(
+        model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
+        messages=[
+            {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
+            {"role": "user", "content": draft},
+        ],
+        temperature=0.1,
+        max_tokens=4096,
+        extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+    )
+    return response.choices[0].message.content
+
 
 _REFUSAL_MARKERS = (
     "временно ограничены",
@@ -411,4 +451,5 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
             "Ответ содержит отказ вместо документа."
         )
     text = clean_llm_text(text)
+    text = await _call_yandex_review(text)
     return _post_substitute_output(text, form_data)
