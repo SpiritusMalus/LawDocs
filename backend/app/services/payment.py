@@ -68,3 +68,22 @@ async def create_payment(order_id: str, amount: int, customer_email: str) -> dic
         "payment_id": data["id"],
         "confirmation_url": data["confirmation"]["confirmation_url"],
     }
+
+
+async def refund_payment(payment_id: str, amount: int) -> bool:
+    """Возвращает деньги через YooKassa. amount в копейках. Возвращает True если успешно."""
+    if not settings.YOOKASSA_SHOP_ID:
+        return True  # dev mode
+    rub_amount = f"{amount / 100:.2f}"
+    async with httpx.AsyncClient() as client:
+        resp = await client.post(
+            f"{YOOKASSA_API}/refunds",
+            auth=_auth(),
+            headers={"Idempotence-Key": str(uuid.uuid4())},
+            json={
+                "payment_id": payment_id,
+                "amount": {"value": rub_amount, "currency": "RUB"},
+            },
+            timeout=15,
+        )
+        return resp.is_success

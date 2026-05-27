@@ -13,9 +13,9 @@ from fpdf import FPDF
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.services.text_cleanup import (
-    clean_llm_text, fix_dashes, has_quality_artifacts, reorder_header_before_title
-)
+from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
+from app.services.docgen import _build_header, _render_right_block, _render_sig_block
+from app.services.llm import _parse_body_json
 
 ROOT       = Path(__file__).parent.parent
 ENV_FILE   = ROOT / "backend" / ".env"
@@ -31,27 +31,25 @@ GIGA_API   = "https://gigachat.devices.sberbank.ru/api/v1"
 FORMAT_RULES = """
 ПРАВИЛА — строго обязательны:
 
-1. Выводи ТОЛЬКО готовый текст документа. Никаких пояснений, предисловий, комментариев от себя.
+1. Верни ТОЛЬКО JSON вида {"body": "текст тела документа"}. Никаких пояснений, предисловий, комментариев вне JSON.
 
-2. ОБЯЗАТЕЛЬНЫЙ ПОРЯДОК (строго соблюдать): сначала шапка (кому / от кого), ЗАТЕМ заголовок документа одним словом (ПРЕТЕНЗИЯ / ЖАЛОБА / ЗАЯВЛЕНИЕ / ВОЗРАЖЕНИЕ / УВЕДОМЛЕНИЕ), ЗАТЕМ основной текст. ЗАПРЕЩЕНО писать заголовок до шапки.
+2. Шапку и заголовок документа НЕ пиши — они формируются автоматически. Начинай тело сразу с первого абзаца. НЕ повторяй в теле личные данные заявителя (ФИО, адрес, паспорт, телефон, email) — они уже есть в шапке.
 
-3. Шапка: «Руководителю [получатель]» и «От: [ФИО, адрес, телефон, email]» — каждый реквизит с новой строки. Не дублируй получателя в тексте.
+3. Основной текст — сразу с фактов (когда, что, договор). Не начинай с «Прошу рассмотреть», «Настоящей претензией» и подобных вступлений.
 
-4. Заголовок — одно слово заглавными, без пояснений и подзаголовков. Не пиши после заголовка город или дату или какой-либо текст.
+4. Текст — обычный регистр. Не пиши ЗАГЛАВНЫМИ слова внутри текста.
 
-5. Основной текст — сразу с фактов (когда, что, договор). Не начинай с «Прошу рассмотреть», «Настоящей претензией» и подобных вступлений.
+5. Не упоминай названия переменных формы (violation_type, has_photo и т.п.) — применяй их смысл по-русски молча.
 
-6. Текст — обычный регистр везде кроме заголовка. Не пиши ЗАГЛАВНЫМИ слова внутри текста.
+6. НЕ пиши квадратные скобки — подставляй значения из данных напрямую.
 
-7. Не упоминай названия переменных формы (violation_type, has_photo и т.п.) — применяй их смысл по-русски молча.
+7. Не используй markdown (**жирный**, *курсив*, # заголовки).
 
-8. НЕ пиши квадратные скобки — подставляй значения из данных напрямую.
+8. Используй ТОЛЬКО длинное тире (—). Одинарный дефис (-) как пауза или в перечислениях — ЗАПРЕЩЁН. ЗАПРЕЩЕНО двойное тире (--).
 
-9. Не используй markdown (**жирный**, *курсив*, # заголовки).
+9. Дату и подпись не выводи — они добавляются автоматически.
 
-10. Используй только одинарное тире (-) где нужна пауза, или длинное тире (—) для примечаний. ЗАПРЕЩЕНО двойное тире (--).
-
-11. Дату и подпись не выводи — они добавляются автоматически.
+10. Аббревиатуры организационно-правовых форм — ВСЕГДА заглавными буквами: ООО, АО, ПАО, ГБУ, МБУ, ИП, ФГУП, МУП. Например: «ООО «Стройгрупп»», «АО «Альфа-Банк»», «ГБУ «Жилищник»» — никогда не «ооо» или «Ооо».
 """
 
 
@@ -221,14 +219,13 @@ async def get_token(auth_key: str) -> str:
 
 
 _RETRY_FEEDBACK = (
-    "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
-    "- НЕ пиши метки разделов ни с номером, ни без: «Шапка:», «Описание:», «Требование:», «Нарушение:», «Расчёт:», «Предупреждение:», «Реквизиты:» и любые подобные — пиши сразу содержание без метки\n"
-    "- НЕ пиши условные конструкции («Если X = Y», «если указан...», «если есть...») — просто применяй их молча\n"
+    "\n\nВАЖНО: предыдущий ответ содержал ошибки. Повтори, строго соблюдая правила:\n"
+    "- Верни ТОЛЬКО JSON: {\"body\": \"...текст...\"} — без шапки, без заголовка, без пояснений вне JSON\n"
+    "- НЕ пиши метки разделов: «Шапка:», «Описание:», «Требование:», «Нарушение:», «Расчёт:» и любые подобные\n"
+    "- НЕ пиши условные конструкции («Если X = Y», «если указан...») — применяй их молча\n"
     "- НЕ пиши дату составления документа\n"
-    "- НЕ пиши 'Дата и подпись'\n"
     "- НЕ используй **жирный** или *курсив*\n"
-    "- НЕ пиши слова ЗАГЛАВНЫМИ БУКВАМИ внутри текста (кроме названия документа)\n"
-    "- Заголовок документа — одно слово без пояснений: ПРЕТЕНЗИЯ (не 'ПРЕТЕНЗИЯ о возврате...')"
+    "- НЕ пиши слова ЗАГЛАВНЫМИ БУКВАМИ внутри текста"
 )
 
 
@@ -289,110 +286,98 @@ def _is_refusal(text: str) -> bool:
 
 # ── PDF helpers ───────────────────────────────────────────────
 
-_TITLE_WORDS = {"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"}
-_DATE_RE = re.compile(
-    r"^\s*\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|"
-    r"июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*года\s*$",
-    re.IGNORECASE,
-)
-_SIG_RE        = re.compile(r"_{4,}")
-_DATE_SHORT_RE = re.compile(r"^\s*\d{1,2}\.\d{2}\.\d{4}\s*$")
-
-
-def _split_document(lines: list[str]) -> tuple[list[str], str, list[str], list[str]]:
-    """Делит строки документа на (шапка, заголовок, тело, блок_подписи)."""
-    # Ищем заголовок — строка только из заглавных букв, входит в TITLE_WORDS
-    title_idx: int | None = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped in _TITLE_WORDS or any(stripped.startswith(t + " ") for t in _TITLE_WORDS):
-            title_idx = i
-            break
-
-    # Ищем начало блока подписи: линия подчёркиваний ИЛИ дата (любого формата)
-    # в последних 14 строках
-    sig_start: int | None = None
-    search_from = max(0, len(lines) - 14)
-    for i in range(search_from, len(lines)):
-        if (_SIG_RE.search(lines[i])
-                or _DATE_RE.search(lines[i])
-                or _DATE_SHORT_RE.match(lines[i])
-                or lines[i].strip().lower().startswith("дата и подпись")):
-            sig_start = i
-            break
-
-    if title_idx is not None:
-        header = lines[:title_idx]
-        title  = lines[title_idx].strip()
-        after  = lines[title_idx + 1:]
-    else:
-        header = []
-        title  = ""
-        after  = lines
-
-    if sig_start is not None:
-        # sig_start относительно исходного lines; пересчитываем для after
-        body_end = (sig_start - (title_idx + 1 if title_idx is not None else 0))
-        body = after[:body_end]
-        sig  = after[body_end:]
-    else:
-        body = after
-        sig  = []
-
-    # Убираем хвостовые пустые строки из тела — иначе они создают gap перед подписью
-    while body and not body[-1].strip():
-        body.pop()
-
-    return header, title, body, sig
-
-
-def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> None:
-    """Рендерит блок строк в правой колонке (x=105, w=85)."""
-    RIGHT_X = 105.0
-    RIGHT_W = 85.0
-    for line in lines:
-        if not line.strip():
-            pdf.ln(2)
-        else:
-            pdf.set_x(RIGHT_X)
-            pdf.multi_cell(RIGHT_W, line_h, line.strip(), align="L")
-
-
-def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) -> None:
-    """Блок подписи: дата-бланк слева + подпись/расшифровка-бланк справа. Всё от руки."""
-    PAGE_W  = 210.0
-    LEFT_M  = 25.0
-    RIGHT_M = 20.0
-    BODY_W  = PAGE_W - LEFT_M - RIGHT_M
-    SIG_W   = 80.0
-
-    if pdf.get_y() + 20 > pdf.h - pdf.b_margin:
-        pdf.add_page()
-
-    DATE_TEXT = "«___» _________________ 20___ г."
-    SIG_TEXT  = "_________________ / _________________"
-
-    pdf.ln(6)
-    pdf.set_x(LEFT_M)
-    pdf.cell(BODY_W - SIG_W, line_h, DATE_TEXT)
-    pdf.set_x(LEFT_M + BODY_W - SIG_W)
-    pdf.cell(SIG_W, line_h, SIG_TEXT)
-    pdf.ln(line_h)
+_DOC_TYPE_TITLES = {
+    "pretenziya": "ПРЕТЕНЗИЯ",
+    "zhaloba": "ЖАЛОБА",
+    "zayavlenie": "ЗАЯВЛЕНИЕ",
+    "vozrazhenie": "ВОЗРАЖЕНИЕ",
+    "hodatajstvo": "ХОДАТАЙСТВО",
+    "uvedomlenie": "УВЕДОМЛЕНИЕ",
+}
 
 
 # ── Постобработка текста LLM ──────────────────────────────────
-# (all patterns and functions moved to app.services.text_cleanup)
+
+_TITLE_WORDS_LC = frozenset({
+    "претензия", "жалоба", "возражение", "заявление", "ходатайство", "уведомление",
+})
+
+_BODY_START_RE = re.compile(
+    r'^([«""]|в\s|на\s|я,\s|настоящим|прошу|требую|сообщаю|уведомляю|обращаюсь|\d[^0-9])',
+    re.IGNORECASE,
+)
+# Строки-шапки начинающиеся с почтового индекса (6 цифр) или номера телефона
+_HEADER_LINE_RE = re.compile(r'^\d{6}[,\s]|^\+7|^8[-\s(]')
+
+
+def strip_leaked_header(body: str, header: list[str], title: str) -> str:
+    """Убирает из начала body шапку и заголовок, если GigaChat их всё равно написал.
+
+    Стратегия: удаляем с начала все короткие строки (<= 80 символов) пока не встретим
+    первую строку которая явно является телом (длинная, начинается с прописной или цифры
+    и не является заголовком/шапочной).
+    """
+    title_lc = title.lower()
+    lines = body.split("\n")
+    start = 0
+
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not s:
+            continue
+        s_lc = s.lower()
+        # Явный заголовок → пропускаем
+        if s_lc in _TITLE_WORDS_LC or s.upper() in {t.upper() for t in _TITLE_WORDS_LC}:
+            start = i + 1
+            continue
+        # Строка совпадает с заголовком документа
+        if s_lc == title_lc:
+            start = i + 1
+            continue
+        # Почтовый индекс или телефон → шапочная строка, пропускаем
+        if _HEADER_LINE_RE.match(s):
+            start = i + 1
+            continue
+        # Короткая строка (шапочная) → пропускаем
+        if len(s) <= 80 and not _BODY_START_RE.match(s):
+            start = i + 1
+            continue
+        # Дошли до тела
+        break
+
+    while start < len(lines) and not lines[start].strip():
+        start += 1
+    return "\n".join(lines[start:])
 
 
 # ── PDF renderer ──────────────────────────────────────────────
 
-def make_pdf(text: str, out_path: Path) -> None:
+class _SamplePDF(FPDF):
+    """FPDF с footer-дисклеймером на каждой странице."""
 
-    pdf = FPDF(orientation="P", unit="mm", format="A4")
+    def footer(self) -> None:
+        self.set_y(-(self.b_margin))
+        self.set_draw_color(180, 180, 180)
+        self.line(25, self.get_y() - 2, 190, self.get_y() - 2)
+        self.set_font("A", size=8)
+        self.set_text_color(120, 120, 120)
+        self.cell(0, 4, "Образец. Не является юридической консультацией. "
+                        "Персональные данные вымышлены. law-docs.ru", align="L")
+        self.set_text_color(0, 0, 0)
+
+
+def make_pdf(
+    header: list[str],
+    title: str,
+    body: str,
+    out_path: Path,
+) -> None:
+    pdf = _SamplePDF(orientation="P", unit="mm", format="A4")
     pdf.add_font("A",          fname=ARIAL)
     pdf.add_font("A", style="B", fname=ARIAL_B)
     pdf.set_margins(left=25, top=25, right=20)
-    pdf.set_auto_page_break(auto=True, margin=20)
+    # margin=25 оставляет место для footer (~10мм) + подпись (~15мм)
+    pdf.set_auto_page_break(auto=True, margin=25)
     pdf.add_page()
 
     # watermark
@@ -403,42 +388,24 @@ def make_pdf(text: str, out_path: Path) -> None:
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("A", size=11)
 
-    lines = text.split("\n")
-    header, title, body, sig = _split_document(lines)
-
-    # 1. Шапка — правый верхний угол
     if header:
         _render_right_block(pdf, header)
         pdf.ln(4)
 
-    # 2. Заголовок — по центру
     if title:
         pdf.set_font("A", style="B", size=12)
         pdf.multi_cell(0, 7, title, align="C")
         pdf.set_font("A", size=11)
         pdf.ln(4)
 
-    # 3. Тело — слева
-    for line in body:
+    for line in body.split("\n"):
         if not line.strip():
             pdf.ln(3)
         else:
             pdf.multi_cell(0, 6, line)
             pdf.ln(1)
 
-    # 4. Блок подписи — всегда рисуем, не режется переносом страницы
-    _render_sig_block(pdf, sig)
-    pdf.ln(6)
-
-    # disclaimer
-    y = pdf.get_y() + 2
-    pdf.set_draw_color(180, 180, 180)
-    pdf.line(25, y, 190, y)
-    pdf.set_y(y + 3)
-    pdf.set_font("A", size=8)
-    pdf.set_text_color(120, 120, 120)
-    pdf.multi_cell(0, 4.5, "Образец. Не является юридической консультацией. "
-                            "Персональные данные вымышлены. law-docs.ru")
+    _render_sig_block(pdf)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     pdf.output(str(out_path))
@@ -521,13 +488,52 @@ async def main() -> None:
                     print(f"    Ответ: {text[:300]!r}")
                     continue
 
-            text = reorder_header_before_title(text)
-            text = clean_llm_text(text)
-            text = fix_dashes(text)
-            make_pdf(text, OUT_DIR / filename)
+            _raw_before = text
+            header_fields = config.get("header_fields", [])
+            header = _build_header(header_fields, form_data)
+            title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
+            body = _parse_body_json(text) if not python_template else text
+            body = strip_leaked_header(body, header, title)
+            body = clean_llm_text(body)
+            body = fix_dashes(body)
+            if "--debug" in sys.argv:
+                print(f"\n--- RAW ({sid}) ---\n{_raw_before[:400]}\n--- AFTER CLEANUP ---\n{body[:400]}\n")
+            make_pdf(header, title, body, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:
-            print(f"❌  {e}")
+            print(f"\n    ⚠  ошибка ({e!r}), повтор через 3с…", flush=True)
+            await asyncio.sleep(3)
+            try:
+                if python_template:
+                    if sid in _HYBRID_ENRICHERS:
+                        form_data = _HYBRID_ENRICHERS[sid](form_data)
+                    narrative_fields = config.get("narrative_fields", [])
+                    narrative_prompt = config.get("narrative_prompt", "")
+                    raw_narrative = " ".join(
+                        str(form_data.get(f, "")) for f in narrative_fields if form_data.get(f)
+                    )
+                    if raw_narrative and narrative_prompt:
+                        polished = await call_giga(token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}")
+                        polished = raw_narrative if _is_refusal(polished) else polished
+                    else:
+                        polished = raw_narrative
+                    text = pre_substitute_prompt(python_template, form_data)
+                    text = text.replace("{{llm_narrative}}", polished)
+                else:
+                    sp = FORMAT_RULES + "\n" + pre_substitute_prompt(config.get("system_prompt", ""), form_data)
+                    up = build_user_prompt(sid, form_data)
+                    text = await call_giga(token, sp, up, validate=True)
+                header_fields = config.get("header_fields", [])
+                header = _build_header(header_fields, form_data)
+                title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
+                body = _parse_body_json(text) if not python_template else text
+                body = strip_leaked_header(body, header, title)
+                body = clean_llm_text(body)
+                body = fix_dashes(body)
+                make_pdf(header, title, body, OUT_DIR / filename)
+                print(f"✓  {filename}  (retry)")
+            except Exception as e2:
+                print(f"❌  {sid}: {e2!r}")
 
     print(f"\nГотово → frontend/public/samples/")
 

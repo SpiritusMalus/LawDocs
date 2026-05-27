@@ -29,6 +29,13 @@ class WizardStep(BaseModel):
     fields: list[WizardField]
 
 
+class HeaderField(BaseModel):
+    """Одна строка шапки документа. Строится детерминированно из form_data."""
+    field: str                  # ключ в form_data
+    label: str | None = None    # текст перед значением, напр. "Руководителю" / "От:"
+    prefix: str | None = None   # короткий префикс вплотную к значению, напр. "тел. "
+
+
 class SituationConfig(BaseModel):
     id: str
     category: str
@@ -45,3 +52,4 @@ class SituationConfig(BaseModel):
     wizard_steps: list[WizardStep]
     append_contact_step: bool = True
     legal_refs: list[LegalRef] = []
+    header_fields: list[HeaderField] = []

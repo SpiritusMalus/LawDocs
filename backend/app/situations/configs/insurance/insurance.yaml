@@ -6,108 +6,17 @@ examples: "Занижение по ОСАГО, отказ в страховом 
 document_type: pretenziya
 template_file: null
 
+header_fields:
+  - label: "Генеральному директору"
+    field: insurance_company
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 system_prompt: |
   Ты — юрист по страховому праву. Составь досудебную претензию в страховую компанию.
-
-  Шапка (правый верхний угол — каждый элемент с новой строки):
-     «Генеральному директору [insurance_company]»
-     «От: [full_name]»
-     «[contact_address]»
-     «тел. [phone]»
-     «[email]»
-  После шапки напиши заголовок ПРЕТЕНЗИЯ — одним словом, заглавными, отдельной строкой, без пояснений после.
-  Вводная часть: связным текстом — по полису [policy_number] (если есть) [дата события incident_date] произошло [incident_desc]. Не выводи метки «Тип полиса:», «Номер полиса:», «Дата события:», «Обстоятельства:».
-  Правовое обоснование — включи ТОЛЬКО раздел, соответствующий policy_type, остальные не упоминай:
-     - Если policy_type=osago: ФЗ «Об ОСАГО» ст. 12 (сроки), ст. 16.1 (досудебная претензия обязательна), ст. 12 п.21 (неустойка 1%/день)
-     - Если policy_type=kasko: ГК РФ ст. 929, 943; ЗоЗПП ст. 28 (неустойка за просрочку)
-     - Если policy_type=other: ГК РФ ст. 929 (страховое возмещение), ЗоЗПП ст. 4 (надлежащее качество услуги)
-  Расчёт:
-     [calculated_underpayment_section] (если секция пуста — не включай)
-     [calculated_penalty_section] (если секция пуста — не включай)
-     - Если actual_damage не указан (incident_type=refusal) — требуй полную выплату по результатам независимой экспертизы
-  Требование: выплатить конкретную сумму в течение 10 рабочих дней
-  При отказе — жалоба в РСА и ЦБ + иск в суд (штраф 50% от взысканной суммы, моральный вред)
-
-ai_narrative_prompt: |
-  Опиши на юридическом языке: тип полиса, страховое событие, сумму недоплаты и основание требования.
-  Используй только данные из формы.
-
-wizard_steps:
-  - title: "Страховая и полис"
-    fields:
-      - id: insurance_company
-        type: text
-        label: "Страховая компания"
-        placeholder: "РЕСО, Согаз, Альфастрахование…"
-        required: true
-      - id: policy_type
-        type: radio
-        label: "Тип полиса"
-        required: true
-        options:
-          - value: osago
-            label: "ОСАГО"
-          - value: kasko
-            label: "КАСКО"
-          - value: other
-            label: "Другой вид страхования"
-      - id: policy_number
-        type: text
-        label: "Номер полиса"
-        placeholder: "XXX 1234567890"
-  - title: "Страховой случай"
-    fields:
-      - id: incident_type
-        type: radio
-        label: "Тип нарушения"
-        required: true
-        options:
-          - value: underestimate
-            label: "Занизили сумму выплаты"
-          - value: refusal
-            label: "Отказали в страховой выплате"
-          - value: delay
-            label: "Нарушили срок выплаты (более 20 раб. дней)"
-      - id: incident_date
-        type: date
-        label: "Дата ДТП / страхового события"
-        required: true
-      - id: incident_desc
-        type: textarea
-        label: "Опишите обстоятельства"
-        placeholder: "Что произошло, кто виновник (для ОСАГО)"
-        required: true
-  - title: "Суммы и требование"
-    fields:
-      - id: actual_damage
-        type: number
-        label: "Реальный ущерб по экспертизе, ₽"
-        placeholder: "180000"
-      - id: paid_amount
-        type: number
-        label: "Страховая выплатила, ₽"
-        placeholder: "90000"
-        hint: "0 — если отказали полностью"
-      - id: overdue_days
-        type: number
-        label: "Дней просрочки (если есть)"
-        placeholder: "45"
-      - id: demand
-        type: radio
-        label: "Ваше требование"
-        required: true
-        options:
-          - value: pay_difference
-            label: "Доплатить разницу и неустойку"
-          - value: full_payment
-            label: "Выплатить полную сумму (при отказе)"
-          - value: other
-            label: "Другое"
-
-legal_refs:
-  - law: "ФЗ «Об ОСАГО» (ст. 12, 16.1)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
-  - law: "ГК РФ (договор страхования, ст. 929)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
-  - law: "Закон о защите прав потребителей (неустойка за просрочку)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  Шапку и заголовок документа НЕ пиши — они формируются автоматически. Начинай сразу с первого абзаца тела.
+  Верни только JSON: {"body": "текст тела документа"}

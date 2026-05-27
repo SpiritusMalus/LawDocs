@@ -116,6 +116,37 @@ async def _cleanup_draft_orders() -> None:
             _cleanup_logger.exception("draft_cleanup_failed")
 
 
+async def _watchdog_refund(order_id: str, situation_id: str, user_email: str) -> None:
+    """Рефанд для заказов stuck в generating на последней retry (сервер упал)."""
+    from app.services.notifications import send_telegram_alert
+    from app.services.payment import refund_payment
+    from app.services.email import send_refund_notification
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if not order or not order.yookassa_payment_id:
+            return
+        try:
+            refunded = await refund_payment(order.yookassa_payment_id, order.amount)
+        except Exception:
+            _auto_retry_logger.exception("watchdog_refund_payment_failed for order %s", order_id)
+            refunded = False
+        try:
+            await send_refund_notification(email=user_email, order_id=order_id)
+        except Exception:
+            _auto_retry_logger.exception("watchdog_refund_email_failed for order %s", order_id)
+        try:
+            await send_telegram_alert(
+                f"💸 <b>Watchdog auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
+                f"order_id: <code>{order_id}</code>\n"
+                f"payment_id: <code>{order.yookassa_payment_id}</code>\n"
+                f"situation: {situation_id}\n"
+                f"email: {user_email}"
+            )
+        except Exception:
+            _auto_retry_logger.exception("watchdog_refund_alert_failed for order %s", order_id)
+
+
 async def _auto_retry_loop() -> None:
     """Каждые 15 минут ищет failed-заказы с оплатой и повторяет генерацию (до 5 попыток)."""
     while True:
@@ -127,14 +158,28 @@ async def _auto_retry_loop() -> None:
                 # (сервер упал во время генерации; используем paid_at как proxy,
                 # т.к. generating всегда наступает после оплаты)
                 watchdog_cutoff = datetime.now(UTC) - timedelta(minutes=30)
-                await db.execute(
-                    update(Order)
+                stuck_result = await db.execute(
+                    select(Order)
                     .where(
                         Order.status == "generating",
                         Order.paid_at < watchdog_cutoff,
                     )
-                    .values(status="failed")
+                    .with_for_update(skip_locked=True)
+                    .options(selectinload(Order.user))
                 )
+                stuck_orders = stuck_result.scalars().all()
+                watchdog_refund_tasks = []
+                for o in stuck_orders:
+                    if o.auto_retry_count >= _MAX_AUTO_RETRIES and o.yookassa_payment_id:
+                        # Сервер упал на последней retry — нужен рефанд
+                        watchdog_refund_tasks.append((
+                            str(o.id), o.situation_id, str(o.user.email),
+                        ))
+                        o.status = "refunded"
+                        o.form_data = {}
+                    else:
+                        o.status = "failed"
+                await db.commit()
 
                 result = await db.execute(
                     select(Order)
@@ -161,6 +206,13 @@ async def _auto_retry_loop() -> None:
                     for o in orders_to_retry
                 ]
                 await db.commit()
+
+            for order_id, situation_id, user_email in watchdog_refund_tasks:
+                _auto_retry_logger.warning(
+                    "watchdog_refund_triggered",
+                    extra={"action": "watchdog_refund_triggered", "order_id": order_id},
+                )
+                asyncio.create_task(_watchdog_refund(order_id, situation_id, user_email))
 
             for order_id, situation_id, form_data, user_email, is_last in retry_tasks:
                 _auto_retry_logger.info(

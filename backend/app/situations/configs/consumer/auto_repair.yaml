@@ -6,122 +6,18 @@ examples: "Брак в ремонте, повторная поломка, нар
 document_type: pretenziya
 template_file: null
 
+header_fields:
+  - label: "Руководителю"
+    field: service_name
+  - field: service_address
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 system_prompt: |
   Ты — юрист по защите прав потребителей. Составь претензию в автосервис.
-
-  Шапка (правый верхний угол — каждый элемент с новой строки):
-     «Руководителю [service_name]»
-     «[service_address]»
-     «От: [full_name]»
-     «[contact_address]»
-     «тел. [phone]»
-     «[email]»
-     Пиши «Руководителю» и «От:» строчными буквами — НЕ заглавными.
-  После шапки напиши заголовок ПРЕТЕНЗИЯ — одним словом, заглавными, отдельной строкой, без пояснений после.
-  Обстоятельства: дата сдачи авто (service_date), автомобиль (car_model, car_plate), перечень заказанных работ (work_desc), стоимость (work_price руб.).
-  Нарушение:
-     — Если violation_type = "bad_quality": описать дефекты из defect_desc. Ссылка: ЗоЗПП ст. 29 — потребитель вправе потребовать безвозмездного устранения недостатков / уменьшения цены / возврата денег. Ссылка на гарантийный срок ст. 722 ГК РФ (если не оговорён — 6 месяцев).
-     — Если violation_type = "delay": авто должно было быть готово planned_date, по состоянию на дату претензии не возвращено. Неустойка ст. 28 ч. 5 ЗоЗПП: 3% от цены работы за каждый день просрочки.
-     — Если violation_type = "overcharge": автосервис выставил счёт в размере work_price руб., тогда как согласованная цена составляла agreed_price руб. Превышение — (work_price − agreed_price) руб. Ссылка: ГК РФ ст. 709 — окончательная цена не может превышать твёрдую смету без письменного согласия заказчика. [calculated_overcharge_section] (если секция пуста — дополнительный расчёт не включай)
-  Расчёт неустойки: [calculated_penalty_section] (если секция пуста — пункт 5 не включай)
-  Требование (на выбор — указать то, что выбрал пользователь в demand):
-     — безвозмездно устранить недостатки в течение 10 дней;
-     — уменьшить стоимость работ на [сумму];
-     — вернуть уплаченную сумму [work_price руб.] и выплатить неустойку.
-     Срок исполнения: 10 дней с даты получения (ст. 22 ЗоЗПП).
-  При отказе — иск в суд; будет взыскан штраф 50% (ст. 13 ЗоЗПП), компенсация морального вреда, судебные расходы.
-
-ai_narrative_prompt: |
-  Опиши на юридическом языке: дату сдачи авто, перечень заказанных работ и стоимость.
-  Укажи суть нарушения: некачественный ремонт (опиши дефекты), задержка возврата авто, или завышение цены.
-  Если было устное или письменное подтверждение сроков — упомяни.
-  Используй только данные из формы.
-
-wizard_steps:
-  - title: "Автосервис"
-    fields:
-      - id: service_name
-        type: text
-        label: "Название автосервиса"
-        placeholder: "ООО «АвтоТехника», СТО «Мастер»"
-        required: true
-      - id: service_address
-        type: text
-        label: "Адрес автосервиса"
-        placeholder: "г. Москва, ул. Гаражная, д. 5"
-  - title: "Автомобиль и работы"
-    fields:
-      - id: car_model
-        type: text
-        label: "Марка и модель автомобиля"
-        placeholder: "Kia Rio 2019"
-        required: true
-      - id: car_plate
-        type: text
-        label: "Гос. номер"
-        placeholder: "В123АВ 77"
-      - id: service_date
-        type: date
-        label: "Дата сдачи авто в ремонт"
-        required: true
-      - id: work_desc
-        type: textarea
-        label: "Какие работы заказали"
-        placeholder: "Замена тормозных колодок, диагностика двигателя, замена масла"
-        required: true
-      - id: work_price
-        type: number
-        label: "Стоимость работ по квитанции, ₽"
-        placeholder: "35000"
-        required: true
-  - title: "Нарушение"
-    fields:
-      - id: violation_type
-        type: radio
-        label: "В чём проблема"
-        required: true
-        options:
-          - value: bad_quality
-            label: "Ремонт выполнен некачественно (брак, повторная поломка)"
-          - value: delay
-            label: "Авто задержали сверх срока"
-          - value: overcharge
-            label: "Выставили счёт больше договорённого"
-          - value: other
-            label: "Другое"
-      - id: defect_desc
-        type: textarea
-        label: "Опишите дефекты или проблему"
-        placeholder: "После ремонта снова стучат тормоза, масло подтекает…"
-        required: true
-      - id: planned_date
-        type: date
-        label: "Когда должны были вернуть авто"
-        hint: "Дата по договору или устной договорённости"
-      - id: agreed_price
-        type: number
-        label: "Первоначально согласованная цена, ₽"
-        hint: "Если цену завысили — укажите сумму из договора или сметы"
-  - title: "Что вы хотите"
-    fields:
-      - id: demand
-        type: radio
-        label: "Ваше требование"
-        required: true
-        options:
-          - value: fix
-            label: "Устранить дефекты бесплатно"
-          - value: refund
-            label: "Вернуть деньги"
-          - value: reduce_price
-            label: "Снизить стоимость работ"
-          - value: other
-            label: "Другое"
-
-legal_refs:
-  - law: "ЗоЗПП ст. 29 — права при недостатках работы"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
-  - law: "ЗоЗПП ст. 28 — неустойка 3%/день за нарушение срока"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
-  - law: "ГК РФ ст. 709, 722 — цена и гарантия по договору подряда"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  Шапку и заголовок документа НЕ пиши — они формируются автоматически. Начинай сразу с первого абзаца тела.
+  Верни только JSON: {"body": "текст тела документа"}
