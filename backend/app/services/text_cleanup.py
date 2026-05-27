@@ -83,6 +83,31 @@ def reorder_header_before_title(text: str) -> str:
     return '\n'.join(lines[:title_idx] + header_lines + [''] + [lines[title_idx]] + rest_lines)
 
 
+_ORG_ABBREVS = frozenset({"ООО", "АО", "ПАО", "ГБУ", "МБУ", "ИП", "ФГУП", "МУП", "ГБУЗ", "ФКУ", "НКО", "КФХ"})
+
+_INLINE_CAPS_RE = re.compile(r'\b([А-ЯЁ]{3,})\b')
+
+
+def _fix_inline_caps(s: str) -> str:
+    """Приводит случайные ALL_CAPS-слова внутри строки к нижнему регистру.
+
+    Сохраняет аббревиатуры из regexps и _ORG_ABBREVS.
+    Не трогает строки, которые сами по себе являются заголовком документа.
+    """
+    if s in _TITLE_WORDS:
+        return s
+
+    def replacer(m: re.Match) -> str:
+        word = m.group(1)
+        if word in _ORG_ABBREVS:
+            return word
+        if len(word) <= 3:
+            return word
+        return word.lower()
+
+    return _INLINE_CAPS_RE.sub(replacer, s)
+
+
 def _is_title_case_line(s: str) -> bool:
     """True если строка — Title Case GigaChat-артефакт (≥4 слова, ≥50% с заглавной)."""
     if len(s) <= 20 or s in _TITLE_WORDS:
@@ -101,6 +126,12 @@ def _to_sentence_case(s: str) -> str:
     result = re.sub(r'(\.\s+)([а-яёa-z])', lambda m: m.group(1) + m.group(2).upper(), result)
     for abbr in abbrevs:
         result = result.replace(abbr.lower(), abbr, 1)
+    # Восстанавливаем аббревиатуры организационно-правовых форм которые могли
+    # быть написаны неверно (Ооо → ООО, Ао → АО и т.д.)
+    for org in _ORG_ABBREVS:
+        # Заменяем все варианты написания (с любым регистром) на правильный
+        result = re.sub(r'\b' + org[0] + org[1:].lower() + r'\b', org, result)
+        result = re.sub(r'\b' + org.lower() + r'\b', org, result)
     return result
 
 _SECTION_PREFIX_RE = re.compile(
@@ -216,7 +247,14 @@ def clean_llm_text(text: str) -> str:
         # ALL_CAPS lines (not a document title) → normal case
         # Properly: capitalize each word, handle patronymic names and multi-word phrases
         if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
-            proper_case = " ".join(word.capitalize() for word in s.split())
+            words_result = []
+            for word in s.split():
+                clean_word = re.sub(r'[«»"\']', '', word)
+                if clean_word in _ORG_ABBREVS:
+                    words_result.append(word)  # сохраняем как есть вместе с кавычками
+                else:
+                    words_result.append(word.capitalize())
+            proper_case = " ".join(words_result)
             cleaned.append(line.replace(s, proper_case))
             continue
 
@@ -231,10 +269,20 @@ def clean_llm_text(text: str) -> str:
         if not re.search(r'^_+\s*/\s*_+$', s):
             line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
 
+        # Fix inline ALL_CAPS words (e.g. "блокирован БАНКом" → "блокирован банком")
+        # Don't apply to header lines (before title) — handled separately
+        if title_seen and s not in _TITLE_WORDS:
+            fixed = _fix_inline_caps(line.strip())
+            line = line.replace(line.strip(), fixed) if fixed != line.strip() else line
+
         cleaned.append(line)
 
     result = "\n".join(cleaned)
     result = re.sub(r'\n{3,}', '\n\n', result)
+    # Финальный pass: восстанавливаем аббревиатуры ООО/АО/ПАО/ГБУ независимо от регистра
+    for org in _ORG_ABBREVS:
+        result = re.sub(r'\b' + org[0] + org[1:].lower() + r'\b', org, result)
+        result = re.sub(r'\b' + org.lower() + r'\b', org, result)
     return result
 
 
