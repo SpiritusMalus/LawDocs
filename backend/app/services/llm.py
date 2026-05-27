@@ -268,13 +268,14 @@ def _clean_llm_text(text: str) -> str:
             cleaned.append(line)
             continue
 
-        # Строка сразу после заголовка — пояснение типа «о возврате денежных средств»
-        # Убираем если: начинается со строчной (явный подзаголовок) или это ещё один
-        # вариант ПРЕТЕНЗИЯ о чём-то на следующей строке
+        # Строка сразу после заголовка — убираем любой подзаголовок:
+        # строчная буква, «ПРЕТЕНЗИЯ о чём-то», или короткая фраза с заглавной (≤ 60 символов)
         if prev_was_title:
             if s[0].islower():
                 continue
             if _TITLE_WITH_SUBTITLE_RE.match(s):
+                continue
+            if s not in _TITLE_WORDS and len(s) <= 60 and not s[0].isdigit():
                 continue
 
         if s in _TITLE_WORDS:
