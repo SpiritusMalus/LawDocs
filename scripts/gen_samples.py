@@ -297,7 +297,51 @@ _DOC_TYPE_TITLES = {
 
 
 # ── Постобработка текста LLM ──────────────────────────────────
-# (all patterns and functions moved to app.services.text_cleanup)
+
+_TITLE_WORDS_LC = frozenset({
+    "претензия", "жалоба", "возражение", "заявление", "ходатайство", "уведомление",
+})
+
+_BODY_START_RE = re.compile(
+    r'^(\d|[«""]|в\s|на\s|я,\s|настоящим|прошу|требую|сообщаю|уведомляю|обращаюсь)',
+    re.IGNORECASE,
+)
+
+
+def strip_leaked_header(body: str, header: list[str], title: str) -> str:
+    """Убирает из начала body шапку и заголовок, если GigaChat их всё равно написал.
+
+    Стратегия: удаляем с начала все короткие строки (<= 80 символов) пока не встретим
+    первую строку которая явно является телом (длинная, начинается с прописной или цифры
+    и не является заголовком/шапочной).
+    """
+    title_lc = title.lower()
+    lines = body.split("\n")
+    start = 0
+
+    for i, line in enumerate(lines):
+        s = line.strip()
+        if not s:
+            continue
+        s_lc = s.lower()
+        # Явный заголовок → пропускаем
+        if s_lc in _TITLE_WORDS_LC or s.upper() in {t.upper() for t in _TITLE_WORDS_LC}:
+            start = i + 1
+            continue
+        # Строка совпадает с заголовком документа
+        if s_lc == title_lc:
+            start = i + 1
+            continue
+        # Короткая строка (шапочная) → пропускаем
+        if len(s) <= 80 and not _BODY_START_RE.match(s):
+            start = i + 1
+            continue
+        # Дошли до тела
+        break
+
+    while start < len(lines) and not lines[start].strip():
+        start += 1
+    return "\n".join(lines[start:])
 
 
 # ── PDF renderer ──────────────────────────────────────────────
@@ -438,6 +482,7 @@ async def main() -> None:
             header = _build_header(header_fields, form_data)
             title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
             body = _parse_body_json(text) if not python_template else text
+            body = strip_leaked_header(body, header, title)
             body = clean_llm_text(body)
             body = fix_dashes(body)
             if "--debug" in sys.argv:
@@ -471,6 +516,7 @@ async def main() -> None:
                 header = _build_header(header_fields, form_data)
                 title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
                 body = _parse_body_json(text) if not python_template else text
+                body = strip_leaked_header(body, header, title)
                 body = clean_llm_text(body)
                 body = fix_dashes(body)
                 make_pdf(header, title, body, OUT_DIR / filename)
