@@ -198,6 +198,18 @@ _REVIEW_SYSTEM_PROMPT = """Ты — редактор юридических до
 
 ВЕРНИ: только исправленный текст документа, без пояснений и комментариев."""
 
+_YANDEX_RETRY_FEEDBACK = (
+    "\n\nЭТО КРИТИЧНО: черновик содержит ошибки форматирования. Переделай, "
+    "АБСОЛЮТНО строго соблюдая:\n"
+    "- Блок подписи должен быть ТОЧНО в таком формате на ОДНОЙ строке: "
+    "_________________ / _________________\n"
+    "- НИКАКИХ меток типа 'Шапка:', 'Заголовок:', 'Описание:', 'Требование:' — "
+    "только чистое содержание\n"
+    "- НИКАКОГО markdown, НИКАКОГО ЗАГЛАВНОГО ТЕКСТА внутри документа\n"
+    "- НИКАКИХ условных конструкций 'Если...' или 'если...'\n"
+    "- Выведи ТОЛЬКО ГОТОВЫЙ ТЕКСТ, без слова в слово повторений из промпта"
+)
+
 
 async def _call_yandex_review(draft: str) -> str:
     """Второй проход: YandexGPT исправляет форматирование черновика от GigaChat."""
@@ -205,21 +217,46 @@ async def _call_yandex_review(draft: str) -> str:
         logger.warning("YandexGPT not configured, skipping review pass")
         return draft
 
-    client = AsyncOpenAI(
-        api_key=settings.YANDEX_API_KEY,
-        base_url="https://ai.api.cloud.yandex.net/v1",
-    )
-    response = await client.chat.completions.create(
-        model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
-        messages=[
-            {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
-            {"role": "user", "content": draft},
-        ],
-        temperature=0.1,
-        max_tokens=4096,
-        extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
-    )
-    return response.choices[0].message.content
+    try:
+        client = AsyncOpenAI(
+            api_key=settings.YANDEX_API_KEY,
+            base_url="https://ai.api.cloud.yandex.net/v1",
+        )
+        response = await client.chat.completions.create(
+            model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
+            messages=[
+                {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
+                {"role": "user", "content": draft},
+            ],
+            temperature=0.1,
+            max_tokens=4096,
+            extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+            timeout=60,
+        )
+        result = response.choices[0].message.content
+        if not result or not result.strip():
+            logger.error("YandexGPT returned empty response, falling back to GigaChat draft")
+            return draft
+        return result
+    except Exception as e:
+        logger.error("YandexGPT review failed (%s: %s), falling back to GigaChat draft", type(e).__name__, str(e))
+        await _send_telegram_alert(f"⚠️ YandexGPT review failed: {type(e).__name__}: {str(e)[:100]}")
+        return draft
+
+
+async def _send_telegram_alert(message: str) -> None:
+    """Отправляет алерт в Telegram если настроен."""
+    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
+        return
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(
+                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
+                json={"chat_id": settings.TELEGRAM_CHAT_ID, "text": message},
+                timeout=10,
+            )
+    except Exception as e:
+        logger.error("Failed to send Telegram alert: %s", e)
 
 
 _REFUSAL_MARKERS = (
@@ -451,5 +488,16 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
             "Ответ содержит отказ вместо документа."
         )
     text = clean_llm_text(text)
-    text = await _call_yandex_review(text)
+
+    reviewed_text = await _call_yandex_review(text)
+    if reviewed_text != text:
+        # YandexGPT успешно исправил
+        text = reviewed_text
+    else:
+        # YandexGPT упал или вернул исходный текст
+        # Делаем retry GigaChat с усиленным фокусом на форматирование
+        logger.info("YandexGPT review failed or skipped, attempting GigaChat retry with format feedback")
+        text = await _call_gigachat(system_prompt, user_prompt + _YANDEX_RETRY_FEEDBACK, validate=False)
+        text = clean_llm_text(text)
+
     return _post_substitute_output(text, form_data)
