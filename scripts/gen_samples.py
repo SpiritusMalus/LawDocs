@@ -13,10 +13,9 @@ from fpdf import FPDF
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.services.text_cleanup import (
-    _HEADER_LINE_RE, _HEADER_MARKER_RE,
-    clean_llm_text, fix_dashes, has_quality_artifacts, reorder_header_before_title
-)
+from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
+from app.services.docgen import _build_header, _render_right_block, _render_sig_block
+from app.services.llm import _parse_body_json
 
 ROOT       = Path(__file__).parent.parent
 ENV_FILE   = ROOT / "backend" / ".env"
@@ -292,114 +291,14 @@ def _is_refusal(text: str) -> bool:
 
 # ── PDF helpers ───────────────────────────────────────────────
 
-_TITLE_WORDS = {"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"}
-_DATE_RE = re.compile(
-    r"^\s*\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|"
-    r"июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*года\s*$",
-    re.IGNORECASE,
-)
-_SIG_RE        = re.compile(r"_{4,}")
-_DATE_SHORT_RE = re.compile(r"^\s*\d{1,2}\.\d{2}\.\d{4}\s*$")
-
-
-def _split_document(lines: list[str]) -> tuple[list[str], str, list[str], list[str]]:
-    """Делит строки документа на (шапка, заголовок, тело, блок_подписи)."""
-    # Ищем заголовок — строка только из заглавных букв, входит в TITLE_WORDS
-    title_idx: int | None = None
-    for i, line in enumerate(lines):
-        stripped = line.strip()
-        if stripped in _TITLE_WORDS or any(stripped.startswith(t + " ") for t in _TITLE_WORDS):
-            title_idx = i
-            break
-
-    # Ищем начало блока подписи: линия подчёркиваний ИЛИ дата (любого формата)
-    # в последних 14 строках
-    sig_start: int | None = None
-    search_from = max(0, len(lines) - 14)
-    for i in range(search_from, len(lines)):
-        if (_SIG_RE.search(lines[i])
-                or _DATE_RE.search(lines[i])
-                or _DATE_SHORT_RE.match(lines[i])
-                or lines[i].strip().lower().startswith("дата и подпись")):
-            sig_start = i
-            break
-
-    if title_idx is not None:
-        header = lines[:title_idx]
-        title  = lines[title_idx].strip()
-        after  = lines[title_idx + 1:]
-        # GigaChat иногда ставит часть шапки (от кого, адрес отправителя) после заголовка.
-        # Подбираем строки шапки из начала after до первой "не-шапочной" строки.
-        extra_header: list[str] = []
-        skip = 0
-        for ln in after:
-            s = ln.strip()
-            if not s:
-                skip += 1
-                continue
-            if (_HEADER_MARKER_RE.match(s) or _HEADER_LINE_RE.match(s)
-                    or s.startswith('«') or (len(s) < 80 and ',' in s and not s[0].isdigit())):
-                extra_header.append(ln.rstrip())
-                skip = 0
-            else:
-                break
-            skip = 0
-        if extra_header:
-            header = [l for l in header if l.strip()] + extra_header
-            after = after[len(extra_header) + skip:]
-    else:
-        header = []
-        title  = ""
-        after  = lines
-
-    if sig_start is not None:
-        # sig_start относительно исходного lines; пересчитываем для after
-        body_end = (sig_start - (title_idx + 1 if title_idx is not None else 0))
-        body = after[:body_end]
-        sig  = after[body_end:]
-    else:
-        body = after
-        sig  = []
-
-    # Убираем хвостовые пустые строки из тела — иначе они создают gap перед подписью
-    while body and not body[-1].strip():
-        body.pop()
-
-    return header, title, body, sig
-
-
-def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> None:
-    """Рендерит блок строк в правой колонке (x=105, w=85)."""
-    RIGHT_X = 105.0
-    RIGHT_W = 85.0
-    for line in lines:
-        if not line.strip():
-            pdf.ln(2)
-        else:
-            pdf.set_x(RIGHT_X)
-            pdf.multi_cell(RIGHT_W, line_h, line.strip(), align="L")
-
-
-def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) -> None:
-    """Блок подписи: дата-бланк слева + подпись/расшифровка-бланк справа. Всё от руки."""
-    PAGE_W  = 210.0
-    LEFT_M  = 25.0
-    RIGHT_M = 20.0
-    BODY_W  = PAGE_W - LEFT_M - RIGHT_M
-    SIG_W   = 80.0
-
-    if pdf.get_y() + 20 > pdf.h - pdf.b_margin:
-        pdf.add_page()
-
-    DATE_TEXT = "«___» _________________ 20___ г."
-    SIG_TEXT  = "_________________ / _________________"
-
-    pdf.ln(6)
-    pdf.set_x(LEFT_M)
-    pdf.cell(BODY_W - SIG_W, line_h, DATE_TEXT)
-    pdf.set_x(LEFT_M + BODY_W - SIG_W)
-    pdf.cell(SIG_W, line_h, SIG_TEXT)
-    pdf.ln(line_h)
+_DOC_TYPE_TITLES = {
+    "pretenziya": "ПРЕТЕНЗИЯ",
+    "zhaloba": "ЖАЛОБА",
+    "zayavlenie": "ЗАЯВЛЕНИЕ",
+    "vozrazhenie": "ВОЗРАЖЕНИЕ",
+    "hodatajstvo": "ХОДАТАЙСТВО",
+    "uvedomlenie": "УВЕДОМЛЕНИЕ",
+}
 
 
 # ── Постобработка текста LLM ──────────────────────────────────
@@ -408,8 +307,12 @@ def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) ->
 
 # ── PDF renderer ──────────────────────────────────────────────
 
-def make_pdf(text: str, out_path: Path) -> None:
-
+def make_pdf(
+    header: list[str],
+    title: str,
+    body: str,
+    out_path: Path,
+) -> None:
     pdf = FPDF(orientation="P", unit="mm", format="A4")
     pdf.add_font("A",          fname=ARIAL)
     pdf.add_font("A", style="B", fname=ARIAL_B)
@@ -425,34 +328,26 @@ def make_pdf(text: str, out_path: Path) -> None:
     pdf.set_text_color(0, 0, 0)
     pdf.set_font("A", size=11)
 
-    lines = text.split("\n")
-    header, title, body, sig = _split_document(lines)
-
-    # 1. Шапка — правый верхний угол
     if header:
         _render_right_block(pdf, header)
         pdf.ln(4)
 
-    # 2. Заголовок — по центру
     if title:
         pdf.set_font("A", style="B", size=12)
         pdf.multi_cell(0, 7, title, align="C")
         pdf.set_font("A", size=11)
         pdf.ln(4)
 
-    # 3. Тело — слева
-    for line in body:
+    for line in body.split("\n"):
         if not line.strip():
             pdf.ln(3)
         else:
             pdf.multi_cell(0, 6, line)
             pdf.ln(1)
 
-    # 4. Блок подписи — всегда рисуем, не режется переносом страницы
-    _render_sig_block(pdf, sig)
+    _render_sig_block(pdf)
     pdf.ln(6)
 
-    # disclaimer
     y = pdf.get_y() + 2
     pdf.set_draw_color(180, 180, 180)
     pdf.line(25, y, 190, y)
@@ -544,12 +439,15 @@ async def main() -> None:
                     continue
 
             _raw_before = text
-            text = reorder_header_before_title(text)
-            text = clean_llm_text(text)
-            text = fix_dashes(text)
+            header_fields = config.get("header_fields", [])
+            header = _build_header(header_fields, form_data)
+            title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
+            body = _parse_body_json(text) if not python_template else text
+            body = clean_llm_text(body)
+            body = fix_dashes(body)
             if "--debug" in sys.argv:
-                print(f"\n--- RAW ({sid}) ---\n{_raw_before[:400]}\n--- AFTER CLEANUP ---\n{text[:400]}\n")
-            make_pdf(text, OUT_DIR / filename)
+                print(f"\n--- RAW ({sid}) ---\n{_raw_before[:400]}\n--- AFTER CLEANUP ---\n{body[:400]}\n")
+            make_pdf(header, title, body, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:
             print(f"\n    ⚠  ошибка ({e!r}), повтор через 3с…", flush=True)
@@ -574,10 +472,13 @@ async def main() -> None:
                     sp = FORMAT_RULES + "\n" + pre_substitute_prompt(config.get("system_prompt", ""), form_data)
                     up = build_user_prompt(sid, form_data)
                     text = await call_giga(token, sp, up, validate=True)
-                text = reorder_header_before_title(text)
-                text = clean_llm_text(text)
-                text = fix_dashes(text)
-                make_pdf(text, OUT_DIR / filename)
+                header_fields = config.get("header_fields", [])
+                header = _build_header(header_fields, form_data)
+                title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
+                body = _parse_body_json(text) if not python_template else text
+                body = clean_llm_text(body)
+                body = fix_dashes(body)
+                make_pdf(header, title, body, OUT_DIR / filename)
                 print(f"✓  {filename}  (retry)")
             except Exception as e2:
                 print(f"❌  {sid}: {e2!r}")
