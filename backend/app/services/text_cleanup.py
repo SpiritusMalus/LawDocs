@@ -71,16 +71,19 @@ def clean_llm_text(text: str) -> str:
     - Dates and signatures
     - All-caps lines (converts to normal case)
     - Markdown formatting
+    - Duplicated titles
     """
     lines = text.split("\n")
     cleaned: list[str] = []
     prev_was_title = False
+    title_seen = False
 
     for line in lines:
         s = line.strip()
 
         if not s:
-            prev_was_title = False
+            # Empty line: keep it, but don't reset prev_was_title
+            # so post-title protection extends through empty lines
             cleaned.append(line)
             continue
 
@@ -93,8 +96,14 @@ def clean_llm_text(text: str) -> str:
                 continue
             if s not in _TITLE_WORDS and len(s) <= 60 and not s[0].isdigit():
                 continue
+            # If we got here, line is substantial enough to keep
+            prev_was_title = False
 
         if s in _TITLE_WORDS:
+            # First title word → keep. Duplicates → remove.
+            if title_seen:
+                continue
+            title_seen = True
             prev_was_title = True
             cleaned.append(line)
             continue
@@ -102,6 +111,9 @@ def clean_llm_text(text: str) -> str:
         # "ПРЕТЕНЗИЯ о возврате..." → keep only title word
         m = _TITLE_WITH_SUBTITLE_RE.match(s)
         if m:
+            if title_seen:
+                continue
+            title_seen = True
             cleaned.append(m.group(1).upper())
             prev_was_title = True
             continue
@@ -120,6 +132,9 @@ def clean_llm_text(text: str) -> str:
         if _DATE_SIG_RE.match(s):
             continue
         if _SECTION_LABEL_RE.match(s):
+            continue
+        # Single section label word (without colon) → remove if it's a known label
+        if s in _SECTION_LABELS.split('|') and not s.endswith(':'):
             continue
         if _CITY_LINE_RE.match(s):
             continue
