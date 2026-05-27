@@ -523,9 +523,12 @@ async def main() -> None:
                     print(f"    Ответ: {text[:300]!r}")
                     continue
 
+            _raw_before = text
             text = reorder_header_before_title(text)
             text = clean_llm_text(text)
             text = fix_dashes(text)
+            if "--debug" in sys.argv:
+                print(f"\n--- RAW ({sid}) ---\n{_raw_before[:400]}\n--- AFTER CLEANUP ---\n{text[:400]}\n")
             make_pdf(text, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:

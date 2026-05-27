@@ -54,14 +54,54 @@ _ALL_CAPS_RE = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
 _TITLE_CASE_MIN_WORDS = 4
 
 _HEADER_MARKER_RE = re.compile(
-    r'^(Мировому\s|В\s+районный|В\s+суд|Начальнику|Руководителю|'
+    r'^(Мировому\s|В\s+районный|В\s+суд|Начальнику|Руководителю|Генеральному|'
+    r'Директору|Президенту|Председателю|'
     r'От\s*:|Взыскатель\s*:|Должник\s*:|Дело\s*№)',
     re.IGNORECASE,
 )
 
 
+_QUOTE_STRIP_RE = re.compile(r'^[«"\']|[»"\']$')
+
+# Строки которые явно относятся к шапке (адрес, телефон, email, реквизиты, «От:», «Дело №»)
+_HEADER_LINE_RE = re.compile(
+    r'''(?x)
+    ^ («|")?                          # возможная кавычка-обёртка GigaChat
+    (
+        \d{6},                        # почтовый индекс
+      | тел\.?\s                       # тел. / тел
+      | [+]?7[\s(]\d                  # телефон
+      | \+7                           # телефон
+      | [a-zA-Z0-9._%+-]+@            # email
+      | г\.\s                         # г. Москва
+      | ул\.\s                        # ул. Ленина
+      | пр\.\s|пр-т\s                 # проспект
+      | д\.\s                         # д. 1
+      | кв\.\s                        # кв. 1
+      | ИНН\s                         # ИНН
+      | Дело\s*№                      # Дело №
+      | От\s*:                        # От:
+      | Взыскатель\s*:                # Взыскатель:
+      | Должник\s*:                   # Должник:
+    )
+    ''',
+    re.IGNORECASE,
+)
+
+# Строки тела — явно начало тела документа
+_BODY_START_RE = re.compile(
+    r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)',
+    re.IGNORECASE,
+)
+
+
 def reorder_header_before_title(text: str) -> str:
-    """Если заголовок документа стоит перед шапкой — переставляет шапку наверх."""
+    """Если заголовок документа стоит перед шапкой — переставляет шапку наверх.
+
+    GigaChat часто выдаёт: ЗАГОЛОВОК → пустые строки → шапка → тело.
+    Функция собирает шапку (блок маркерных строк после заголовка), пропуская
+    пустые строки внутри блока, и переставляет её перед заголовком.
+    """
     lines = text.split('\n')
     title_idx = next((i for i, l in enumerate(lines) if l.strip() in _TITLE_WORDS), None)
     if title_idx is None:
@@ -69,17 +109,59 @@ def reorder_header_before_title(text: str) -> str:
     non_empty_before = [l for l in lines[:title_idx] if l.strip()]
     if non_empty_before:
         return text  # порядок уже верный
-    # Ищем шапку после заголовка
+
+    # Ищем шапку после заголовка — пропускаем ведущие пустые строки
     after = lines[title_idx + 1:]
-    header_lines, rest_lines, in_header = [], [], True
-    for line in after:
-        if in_header and line.strip() and _HEADER_MARKER_RE.match(line.strip()):
-            header_lines.append(line)
+    header_lines: list[str] = []
+    rest_start = 0
+    found_marker = False
+    consecutive_empty = 0
+
+    for j, line in enumerate(after):
+        s = _QUOTE_STRIP_RE.sub('', line.strip())
+
+        if not s:
+            if not found_marker:
+                continue  # пустые строки до маркера — пропускаем
+            # Пустая строка внутри найденной шапки: продолжаем только если
+            # следующая строка тоже шапка (смотрим вперёд)
+            # Помечаем позицию — если следующая строка не шапка, останавливаемся
+            consecutive_empty += 1
+            continue
+
+        consecutive_empty = 0
+
+        # Явный признак начала тела
+        if _BODY_START_RE.match(s) or len(s) > 120:
+            rest_start = j
+            break
+
+        if not found_marker:
+            if _HEADER_MARKER_RE.match(s):
+                found_marker = True
+                header_lines.append(line.rstrip())
+                rest_start = j + 1
+            else:
+                # Непустая строка не совпала с маркером — шапки нет
+                break
         else:
-            in_header = False
-            rest_lines.append(line)
+            # После маркера: всё кроме явного начала тела идёт в шапку
+            # Тело начинается с длинного предложения без адресных признаков
+            is_body = (
+                not _HEADER_LINE_RE.match(s)
+                and not _HEADER_MARKER_RE.match(s)
+                and not s.startswith('«')
+                and len(s) > 60
+            )
+            if is_body:
+                rest_start = j
+                break
+            header_lines.append(line.rstrip())
+            rest_start = j + 1
+
     if not header_lines:
         return text
+    rest_lines = after[rest_start:]
     return '\n'.join(lines[:title_idx] + header_lines + [''] + [lines[title_idx]] + rest_lines)
 
 
@@ -183,6 +265,22 @@ def clean_llm_text(text: str) -> str:
     for line in lines:
         s = line.strip()
 
+        # Снимаем кавычки-обёртки GigaChat со строк шапки
+        if not title_seen:
+            if s.startswith('«'):
+                s = s[1:].strip()
+                # Хвостовая » — обёртка (не часть названия «ООО»): убираем если нет внутренних «
+                if s.endswith('»') and '«' not in s:
+                    s = s[:-1].strip()
+                line = s
+            elif s.endswith('»') and '«' not in s:
+                # Хвост многострочного блока в кавычках
+                s = s[:-1].strip()
+                line = s
+            elif s.startswith('"') and s.endswith('"'):
+                s = s[1:-1].strip()
+                line = s
+
         if not s:
             # Empty line: keep it, but don't reset prev_was_title
             # so post-title protection extends through empty lines
@@ -284,7 +382,9 @@ def clean_llm_text(text: str) -> str:
     result = re.sub(r'\n{3,}', '\n\n', result)
     # Capitalize первой буквы каждой строки шапки если она строчная
     # (GigaChat пишет адресные строки типа "московская обл." в нижнем регистре)
-    result = re.sub(r'(?m)^([а-яёa-z])', lambda m: m.group(1).upper(), result)
+    # Capitalize только кириллических строчных букв в начале строки
+    # (не трогаем email, латинские строки)
+    result = re.sub(r'(?m)^([а-яё])', lambda m: m.group(1).upper(), result)
     # Финальный pass: восстанавливаем аббревиатуры ООО/АО/ПАО/ГБУ независимо от регистра
     for org in _ORG_ABBREVS:
         result = re.sub(_ORG_BOUNDARY + org[0] + org[1:].lower() + _ORG_BOUNDARY_END, org, result)
