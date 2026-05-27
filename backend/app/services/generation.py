@@ -93,14 +93,19 @@ async def run_document_generation(
 
             await db.commit()
 
-            await send_document_ready(email=user_email, order_id=order_id)
+            try:
+                await send_document_ready(email=user_email, order_id=order_id)
+            except Exception:
+                logger.exception("Email delivery failed for order %s — document is ready, form_data preserved for retry", order_id)
 
-            # Privacy: документ доставлен — персональные данные больше не нужны.
-            # Стираем отдельным commit только после успеха; на failed form_data
-            # сохраняется для retry (поэтому стирание не в транзакции status=done:
-            # сбой письма не должен оставить заказ без данных для повторной генерации).
-            order.form_data = {}
-            await db.commit()
+            # Privacy: стираем ПДн только после успешной доставки письма.
+            # Если email упал — form_data сохраняется для повторной отправки.
+            # Отдельный commit: сбой стирания не должен откатить status=done.
+            try:
+                order.form_data = {}
+                await db.commit()
+            except Exception:
+                logger.exception("Failed to wipe form_data for order %s", order_id)
         except Exception:
             logger.exception("Document generation failed for order %s", order_id)
             order.status = "failed"

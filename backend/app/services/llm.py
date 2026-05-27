@@ -104,13 +104,14 @@ _RETRY_FEEDBACK = (
 
 async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
     """Вызывает GigaChat. При validate=True делает до 2 retry при артефактах в ответе."""
-    token = await _get_gigachat_token()
 
     async def _once(extra_feedback: str = "") -> str:
+        # Токен перезапрашивается каждый раз — защита от истечения между retry
+        fresh_token = await _get_gigachat_token()
         async with httpx.AsyncClient(verify=_get_verify()) as client:
             resp = await client.post(
                 f"{GIGACHAT_API_URL}/chat/completions",
-                headers={"Authorization": f"Bearer {token}"},
+                headers={"Authorization": f"Bearer {fresh_token}"},
                 json={
                     "model": "GigaChat",
                     "messages": [
@@ -211,52 +212,47 @@ _YANDEX_RETRY_FEEDBACK = (
 )
 
 
-async def _call_yandex_review(draft: str) -> str:
-    """Второй проход: YandexGPT исправляет форматирование черновика от GigaChat."""
+async def _call_yandex_review(draft: str) -> tuple[str, bool]:
+    """Второй проход: YandexGPT исправляет форматирование черновика от GigaChat.
+
+    Возвращает (текст, yandex_ok) — флаг True если Yandex отработал успешно.
+    """
     if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
         logger.warning("YandexGPT not configured, skipping review pass")
-        return draft
+        return draft, False
 
-    try:
-        client = AsyncOpenAI(
-            api_key=settings.YANDEX_API_KEY,
-            base_url="https://ai.api.cloud.yandex.net/v1",
-        )
-        response = await client.chat.completions.create(
-            model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
-            messages=[
-                {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
-                {"role": "user", "content": draft},
-            ],
-            temperature=0.1,
-            max_tokens=4096,
-            extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
-            timeout=60,
-        )
-        result = response.choices[0].message.content
-        if not result or not result.strip():
-            logger.error("YandexGPT returned empty response, falling back to GigaChat draft")
-            return draft
-        return result
-    except Exception as e:
-        logger.error("YandexGPT review failed (%s: %s), falling back to GigaChat draft", type(e).__name__, str(e))
-        await _send_telegram_alert(f"⚠️ YandexGPT review failed: {type(e).__name__}: {str(e)[:100]}")
-        return draft
+    client = AsyncOpenAI(
+        api_key=settings.YANDEX_API_KEY,
+        base_url="https://ai.api.cloud.yandex.net/v1",
+    )
 
-
-async def _send_telegram_alert(message: str) -> None:
-    """Отправляет алерт в Telegram если настроен."""
-    if not settings.TELEGRAM_BOT_TOKEN or not settings.TELEGRAM_CHAT_ID:
-        return
-    try:
-        async with httpx.AsyncClient() as client:
-            await client.post(
-                f"https://api.telegram.org/bot{settings.TELEGRAM_BOT_TOKEN}/sendMessage",
-                json={"chat_id": settings.TELEGRAM_CHAT_ID, "text": message},
-                timeout=10,
+    for attempt in range(1, 3):
+        try:
+            response = await client.chat.completions.create(
+                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-lite/latest",
+                messages=[
+                    {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
+                    {"role": "user", "content": draft},
+                ],
+                temperature=0.1,
+                max_tokens=4096,
+                extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+                timeout=60,
             )
-    except Exception as e:
-        logger.error("Failed to send Telegram alert: %s", e)
+            result = response.choices[0].message.content
+            if not result or not result.strip():
+                logger.error("YandexGPT returned empty response (attempt %d)", attempt)
+                return draft, False
+            return result, True
+        except Exception as e:
+            logger.error("YandexGPT review failed attempt %d (%s: %s)", attempt, type(e).__name__, str(e))
+            if attempt == 2:
+                from app.services.notifications import send_telegram_alert
+                await send_telegram_alert(f"⚠️ YandexGPT review failed: {type(e).__name__}: {str(e)[:100]}")
+                return draft, False
+            await asyncio.sleep(2)
+
+    return draft, False
 
 
 _REFUSAL_MARKERS = (
@@ -489,15 +485,13 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
         )
     text = clean_llm_text(text)
 
-    reviewed_text = await _call_yandex_review(text)
-    if reviewed_text != text:
-        # YandexGPT успешно исправил
+    reviewed_text, yandex_ok = await _call_yandex_review(text)
+    if yandex_ok:
         text = reviewed_text
     else:
-        # YandexGPT упал или вернул исходный текст
-        # Делаем retry GigaChat с усиленным фокусом на форматирование
-        logger.info("YandexGPT review failed or skipped, attempting GigaChat retry with format feedback")
-        text = await _call_gigachat(system_prompt, user_prompt + _YANDEX_RETRY_FEEDBACK, validate=False)
+        # YandexGPT недоступен — retry GigaChat с усиленным промптом на форматирование
+        logger.info("YandexGPT review unavailable, retrying GigaChat with format feedback")
+        text = await _call_gigachat(system_prompt, user_prompt + _YANDEX_RETRY_FEEDBACK, validate=True)
         text = clean_llm_text(text)
 
     return _post_substitute_output(text, form_data)

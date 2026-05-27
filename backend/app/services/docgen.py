@@ -206,8 +206,8 @@ def _docx_to_pdf(docx_bytes: bytes) -> bytes:
         pdf.multi_cell(0, 6, line)
         pdf.ln(1)
 
-    if sig:
-        _render_sig_block(pdf)
+    # Блок подписи рендерится всегда — даже если LLM не вывел строку подписи
+    _render_sig_block(pdf)
 
     return bytes(pdf.output())
 
