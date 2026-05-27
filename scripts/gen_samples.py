@@ -13,7 +13,9 @@ from fpdf import FPDF
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.services.text_cleanup import clean_llm_text, fix_dashes
+from app.services.text_cleanup import (
+    clean_llm_text, fix_dashes, has_quality_artifacts, reorder_header_before_title
+)
 
 ROOT       = Path(__file__).parent.parent
 ENV_FILE   = ROOT / "backend" / ".env"
@@ -229,31 +231,11 @@ _RETRY_FEEDBACK = (
     "- Заголовок документа — одно слово без пояснений: ПРЕТЕНЗИЯ (не 'ПРЕТЕНЗИЯ о возврате...')"
 )
 
-_SECTION_LABELS = (
-    r'Шапка|Описание|Обоснование(?:\s+по\s+причине)?|Требование|Нарушение|Обстоятельства|Правовое\s+обоснование|'
-    r'Расчёт|Предупреждение|Приложени[ея]|Вводная|Реквизиты|Содержательная(?:\s+часть)?|'
-    r'Основание\s+несогласия'
-)
-
-_QUALITY_ARTIFACTS = (
-    re.compile(
-        r'^\d+[\.\)]\s+(' + _SECTION_LABELS + r')',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    re.compile(
-        r'^(' + _SECTION_LABELS + r')\s*:',
-        re.IGNORECASE | re.MULTILINE,
-    ),
-    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
-    re.compile(r'\*{2,}[^\*]+\*{2,}'),
-    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
-)
-
 
 def _has_quality_artifacts(text: str) -> bool:
     if len(text.strip()) < 300:
         return True
-    return any(p.search(text) for p in _QUALITY_ARTIFACTS)
+    return has_quality_artifacts(text)
 
 
 async def _call_once(token: str, system_prompt: str, user_prompt: str) -> str:
@@ -539,6 +521,7 @@ async def main() -> None:
                     print(f"    Ответ: {text[:300]!r}")
                     continue
 
+            text = reorder_header_before_title(text)
             text = clean_llm_text(text)
             text = fix_dashes(text)
             make_pdf(text, OUT_DIR / filename)
