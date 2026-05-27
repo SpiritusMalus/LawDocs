@@ -1743,6 +1743,284 @@ def calculate_rental_deposit(form_data: dict) -> dict:
     return data
 
 
+def calculate_neighbor_flood(form_data: dict) -> dict:
+    """Претензия о заливе квартиры соседом. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    apartment = str(data.get("apartment_address") or "").strip()
+    incident_date_raw = str(data.get("incident_date") or "").strip()
+    flood_source = str(data.get("flood_source") or "").strip()
+    has_act = str(data.get("has_act") or "").strip()
+    has_estimate = str(data.get("has_estimate") or "").strip()
+
+    incident_d = _parse_date(incident_date_raw)
+    incident_str = _fmt_date_ru(incident_d) if incident_d else incident_date_raw
+
+    try:
+        damage_amount = Decimal(str(data.get("damage_amount") or "0"))
+    except Exception:
+        damage_amount = Decimal("0")
+
+    intro_parts = []
+    if apartment:
+        intro_parts.append(f"Пострадавшая квартира: {apartment}")
+    intro_parts.append(f"Дата залива: {incident_str}")
+    act_note = "Факт залива зафиксирован актом управляющей компании." if has_act == "yes" else "Ущерб зафиксирован фотоматериалами."
+    intro_parts.append(act_note)
+    data["calculated_intro_section"] = " ".join(intro_parts)
+
+    legal_parts = [
+        "На основании ст. 1064 ГК РФ лицо, причинившее вред, обязано возместить его в полном объёме.",
+        "Согласно ст. 1082 ГК РФ возмещение вреда осуществляется путём возмещения убытков.",
+        "В соответствии с ч. 4 ст. 30 ЖК РФ собственник помещения обязан поддерживать его в надлежащем состоянии, не допуская бесхозяйственного обращения с ним.",
+    ]
+    if flood_source == "management_company":
+        legal_parts.append(
+            "Согласно ст. 161 ЖК РФ управляющая организация несёт ответственность за надлежащее содержание общего имущества многоквартирного дома."
+        )
+    data["calculated_legal_section"] = " ".join(legal_parts)
+
+    estimate_note = " на основании заключения независимого оценщика" if has_estimate == "yes" else " по рыночным ценам восстановительного ремонта"
+    data["calculated_amount_section"] = (
+        f"Размер причинённого ущерба составляет {_fmt(damage_amount)} руб.{estimate_note}."
+    )
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу возместить причинённый ущерб в размере {_fmt(damage_amount)} руб. "
+        f"в течение 10 дней с даты получения настоящей претензии. "
+        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться в суд "
+        f"с требованием о взыскании суммы ущерба, компенсации морального вреда (ст. 151 ГК РФ) и судебных расходов."
+    )
+
+    return data
+
+
+def calculate_ddu_defects(form_data: dict) -> dict:
+    """Претензия о недостатках по ДДУ. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    apartment = str(data.get("apartment_address") or "").strip()
+    contract_num = str(data.get("contract_number") or "").strip()
+    transfer_date_raw = str(data.get("transfer_date") or "").strip()
+    elimination_period = str(data.get("elimination_period") or "30").strip()
+
+    transfer_d = _parse_date(transfer_date_raw)
+    transfer_str = _fmt_date_ru(transfer_d) if transfer_d else transfer_date_raw
+
+    try:
+        defects_amount = Decimal(str(data.get("defects_amount") or "0"))
+    except Exception:
+        defects_amount = Decimal("0")
+
+    intro_parts = []
+    if contract_num:
+        intro_parts.append(f"Договор участия в долевом строительстве № {contract_num}")
+    if apartment:
+        intro_parts.append(f"объект — {apartment}")
+    if transfer_str:
+        intro_parts.append(f"акт приёма-передачи подписан {transfer_str}")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "." if intro_parts else ""
+
+    data["calculated_legal_section"] = (
+        "В соответствии с ч. 1 ст. 7 Федерального закона от 30.12.2004 № 214-ФЗ застройщик обязан передать "
+        "участнику долевого строительства объект, качество которого соответствует условиям договора и "
+        "обязательным требованиям. Согласно ч. 2 ст. 7 ФЗ-214 в случае, если объект построен с отступлениями "
+        "от условий договора, дольщик вправе потребовать безвозмездного устранения недостатков в разумный срок. "
+        "Гарантийный срок на объект составляет 5 лет (ч. 5 ст. 7 ФЗ-214). "
+        "Согласно ст. 29 Закона РФ «О защите прав потребителей» потребитель вправе потребовать безвозмездного "
+        "устранения недостатков оказанной услуги."
+    )
+
+    if defects_amount > 0:
+        data["calculated_amount_section"] = (
+            f"По предварительной оценке стоимость устранения выявленных недостатков составляет {_fmt(defects_amount)} руб."
+        )
+    else:
+        data["calculated_amount_section"] = ""
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу устранить все перечисленные недостатки в срок {elimination_period} календарных дней "
+        f"с даты получения настоящей претензии. "
+        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться в суд с требованием: "
+        f"безвозмездного устранения недостатков или возмещения расходов на их устранение, "
+        f"неустойки в размере 1% от цены договора за каждый день просрочки, "
+        f"компенсации морального вреда, штрафа в размере 50% от присуждённой суммы."
+    )
+
+    return data
+
+
+def calculate_online_course(form_data: dict) -> dict:
+    """Претензия онлайн-школе о возврате средств. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    school = str(data.get("school_name") or "").strip() or "онлайн-школе"
+    course = str(data.get("course_name") or "").strip()
+    contract_date_raw = str(data.get("contract_date") or "").strip()
+    problem_type = str(data.get("problem_type") or "").strip()
+    refund_request_date_raw = str(data.get("refund_request_date") or "").strip()
+
+    contract_d = _parse_date(contract_date_raw)
+    contract_str = _fmt_date_ru(contract_d) if contract_d else contract_date_raw
+
+    refund_d = _parse_date(refund_request_date_raw)
+    refund_str = _fmt_date_ru(refund_d) if refund_d else refund_request_date_raw
+
+    try:
+        course_price = Decimal(str(data.get("course_price") or "0"))
+    except Exception:
+        course_price = Decimal("0")
+    try:
+        claimed_amount = Decimal(str(data.get("claimed_amount") or "0"))
+    except Exception:
+        claimed_amount = Decimal("0")
+
+    refund_amount = claimed_amount if claimed_amount > 0 else course_price
+
+    intro_parts = [f"Онлайн-школа: {school}"]
+    if course:
+        intro_parts.append(f"курс: «{course}»")
+    intro_parts.append(f"стоимость: {_fmt(course_price)} руб.")
+    if contract_str:
+        intro_parts.append(f"дата оплаты: {contract_str}")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    legal_parts = [
+        "В соответствии с ч. 2 ст. 54 Федерального закона от 29.12.2012 № 273-ФЗ «Об образовании в Российской Федерации» "
+        "при расторжении договора расчёт производится за фактически оказанные услуги.",
+        "Согласно п. 24 Постановления Правительства РФ от 15.09.2020 № 1563 при расторжении договора исполнитель "
+        "возвращает уплаченные средства за вычетом стоимости фактически оказанных услуг; фактические расходы должны быть "
+        "документально подтверждены.",
+        "На основании ст. 32 Закона РФ «О защите прав потребителей» потребитель вправе отказаться от исполнения договора "
+        "об оказании услуг в любое время при условии оплаты исполнителю фактически понесённых им расходов.",
+    ]
+    if problem_type == "quality":
+        legal_parts.append(
+            "В соответствии со ст. 29 ЗоЗПП потребитель вправе потребовать соразмерного уменьшения цены услуги "
+            "либо возмещения расходов по устранению недостатков, если услуга не соответствует условиям договора."
+        )
+    data["calculated_legal_section"] = " ".join(legal_parts)
+
+    amount_parts = []
+    if problem_type == "not_started":
+        amount_parts.append(
+            f"Обучение не началось, занятия не проводились — фактических расходов у исполнителя нет, "
+            f"оснований для удержания средств не имеется. Сумма к возврату: {_fmt(refund_amount)} руб."
+        )
+    elif problem_type == "partial":
+        amount_parts.append(
+            f"Часть услуг оказана; сумма к возврату за неоказанные услуги: {_fmt(refund_amount)} руб. "
+            f"Прошу предоставить детализацию фактически понесённых расходов с подтверждающими документами."
+        )
+    else:
+        amount_parts.append(f"Сумма к возврату: {_fmt(refund_amount)} руб.")
+
+    if refund_str:
+        amount_parts.append(
+            f"Запрос о возврате направлен {refund_str}; неустойка 3% в день начисляется с указанной даты (ч. 5 ст. 28 ЗоЗПП)."
+        )
+    data["calculated_amount_section"] = " ".join(amount_parts)
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу вернуть денежные средства в размере {_fmt(refund_amount)} руб. "
+        f"в течение 10 дней с даты получения настоящей претензии. "
+        f"В случае отказа буду вынужден(-а) обратиться в суд с требованием о взыскании суммы долга, "
+        f"неустойки 3% за каждый день просрочки, компенсации морального вреда и штрафа 50% (ч. 6 ст. 13 ЗоЗПП)."
+    )
+
+    return data
+
+
+def calculate_tour_operator(form_data: dict) -> dict:
+    """Претензия туроператору о возврате средств. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    operator = str(data.get("tour_operator") or "").strip() or "туроператору"
+    destination = str(data.get("trip_destination") or "").strip()
+    departure_date_raw = str(data.get("departure_date") or "").strip()
+    contract_num = str(data.get("contract_number") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+
+    departure_d = _parse_date(departure_date_raw)
+    departure_str = _fmt_date_ru(departure_d) if departure_d else departure_date_raw
+
+    try:
+        tour_price = Decimal(str(data.get("tour_price") or "0"))
+    except Exception:
+        tour_price = Decimal("0")
+    try:
+        refunded_amount = Decimal(str(data.get("refunded_amount") or "0"))
+    except Exception:
+        refunded_amount = Decimal("0")
+
+    refund_due = tour_price - refunded_amount if refunded_amount > 0 else tour_price
+
+    intro_parts = [f"Туроператор: {operator}"]
+    if destination:
+        intro_parts.append(f"направление: {destination}")
+    if departure_str:
+        intro_parts.append(f"дата вылета: {departure_str}")
+    intro_parts.append(f"стоимость тура: {_fmt(tour_price)} руб.")
+    if contract_num:
+        intro_parts.append(f"договор № {contract_num}")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    if violation_type in ("operator_cancelled", "changed_conditions"):
+        legal_text = (
+            "В соответствии со ст. 10 Федерального закона от 24.11.1996 № 132-ФЗ «Об основах туристской деятельности "
+            "в Российской Федерации» при существенном изменении обстоятельств, в том числе невозможности совершения тура "
+            "по вине туроператора или изменения условий путешествия, турист вправе отказаться от тура и получить полный "
+            "возврат уплаченных средств. "
+            "Согласно ст. 10.1 ФЗ № 132-ФЗ туроператор обязан вернуть денежные средства в течение 10 дней с момента "
+            "предъявления требования."
+        )
+    else:
+        legal_text = (
+            "На основании ст. 32 Закона РФ «О защите прав потребителей» и ст. 782 ГК РФ потребитель вправе отказаться "
+            "от исполнения договора об оказании услуг в любое время при условии оплаты исполнителю фактически понесённых им "
+            "расходов. Фактические расходы должны быть документально подтверждены; удержание без подтверждения расходов незаконно."
+        )
+    legal_text += (
+        " В соответствии с ч. 5 ст. 28 ЗоЗПП нарушение срока возврата влечёт неустойку 3% от суммы долга за каждый день "
+        "просрочки. При обращении в суд — штраф 50% от присуждённой суммы (ч. 6 ст. 13 ЗоЗПП)."
+    )
+    data["calculated_legal_section"] = legal_text
+
+    if refunded_amount > 0:
+        data["calculated_amount_section"] = (
+            f"Частично возвращено {_fmt(refunded_amount)} руб. Остаток к возврату: {_fmt(refund_due)} руб."
+        )
+    else:
+        data["calculated_amount_section"] = (
+            f"Сумма к возврату: {_fmt(tour_price)} руб."
+        )
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу вернуть денежные средства в размере {_fmt(refund_due)} руб. "
+        f"в течение 10 дней с даты получения настоящей претензии. "
+        f"В случае отказа буду вынужден(-а) обратиться в суд с требованием о взыскании суммы долга, "
+        f"неустойки 3% за каждый день просрочки, компенсации морального вреда и штрафа 50% (ч. 6 ст. 13 ЗоЗПП)."
+    )
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
@@ -1757,4 +2035,8 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "airline": calculate_airline,
     "rental_deposit": calculate_rental_deposit,
     "court_order": calculate_court_order,
+    "neighbor_flood": calculate_neighbor_flood,
+    "ddu_defects": calculate_ddu_defects,
+    "online_course": calculate_online_course,
+    "tour_operator": calculate_tour_operator,
 }

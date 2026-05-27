@@ -16,7 +16,38 @@ header_fields:
     field: user_phone
   - field: user_email
 
+# Гибридный режим: структура документа рендерится через python_template,
+# LLM перефразирует только {{llm_narrative}} из flood_cause + damage_desc.
+# system_prompt сохранён для совместимости с обязательным полем модели,
+# но в гибридном режиме не используется.
 system_prompt: |
+  Гибридный режим: структура документа рендерится через python_template,
+  LLM перефразирует только {{llm_narrative}}.
+
+python_template: |
+  [calculated_intro_section]
+
+  {{llm_narrative}}
+
+  [calculated_legal_section]
+
+  [calculated_amount_section]
+
+  [calculated_demand_section]
+
+  _________________ / _________________
+
+narrative_prompt: |
+  Ты — помощник юриста. Кратко (3–5 предложений) опиши фактические обстоятельства залива
+  официально-деловым стилем: дата происшествия, откуда пришла вода, причина залива,
+  что именно пострадало в квартире. Исправь орфографические и грамматические ошибки.
+  Верни ТОЛЬКО текст абзаца, без вступлений и пояснений.
+
+narrative_fields:
+  - flood_cause
+  - damage_desc
+
+ai_narrative_prompt: |
   Ты — юрист по жилищному и гражданскому праву. Составь претензию виновнику залива квартиры.
      [neighbor_name]
      [neighbor_address_full]
