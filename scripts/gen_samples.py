@@ -212,7 +212,30 @@ async def get_token(auth_key: str) -> str:
         return r.json()["access_token"]
 
 
-async def call_giga(token: str, system_prompt: str, user_prompt: str) -> str:
+_RETRY_FEEDBACK = (
+    "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
+    "- НЕ пиши нумерованные метки разделов (1. Шапка:, 7. Требование: и т.п.)\n"
+    "- НЕ пиши дату составления документа\n"
+    "- НЕ пиши 'Дата и подпись'\n"
+    "- НЕ используй **жирный** или *курсив*\n"
+    "- НЕ пиши слова ЗАГЛАВНЫМИ БУКВАМИ внутри текста (кроме названия документа)\n"
+    "- Заголовок документа — одно слово без пояснений: ПРЕТЕНЗИЯ (не 'ПРЕТЕНЗИЯ о возврате...')"
+)
+
+_QUALITY_ARTIFACTS = (
+    re.compile(r'^\d+[\.\)]\s+(Шапка|Заголовок|Описание|Нарушение|Требование|Обстоятельства|Правовое\s+обоснование|Приложен|Расчёт|Вводная)', re.IGNORECASE | re.MULTILINE),
+    re.compile(r'\*{2,}[^\*]+\*{2,}'),
+    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
+)
+
+
+def _has_quality_artifacts(text: str) -> bool:
+    if len(text.strip()) < 300:
+        return True
+    return any(p.search(text) for p in _QUALITY_ARTIFACTS)
+
+
+async def _call_once(token: str, system_prompt: str, user_prompt: str) -> str:
     async with httpx.AsyncClient(verify=False) as c:
         r = await c.post(
             f"{GIGA_API}/chat/completions",
@@ -225,6 +248,17 @@ async def call_giga(token: str, system_prompt: str, user_prompt: str) -> str:
         )
         r.raise_for_status()
         return r.json()["choices"][0]["message"]["content"]
+
+
+async def call_giga(token: str, system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
+    text = await _call_once(token, system_prompt, user_prompt)
+    if validate:
+        for attempt in range(1, 3):
+            if not _has_quality_artifacts(text):
+                break
+            print(f"    ⚠  артефакты форматирования (попытка {attempt}), повтор…")
+            text = await _call_once(token, system_prompt, user_prompt + _RETRY_FEEDBACK)
+    return text
 
 
 # ── Детектор отказа GigaChat ──────────────────────────────────
@@ -345,27 +379,51 @@ def _render_sig_block(pdf: "FPDF", sig_lines: list[str], line_h: float = 6.0) ->
 
 # ── Постобработка текста LLM ──────────────────────────────────
 
-_SECTION_LABEL_RE = re.compile(r'^[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,38}:$')
-_DATE_SIG_RE      = re.compile(r'^(\d+\.\s*)?дата\s+и\s+подпись\.?$', re.IGNORECASE)
-_CITY_LINE_RE     = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
-_DOC_DATE_RE      = re.compile(
+_SECTION_LABEL_RE       = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
+_DATE_SIG_RE            = re.compile(r'^(\d+[\.\)]?\s*)?дата\s+(и\s+)?подпись[:\.]?\s*$', re.IGNORECASE)
+_CITY_LINE_RE           = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
+_DOC_DATE_RE            = re.compile(
     r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|'
     r'июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*(г\.?|года)?\s*$',
     re.IGNORECASE,
 )
-_SHORT_DATE_LINE_RE = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
-_MARKDOWN_RE        = re.compile(r'^#{1,3}\s|^-{3,}$')
+_SHORT_DATE_LINE_RE     = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
+_MARKDOWN_RE            = re.compile(r'^#{1,3}\s|^\*{1,3}[^\*]|^-{3,}$')
+_TITLE_WITH_SUBTITLE_RE = re.compile(
+    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
+    re.IGNORECASE,
+)
+_ALL_CAPS_RE            = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
 
 
 def _clean_llm_text(text: str) -> str:
     """Детерминированно убирает артефакты GigaChat независимо от промпта."""
     lines = text.split("\n")
-    cleaned = []
+    cleaned: list[str] = []
+    prev_was_title = False
+
     for line in lines:
         s = line.strip()
+
         if not s:
+            prev_was_title = False
             cleaned.append(line)
             continue
+
+        if s in _TITLE_WORDS:
+            prev_was_title = True
+            cleaned.append(line)
+            continue
+
+        # «ПРЕТЕНЗИЯ о возврате...» — оставляем только само слово
+        m = _TITLE_WITH_SUBTITLE_RE.match(s)
+        if m:
+            cleaned.append(m.group(1).upper())
+            prev_was_title = True
+            continue
+
+        prev_was_title = False
+
         if _DATE_SIG_RE.match(s):
             continue
         if _SECTION_LABEL_RE.match(s):
@@ -378,9 +436,20 @@ def _clean_llm_text(text: str) -> str:
             continue
         if _MARKDOWN_RE.match(s):
             continue
+        # ЗАГЛАВНЫЕ строки (не заголовок документа) → обычный регистр
+        if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
+            cleaned.append(line.replace(s, s.capitalize()))
+            continue
+
+        # Убираем markdown-жирный и курсив внутри строки
+        line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
+        line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
+
         cleaned.append(line)
+
     result = "\n".join(cleaned)
     result = re.sub(r'-{2,}', '—', result)
+    result = re.sub(r'\n{3,}', '\n\n', result)
     return result
 
 
@@ -513,12 +582,12 @@ async def main() -> None:
                     continue
                 sp = FORMAT_RULES + "\n" + pre_substitute_prompt(sp, form_data)
                 up = build_user_prompt(sid, form_data)
-                text = await call_giga(token, sp, up)
+                text = await call_giga(token, sp, up, validate=True)
                 if _is_refusal(text):
                     print(f"🚫  GigaChat отказал (content filter): пропускаем {filename}")
                     print(f"    Ответ: {text[:200]!r}")
                     continue
-                if len(text.strip()) < 200:
+                if len(text.strip()) < 300:
                     print(f"⚠  GigaChat вернул слишком короткий текст ({len(text.strip())} симв.): пропускаем {filename}")
                     print(f"    Ответ: {text[:300]!r}")
                     continue
