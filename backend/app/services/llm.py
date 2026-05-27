@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 import httpx
 
@@ -90,7 +90,8 @@ async def _get_gigachat_token() -> str:
 
 _RETRY_FEEDBACK = (
     "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
-    "- НЕ пиши нумерованные метки разделов (1. Шапка:, 7. Требование: и т.п.)\n"
+    "- НЕ пиши метки разделов ни с номером, ни без: «Шапка:», «Описание:», «Требование:», «Нарушение:», «Расчёт:», «Предупреждение:», «Реквизиты:» и любые подобные — пиши сразу содержание без метки\n"
+    "- НЕ пиши условные конструкции («Если X = Y», «если указан...», «если есть...») — просто применяй их молча\n"
     "- НЕ пиши дату составления документа\n"
     "- НЕ пиши 'Дата и подпись'\n"
     "- НЕ используй **жирный** или *курсив*\n"
@@ -221,13 +222,34 @@ _TITLE_WITH_SUBTITLE_RE = re.compile(
 # Строка только из заглавных букв (>= 10 символов) — ИТОГО К ВЫПЛАТЕ, ТРЕБУЮ и т.п.
 _ALL_CAPS_RE        = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
 
+_SECTION_LABELS = (
+    r'Шапка|Описание|Требование|Нарушение|Обстоятельства|Правовое\s+обоснование|'
+    r'Расчёт|Предупреждение|Приложени[ея]|Вводная|Реквизиты|Содержательная(?:\s+часть)?'
+)
+
 _QUALITY_ARTIFACTS = (
     # нумерованные метки разделов в начале строки
-    re.compile(r'^\d+[\.\)]\s+(Шапка|Заголовок|Описание|Нарушение|Требование|Обстоятельства|Правовое\s+обоснование|Приложен|Расчёт|Вводная)', re.IGNORECASE),
+    re.compile(
+        r'^\d+[\.\)]\s+(' + _SECTION_LABELS + r')',
+        re.IGNORECASE | re.MULTILINE,
+    ),
+    # ненумерованные метки разделов в начале строки
+    re.compile(
+        r'^(' + _SECTION_LABELS + r')\s*:',
+        re.IGNORECASE | re.MULTILINE,
+    ),
+    # условные конструкции из инструкции попали в документ
+    re.compile(r'^Если\s+\w[\w_]*\s*[=:]', re.IGNORECASE | re.MULTILINE),
     # markdown-жирный или курсив внутри строки
     re.compile(r'\*{2,}[^\*]+\*{2,}'),
     # технические переменные формы в тексте документа
     re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
+)
+
+# Метка раздела слитая с содержимым: «Шапка: Руководителю...» → «Руководителю...»
+_SECTION_PREFIX_RE = re.compile(
+    r'^(' + _SECTION_LABELS + r')\s*:\s*',
+    re.IGNORECASE,
 )
 
 
@@ -266,6 +288,16 @@ def _clean_llm_text(text: str) -> str:
 
         prev_was_title = False
 
+        # «Шапка: Руководителю...» → убираем префикс, оставляем содержимое
+        m = _SECTION_PREFIX_RE.match(s)
+        if m:
+            # Если после метки ничего нет — строка пустая, пропускаем
+            remainder = s[m.end():].strip()
+            if not remainder:
+                continue
+            line = line[len(s) - len(remainder):]
+            s = remainder
+
         if _DATE_SIG_RE.match(s):
             continue
         if _SECTION_LABEL_RE.match(s):
@@ -285,8 +317,10 @@ def _clean_llm_text(text: str) -> str:
             continue
 
         # Убираем markdown-жирный внутри строки: **слово** → слово
+        # Блок подписи (_ / _) не трогаем — он не является markdown
         line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
-        line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
+        if not re.search(r'^_+\s*/\s*_+$', s):
+            line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
 
         cleaned.append(line)
 
@@ -329,7 +363,8 @@ def _build_user_prompt(situation_id: str, form_data: dict) -> str:
     через _post_substitute_output. Граница приватности — app.services.pii_classifier.
     """
     safe, _sensitive = split_for_llm(form_data)
-    lines = [f"Ситуация: {situation_id}", "", "Данные пользователя:"]
+    today = date.today().strftime("%d.%m.%Y")
+    lines = [f"Ситуация: {situation_id}", f"Текущая дата: {today}", "", "Данные пользователя:"]
     for k, v in safe.items():
         if v:
             lines.append(f"- {k}: {_sanitize_value(str(v))}")
