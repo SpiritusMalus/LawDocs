@@ -205,8 +205,8 @@
   user_address: "100006, г. Москва, ул. Образцовая, д. 163, кв. 78"
   user_phone: "+7 (999) 999-99-99"
   user_email: ivanov@example.ru
-  provider_name: "ПАО «ВымпелКом» (Билайн), ИНН 7713076301, 127083, г. Москва, ул. 8 Марта, д. 10, стр. 14"
-  provider_address: "127083, г. Москва, ул. 8 Марта, д. 10, стр. 14"
+  provider_name: "ПАО «ВымпелКом» (Билайн)"
+  provider_address: "ИНН 7713076301, 127083, г. Москва, ул. 8 Марта, д. 10, стр. 14"
   contract_number: "МСК-2023-000001"
   service_type: "Домашний интернет 500 Мбит/с"
   problem_type: "отсутствие услуги связи"
@@ -223,7 +223,7 @@
   user_address: "100007, г. Москва, ул. Образцовая, д. 43, кв. 21"
   user_phone: "+7 (999) 888-88-88"
   user_email: ivanova@example.ru
-  clinic_name: "АО «ГК «СМ-Клиника»», г. Москва, Старопетровский пр., д. 7А, стр. 1"
+  clinic_name: "АО «ГК «СМ-Клиника»»"
   clinic_address: "г. Москва, Старопетровский пр., д. 7А, стр. 1"
   treatment_date: 10.04.2026
   insurance_type: "ОМС (полис имеется)"
@@ -312,8 +312,8 @@
   user_address: "100008, г. Москва, ул. Образцовая, д. 3, кв. 88"
   user_phone: "+7 (999) 999-99-99"
   user_email: ivanov@example.ru
-  service_name: "Fit Service (ООО «Фит Технологии»), ИНН 7734299956, г. Москва, ул. Люблинская, д. 157"
-  service_address: "г. Москва, ул. Люблинская, д. 157"
+  service_name: "Fit Service (ООО «Фит Технологии»)"
+  service_address: "ИНН 7734299956, г. Москва, ул. Люблинская, д. 157"
   car_model: "Toyota Camry 2.5 2019 г."
   car_plate: "А 000 ОО 777"
   service_date: 05.04.2026
@@ -367,7 +367,8 @@
   user_address: "140001, Московская обл., г. Мытищи, ул. Примерная, д. 1, кв. 56"
   user_phone: "+7 (999) 999-99-99"
   user_email: ivanov@example.ru
-  insurance_company: "СПАО «СОГАЗ», ИНН 7736035485, 107078, г. Москва, пер. Гарднера, д. 1, стр. 1"
+  insurance_company: "СПАО «СОГАЗ»"
+  insurance_address: "107078, г. Москва, пер. Гарднера, д. 1, стр. 1"
   policy_number: "ААВ 0000000001"
   incident_date: 15.03.2026
   incident_location: "Московская обл., г. Мытищи, Ярославское ш., у д. 111"
