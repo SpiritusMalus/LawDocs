@@ -128,7 +128,7 @@ async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool
 
     if validate:
         for attempt in range(1, 3):
-            if not _has_quality_artifacts(text):
+            if not has_quality_artifacts(text):
                 break
             logger.warning(
                 "GigaChat response has quality artifacts (attempt %d), retrying", attempt

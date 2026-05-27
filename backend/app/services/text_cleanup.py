@@ -131,9 +131,9 @@ def clean_llm_text(text: str) -> str:
             continue
 
         # ALL_CAPS lines (not a document title) → normal case
-        # Properly: lowercase everything then capitalize first letter only
+        # Properly: capitalize each word, handle patronymic names and multi-word phrases
         if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
-            proper_case = s.lower().capitalize()
+            proper_case = " ".join(word.capitalize() for word in s.split())
             cleaned.append(line.replace(s, proper_case))
             continue
 
