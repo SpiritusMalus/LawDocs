@@ -22,35 +22,23 @@
 "план"                    → План этой сессии
 ```
 
-Полный список и примеры: [[TRIGGER_COMMANDS]]
 
 ---
 
-**КАК ЭТО РАБОТАЕТ:**
+## Git workflow
 
-1. **Ты:** "начинаем"
-2. **Я:** [читаю handoff_N, показываю статус, бэклог, рекомендации]
-3. **Ты:** "Issue #20" (выбираешь что делать)
-4. **Я:** [выполняю ritual, показываю 5 правил, модель, план]
-5. **Ты:** "начинай"
-6. **Я:** [работаю]
+**Claude:** feature branch → code → commit → STOP  
+**User:** push → deploy → verify
 
----
+```bash
+git checkout -b fix-issue-XXX   # всегда от main
+# ... код ...
+git add <files>
+git commit -m "fix: description"
+# STOP — push делает User
+```
 
-## Skill routing
+**Запрещено Claude:** `git push`, `/ship`, docker команды, SSH на сервер.
 
-When the user's request matches an available skill, invoke it via the Skill tool. When in doubt, invoke the skill.
+Причина: push и deploy — зона ответственности User'а. Claude не видит состояние прода, не знает когда безопасно деплоить, и не должен принимать эти решения самостоятельно.
 
-Key routing rules:
-- Product ideas/brainstorming → invoke /office-hours
-- Strategy/scope → invoke /plan-ceo-review
-- Architecture → invoke /plan-eng-review
-- Design system/plan review → invoke /design-consultation or /plan-design-review
-- Full review pipeline → invoke /autoplan
-- Bugs/errors → invoke /investigate
-- QA/testing site behavior → invoke /qa or /qa-only
-- Code review/diff check → invoke /review
-- Visual polish → invoke /design-review
-- Ship/deploy/PR → invoke /ship or /land-and-deploy
-- Save progress → invoke /context-save
-- Resume context → invoke /context-restore
