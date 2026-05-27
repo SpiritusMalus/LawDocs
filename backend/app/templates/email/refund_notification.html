@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Возврат средств</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #f1f5f9 100%);
+            padding: 40px 20px;
+            line-height: 1.6;
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.07), 0 10px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            padding: 32px 24px;
+            text-align: center;
+        }
+        .header-icon { font-size: 48px; margin-bottom: 12px; display: block; }
+        .header h1 { font-size: 26px; font-weight: 700; color: #ffffff; margin-bottom: 4px; }
+        .header p { font-size: 14px; color: rgba(255,255,255,0.9); }
+        .content { padding: 32px 24px; }
+        .info-block {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            border-left: 4px solid #6366f1;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            font-size: 14px;
+            color: #3730a3;
+        }
+        .info-block strong { display: block; color: #312e81; margin-bottom: 6px; font-weight: 600; }
+        .status-section {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .status-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 14px;
+            font-size: 14px;
+            color: #475569;
+        }
+        .status-item:last-child { margin-bottom: 0; }
+        .status-icon { margin-top: 2px; font-weight: bold; font-size: 16px; color: #6366f1; }
+        .status-label { flex: 1; }
+        .status-label strong { display: block; color: #1e293b; margin-bottom: 2px; font-weight: 500; }
+        .footer-note {
+            font-size: 12px;
+            color: #7f8fa3;
+            text-align: center;
+            padding-top: 16px;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <span class="header-icon">💸</span>
+            <h1>Возврат средств</h1>
+            <p>Мы не смогли создать документ и возвращаем оплату</p>
+        </div>
+        <div class="content">
+            <div class="info-block">
+                <strong>Документ не удалось сформировать</strong>
+                К сожалению, после нескольких попыток создать ваш документ произошла техническая ошибка.
+                Мы автоматически инициировали возврат средств.
+            </div>
+            <div class="status-section">
+                <div class="status-item">
+                    <span class="status-icon">✓</span>
+                    <div class="status-label">
+                        <strong>Возврат инициирован</strong>
+                        Средства поступят на вашу карту в течение 3–10 рабочих дней.
+                    </div>
+                </div>
+                <div class="status-item">
+                    <span class="status-icon">i</span>
+                    <div class="status-label">
+                        <strong>Вопросы?</strong>
+                        Напишите нам — мы поможем разобраться.
+                    </div>
+                </div>
+            </div>
+            <p class="footer-note">Номер заказа: {{ order_id }}</p>
+        </div>
+    </div>
+</body>
+</html>

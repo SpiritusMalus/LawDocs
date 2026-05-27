@@ -90,3 +90,10 @@ async def send_document_failed(email: str, order_id: str) -> None:
         order_id=order_id[:8].upper(),
     )
     await _send(to=email, subject="LawDocs — ошибка при создании документа", html=html)
+
+
+async def send_refund_notification(email: str, order_id: str) -> None:
+    html = _templates.get_template("refund_notification.html").render(
+        order_id=order_id[:8].upper(),
+    )
+    await _send(to=email, subject="LawDocs — возврат средств", html=html)

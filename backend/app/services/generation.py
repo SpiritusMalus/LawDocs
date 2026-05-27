@@ -25,7 +25,7 @@ async def run_document_generation(
 ) -> None:
     from app.models.document import Document
     from app.services.docgen import generate_document, generate_instruction
-    from app.services.email import send_document_failed, send_document_ready
+    from app.services.email import send_document_failed, send_document_ready, send_refund_notification
     from app.services.llm import fill_instruction, fill_template
 
     async with AsyncSessionLocal() as db:
@@ -108,20 +108,43 @@ async def run_document_generation(
                 logger.exception("Failed to wipe form_data for order %s", order_id)
         except Exception:
             logger.exception("Document generation failed for order %s", order_id)
-            order.status = "failed"
+            if notify_on_failure and order.yookassa_payment_id:
+                # Все retry исчерпаны — возвращаем деньги автоматически
+                from app.services.payment import refund_payment
+                try:
+                    refunded = await refund_payment(order.yookassa_payment_id, order.amount)
+                except Exception:
+                    logger.exception("Refund request failed for order %s", order_id)
+                    refunded = False
+                order.status = "refunded"
+                order.form_data = {}
+            else:
+                order.status = "failed"
             await db.commit()
             if notify_on_failure:
                 try:
-                    await send_document_failed(email=user_email, order_id=order_id)
+                    if order.status == "refunded":
+                        await send_refund_notification(email=user_email, order_id=order_id)
+                    else:
+                        await send_document_failed(email=user_email, order_id=order_id)
                 except Exception:
                     logger.exception("Failed to send failure notification for order %s", order_id)
                 try:
                     from app.services.notifications import send_telegram_alert
-                    await send_telegram_alert(
-                        f"❌ <b>Order failed</b>\n"
-                        f"order_id: <code>{order_id}</code>\n"
-                        f"situation: {situation_id}\n"
-                        f"email: {user_email}"
-                    )
+                    if order.status == "refunded":
+                        await send_telegram_alert(
+                            f"💸 <b>Auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
+                            f"order_id: <code>{order_id}</code>\n"
+                            f"payment_id: <code>{order.yookassa_payment_id}</code>\n"
+                            f"situation: {situation_id}\n"
+                            f"email: {user_email}"
+                        )
+                    else:
+                        await send_telegram_alert(
+                            f"❌ <b>Order failed</b>\n"
+                            f"order_id: <code>{order_id}</code>\n"
+                            f"situation: {situation_id}\n"
+                            f"email: {user_email}"
+                        )
                 except Exception:
                     logger.exception("Failed to send Telegram alert for order %s", order_id)
