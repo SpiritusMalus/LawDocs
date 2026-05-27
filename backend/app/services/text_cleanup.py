@@ -83,9 +83,13 @@ def reorder_header_before_title(text: str) -> str:
     return '\n'.join(lines[:title_idx] + header_lines + [''] + [lines[title_idx]] + rest_lines)
 
 
-_ORG_ABBREVS = frozenset({"ООО", "АО", "ПАО", "ГБУ", "МБУ", "ИП", "ФГУП", "МУП", "ГБУЗ", "ФКУ", "НКО", "КФХ"})
+_ORG_ABBREVS = frozenset({"ООО", "АО", "ПАО", "ГБУ", "МБУ", "ИП", "ФГУП", "МУП", "ГБУЗ", "ФКУ", "НКО", "КФХ", "ФССП", "ФАС", "РПН"})
 
 _INLINE_CAPS_RE = re.compile(r'\b([А-ЯЁ]{3,})\b')
+
+# \b не работает для кириллицы в Python — используем lookaround
+_ORG_BOUNDARY = r'(?<![А-ЯЁа-яёA-Za-z])'
+_ORG_BOUNDARY_END = r'(?![А-ЯЁа-яёA-Za-z])'
 
 
 def _fix_inline_caps(s: str) -> str:
@@ -129,9 +133,8 @@ def _to_sentence_case(s: str) -> str:
     # Восстанавливаем аббревиатуры организационно-правовых форм которые могли
     # быть написаны неверно (Ооо → ООО, Ао → АО и т.д.)
     for org in _ORG_ABBREVS:
-        # Заменяем все варианты написания (с любым регистром) на правильный
-        result = re.sub(r'\b' + org[0] + org[1:].lower() + r'\b', org, result)
-        result = re.sub(r'\b' + org.lower() + r'\b', org, result)
+        result = re.sub(_ORG_BOUNDARY + org[0] + org[1:].lower() + _ORG_BOUNDARY_END, org, result)
+        result = re.sub(_ORG_BOUNDARY + org.lower() + _ORG_BOUNDARY_END, org, result)
     return result
 
 _SECTION_PREFIX_RE = re.compile(
@@ -279,10 +282,13 @@ def clean_llm_text(text: str) -> str:
 
     result = "\n".join(cleaned)
     result = re.sub(r'\n{3,}', '\n\n', result)
+    # Capitalize первой буквы каждой строки шапки если она строчная
+    # (GigaChat пишет адресные строки типа "московская обл." в нижнем регистре)
+    result = re.sub(r'(?m)^([а-яёa-z])', lambda m: m.group(1).upper(), result)
     # Финальный pass: восстанавливаем аббревиатуры ООО/АО/ПАО/ГБУ независимо от регистра
     for org in _ORG_ABBREVS:
-        result = re.sub(r'\b' + org[0] + org[1:].lower() + r'\b', org, result)
-        result = re.sub(r'\b' + org.lower() + r'\b', org, result)
+        result = re.sub(_ORG_BOUNDARY + org[0] + org[1:].lower() + _ORG_BOUNDARY_END, org, result)
+        result = re.sub(_ORG_BOUNDARY + org.lower() + _ORG_BOUNDARY_END, org, result)
     return result
 
 
@@ -295,6 +301,8 @@ def fix_dashes(text: str) -> str:
     text = re.sub(r'-{2,}', '—', text)  # -- → —
     text = re.sub(r'–{2,}', '—', text)  # –– → —
     text = re.sub(r'[-–][-–]+', '—', text)  # смешанные
+    # Одиночный дефис в начале строки как пункт перечисления → длинное тире
+    text = re.sub(r'(?m)^- ', '— ', text)
     return text
 
 
