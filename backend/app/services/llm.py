@@ -88,25 +88,52 @@ async def _get_gigachat_token() -> str:
         return _gigachat_token
 
 
-async def _call_gigachat(system_prompt: str, user_prompt: str) -> str:
+_RETRY_FEEDBACK = (
+    "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
+    "- НЕ пиши нумерованные метки разделов (1. Шапка:, 7. Требование: и т.п.)\n"
+    "- НЕ пиши дату составления документа\n"
+    "- НЕ пиши 'Дата и подпись'\n"
+    "- НЕ используй **жирный** или *курсив*\n"
+    "- НЕ пиши слова ЗАГЛАВНЫМИ БУКВАМИ внутри текста (кроме названия документа)\n"
+    "- Заголовок документа — одно слово без пояснений: ПРЕТЕНЗИЯ (не 'ПРЕТЕНЗИЯ о возврате...')"
+)
+
+
+async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
+    """Вызывает GigaChat. При validate=True делает до 2 retry при артефактах в ответе."""
     token = await _get_gigachat_token()
-    async with httpx.AsyncClient(verify=_get_verify()) as client:
-        resp = await client.post(
-            f"{GIGACHAT_API_URL}/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
-            json={
-                "model": "GigaChat",
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                "temperature": 0.2,
-                "max_tokens": 4096,
-            },
-            timeout=60,
-        )
-        resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+
+    async def _once(extra_feedback: str = "") -> str:
+        async with httpx.AsyncClient(verify=_get_verify()) as client:
+            resp = await client.post(
+                f"{GIGACHAT_API_URL}/chat/completions",
+                headers={"Authorization": f"Bearer {token}"},
+                json={
+                    "model": "GigaChat",
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt + extra_feedback},
+                    ],
+                    "temperature": 0.2,
+                    "max_tokens": 4096,
+                },
+                timeout=60,
+            )
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+
+    text = await _once()
+
+    if validate:
+        for attempt in range(1, 3):
+            if not _has_quality_artifacts(text):
+                break
+            logger.warning(
+                "GigaChat response has quality artifacts (attempt %d), retrying", attempt
+            )
+            text = await _once(_RETRY_FEEDBACK)
+
+    return text
 
 
 _MONTHS_RU = ["января", "февраля", "марта", "апреля", "мая", "июня",
@@ -171,6 +198,115 @@ _REFUSAL_MARKERS = (
 def _is_gigachat_refusal(text: str) -> bool:
     low = text.lower()
     return any(marker in low for marker in _REFUSAL_MARKERS)
+
+
+# ── Постобработка и валидация ответа GigaChat ─────────────────────────────────
+
+_SECTION_LABEL_RE   = re.compile(r'^(\d+[\.\)]\s*)?[А-ЯЁа-яёA-Za-z][А-ЯЁа-яёA-Za-z\s]{2,50}:$')
+_DATE_SIG_RE        = re.compile(r'^(\d+[\.\)]?\s*)?дата\s+(и\s+)?подпись[:\.]?\s*$', re.IGNORECASE)
+_CITY_LINE_RE       = re.compile(r'^г\.\s+[А-ЯЁ][а-яё]+(,\s*\d{1,2}\s+\w+\s+\d{4}.*)?\.?\s*$')
+_DOC_DATE_RE        = re.compile(
+    r'^\d{1,2}\s+(января|февраля|марта|апреля|мая|июня|'
+    r'июля|августа|сентября|октября|ноября|декабря)\s+\d{4}\s*(г\.?|года)?\s*$',
+    re.IGNORECASE,
+)
+_SHORT_DATE_LINE_RE = re.compile(r'^\d{1,2}\.\d{2}\.\d{4}\s*$')
+_MARKDOWN_RE        = re.compile(r'^#{1,3}\s|^\*{1,3}[^\*]|^-{3,}$')
+_TITLE_WORDS        = frozenset({"ПРЕТЕНЗИЯ", "ЖАЛОБА", "ВОЗРАЖЕНИЕ", "ЗАЯВЛЕНИЕ", "ХОДАТАЙСТВО", "УВЕДОМЛЕНИЕ"})
+# «ПРЕТЕНЗИЯ о возврате...» — подзаголовок в одну строку с заголовком
+_TITLE_WITH_SUBTITLE_RE = re.compile(
+    r'^(ПРЕТЕНЗИЯ|ЖАЛОБА|ВОЗРАЖЕНИЕ|ЗАЯВЛЕНИЕ|ХОДАТАЙСТВО|УВЕДОМЛЕНИЕ)\s+\S',
+    re.IGNORECASE,
+)
+# Строка только из заглавных букв (>= 10 символов) — ИТОГО К ВЫПЛАТЕ, ТРЕБУЮ и т.п.
+_ALL_CAPS_RE        = re.compile(r'^[А-ЯЁ\s\d\W]{10,}$')
+
+_QUALITY_ARTIFACTS = (
+    # нумерованные метки разделов в начале строки
+    re.compile(r'^\d+[\.\)]\s+(Шапка|Заголовок|Описание|Нарушение|Требование|Обстоятельства|Правовое\s+обоснование|Приложен|Расчёт|Вводная)', re.IGNORECASE),
+    # markdown-жирный или курсив внутри строки
+    re.compile(r'\*{2,}[^\*]+\*{2,}'),
+    # технические переменные формы в тексте документа
+    re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls)\b'),
+)
+
+
+def _clean_llm_text(text: str) -> str:
+    """Детерминированно убирает артефакты GigaChat независимо от промпта."""
+    lines = text.split("\n")
+    cleaned: list[str] = []
+    prev_was_title = False
+
+    for line in lines:
+        s = line.strip()
+
+        if not s:
+            prev_was_title = False
+            cleaned.append(line)
+            continue
+
+        # Строка сразу после заголовка документа — «ПРЕТЕНЗИЯ о возврате...»
+        # или следующая строка с пояснением — убираем
+        if prev_was_title and not any(c.islower() for c in s[:3]):
+            # Следующий абзац с заглавных — скорее всего подзаголовок, пропускаем
+            if _TITLE_WITH_SUBTITLE_RE.match(s):
+                continue
+
+        if s in _TITLE_WORDS:
+            prev_was_title = True
+            cleaned.append(line)
+            continue
+
+        # Строка «ПРЕТЕНЗИЯ о чём-то» — оставляем только само слово
+        m = _TITLE_WITH_SUBTITLE_RE.match(s)
+        if m:
+            cleaned.append(m.group(1).upper())
+            prev_was_title = True
+            continue
+
+        prev_was_title = False
+
+        if _DATE_SIG_RE.match(s):
+            continue
+        if _SECTION_LABEL_RE.match(s):
+            continue
+        if _CITY_LINE_RE.match(s):
+            continue
+        if _DOC_DATE_RE.match(s):
+            continue
+        if _SHORT_DATE_LINE_RE.match(s):
+            continue
+        if _MARKDOWN_RE.match(s):
+            continue
+        # Строка полностью из заглавных (длинная) — например ИТОГО К ВЫПЛАТЕ
+        if _ALL_CAPS_RE.match(s) and len(s) > 15 and s not in _TITLE_WORDS:
+            # Приводим к обычному регистру: первая заглавная, остальные строчные
+            cleaned.append(line.replace(s, s.capitalize()))
+            continue
+
+        # Убираем markdown-жирный внутри строки: **слово** → слово
+        line = re.sub(r'\*{2,}([^\*]+)\*{2,}', r'\1', line)
+        line = re.sub(r'_{2,}([^_]+)_{2,}', r'\1', line)
+
+        cleaned.append(line)
+
+    result = "\n".join(cleaned)
+    # Двойные и более дефисы → длинное тире
+    result = re.sub(r'-{2,}', '—', result)
+    # Множественные пустые строки → не более двух подряд
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result
+
+
+def _has_quality_artifacts(text: str) -> bool:
+    """Проверяет, содержит ли текст типичные артефакты GigaChat."""
+    for pattern in _QUALITY_ARTIFACTS:
+        if pattern.search(text):
+            return True
+    # Слишком короткий — не документ
+    if len(text.strip()) < 300:
+        return True
+    return False
 
 
 _DEFAULT_SYSTEM_PROMPT = """Ты — опытный юрист. Составь официальную претензию или жалобу.
@@ -354,7 +490,7 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
     system_prompt = _FORMAT_RULES + "\n" + base_prompt
     user_prompt = _build_user_prompt(situation_id, form_data)
 
-    text = await _call_gigachat(system_prompt, user_prompt)
+    text = await _call_gigachat(system_prompt, user_prompt, validate=True)
     if _is_gigachat_refusal(text):
         logger.error(
             "GigaChat refused to generate document for situation=%s: %r",
@@ -364,4 +500,5 @@ async def fill_template(situation_id: str, form_data: dict) -> str:
             f"GigaChat отказал в генерации документа для ситуации '{situation_id}'. "
             "Ответ содержит отказ вместо документа."
         )
+    text = _clean_llm_text(text)
     return _post_substitute_output(text, form_data)
