@@ -645,6 +645,164 @@ def calculate_airline(form_data: dict) -> dict:
     return data
 
 
+_COURT_OBJECTION_SECTIONS = {
+    "dispute_debt": (
+        "Я оспариваю само существование задолженности перед взыскателем. "
+        "На момент рассмотрения дела задолженности не было и не имеется."
+    ),
+    "dispute_amount": (
+        "Я оспариваю размер взысканной суммы как неверный и завышенный. "
+        "Правильный размер задолженности существенно отличается от указанного в приказе."
+    ),
+    "already_paid": (
+        "Задолженность была погашена полностью или частично до вынесения приказа. "
+        "Я располагаю документами, подтверждающими произведённые платежи взыскателю."
+    ),
+    "procedural": (
+        "Был нарушен порядок вынесения судебного приказа, либо истёк срок исковой давности "
+        "по требованию взыскателя, либо иные процессуальные основания отмены приказа."
+    ),
+}
+
+
+def calculate_court_order(form_data: dict) -> dict:
+    """Возражение на судебный приказ. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_receipt_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_objection_section", "")
+    data.setdefault("calculated_additional_block", "")
+    data.setdefault("calculated_demand_section", "")
+
+    case_num = str(data.get("case_number") or "").strip() or "—"
+    order_date = str(data.get("order_date") or "").strip()
+    receive_date = str(data.get("receive_date") or "").strip()
+    creditor = str(data.get("creditor_name") or "").strip() or "взыскатель"
+    objection_reason = str(data.get("objection_reason") or "").strip()
+    additional = str(data.get("additional_desc") or "").strip()
+
+    try:
+        amount = Decimal(str(data.get("debt_amount") or "0"))
+    except Exception:
+        amount = Decimal("0")
+
+    intro_parts = ["Судебный приказ", f"№ {case_num}"]
+    if order_date:
+        intro_parts.append(f"от {order_date}")
+    intro_parts.append(f"взыскатель — {creditor}")
+    intro_parts.append(f"сумма взыскания — {_fmt(amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    receipt_text = (
+        f"Судебный приказ получен мной {receive_date}. Настоящее возражение подаётся "
+        f"в установленный десятидневный срок в соответствии со статьей 128 "
+        f"Гражданского процессуального кодекса Российской Федерации."
+    )
+    data["calculated_receipt_section"] = receipt_text
+
+    legal_text = (
+        "В соответствии со статьёй 128 Гражданского процессуального кодекса РФ должник "
+        "вправе в течение десяти дней со дня получения судебного приказа представить "
+        "возражения против его исполнения. Согласно статье 129 ГПК РФ судья обязан отменить "
+        "судебный приказ при поступлении возражений должника, после чего взыскатель вправе "
+        "предъявить своё требование в порядке искового производства. Конституционный Суд РФ "
+        "постановил, что для принятия возражения закон не требует их мотивировки — достаточно "
+        "выражения несогласия с исполнением приказа."
+    )
+    data["calculated_legal_section"] = legal_text
+
+    objection_template = _COURT_OBJECTION_SECTIONS.get(
+        objection_reason,
+        "Я выражаю несогласие с исполнением судебного приказа по основаниям, "
+        "указанным в доп. описании."
+    )
+    data["calculated_objection_section"] = objection_template
+
+    if additional:
+        data["calculated_additional_block"] = additional
+
+    demand_text = (
+        f"На основании изложенного прошу отменить судебный приказ № {case_num} "
+        f"полностью на основании статьи 129 Гражданского процессуального кодекса РФ. "
+        f"К возражению прилагается: копия документа, подтверждающего дату получения "
+        f"судебного приказа."
+    )
+    data["calculated_demand_section"] = demand_text
+
+    return data
+
+
+def calculate_rental_deposit(form_data: dict) -> dict:
+    """Претензия о возврате залога. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+    data.setdefault("calculated_wear_block", "")
+
+    landlord = str(data.get("landlord_name") or "").strip() or "арендодателю"
+    apartment = str(data.get("apartment_address") or "").strip()
+    move_in = str(data.get("move_in_date") or "").strip()
+    move_out = str(data.get("move_out_date") or "").strip()
+    contract_num = str(data.get("contract_number") or "").strip()
+    deposit_reason = str(data.get("deposit_reason") or "").strip()
+
+    try:
+        deposit = Decimal(str(data.get("deposit_amount") or "0"))
+    except Exception:
+        deposit = Decimal("0")
+
+    intro_parts = []
+    if apartment:
+        intro_parts.append(f"Арендованная квартира: {apartment}")
+    intro_parts.append(f"Период аренды: {move_in} — {move_out}")
+    if contract_num:
+        intro_parts.append(f"Договор аренды № {contract_num}")
+    intro_parts.append(f"Размер обеспечительного платежа (залога): {_fmt(deposit)} руб.")
+    data["calculated_intro_section"] = ". ".join(intro_parts) + "."
+
+    legal_text = (
+        "На основании ст. 381.1 ГК РФ обеспечительный платёж подлежит возврату, "
+        "если предусмотренные договором обстоятельства не наступили или договор "
+        "прекращён. В соответствии со ст. 622 ГК РФ после прекращения договора "
+        "аренды все обязательства сторон, включая возврат обеспечительного платежа, "
+        "прекращаются. Ст. 1102 ГК РФ обязывает лицо, без законных оснований "
+        "удерживающее чужие денежные средства, их вернуть. За незаконное удержание "
+        "денежных средств начисляются проценты по ключевой ставке ЦБ РФ (ст. 395 ГК РФ)."
+    )
+    data["calculated_legal_section"] = legal_text
+
+    wear_block = ""
+    if deposit_reason in ("damages_fake", "wear_normal"):
+        wear_block = (
+            "Нормальный износ квартиры в результате её использования по назначению "
+            "не является ущербом, за который арендатор несёт ответственность (ст. 616, "
+            "622 ГК РФ). Арендодатель обязан документально подтвердить реальный ущерб, "
+            "причинённый сверх нормального износа."
+        )
+    data["calculated_wear_block"] = wear_block
+
+    amount_text = (
+        f"Размер требуемой к возврату суммы: {_fmt(deposit)} руб. "
+        f"Срок возврата: 10 дней с даты получения настоящей претензии."
+    )
+    data["calculated_amount_section"] = amount_text
+
+    demand_text = (
+        f"На основании изложенного прошу вернуть обеспечительный платёж в размере "
+        f"{_fmt(deposit)} руб. в течение 10 дней с даты получения настоящей претензии. "
+        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"обратиться в суд с требованием о возврате суммы залога, уплате процентов за "
+        f"пользование чужими деньгами (ст. 395 ГК РФ), взыскании морального вреда и "
+        f"судебных расходов."
+    )
+    data["calculated_demand_section"] = demand_text
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
@@ -657,4 +815,6 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "insurance": calculate_insurance,
     "telecom": calculate_telecom,
     "airline": calculate_airline,
+    "rental_deposit": calculate_rental_deposit,
+    "court_order": calculate_court_order,
 }

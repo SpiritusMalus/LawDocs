@@ -197,9 +197,25 @@ def enrich_ddu_termination(form_data: dict) -> dict:
     return data
 
 
+def enrich_rental_deposit(form_data: dict) -> dict:
+    """Обогащает form_data вычисленными полями для гибридного шаблона rental_deposit."""
+    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+    from app.services.calculators import calculate_rental_deposit
+    return calculate_rental_deposit(form_data)
+
+
+def enrich_court_order(form_data: dict) -> dict:
+    """Обогащает form_data вычисленными полями для гибридного шаблона court_order."""
+    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+    from app.services.calculators import calculate_court_order
+    return calculate_court_order(form_data)
+
+
 # Реестр гибридных обогатителей: situation_id → функция
 _HYBRID_ENRICHERS = {
     "ddu_termination": enrich_ddu_termination,
+    "rental_deposit": enrich_rental_deposit,
+    "court_order": enrich_court_order,
 }
 
 
