@@ -457,59 +457,190 @@ def calculate_telecom(form_data: dict) -> dict:
     return data
 
 
+# TODO: формула «25 руб./час» — устаревшая редакция ВК РФ ст. 120.
+# Действующая норма: 25% МРОТ × час просрочки, но не более 50% провозной платы.
+# Не правится в пилоте миграции — это юр.фикс отдельной задачей.
+_AIRLINE_VIOLATION_SECTIONS = {
+    "delay": (
+        "В нарушение договора воздушной перевозки рейс {flight_number} "
+        "был задержан на {delay_hours} ч."
+    ),
+    "cancellation": (
+        "Авиакомпания отменила рейс {flight_number}, в результате чего "
+        "перевозка по договору не состоялась."
+    ),
+    "luggage": (
+        "При перевозке рейсом {flight_number} авиакомпанией не было обеспечено "
+        "сохранение багажа: багаж утрачен / повреждён."
+    ),
+    "refund_denied": (
+        "После отказа от перевозки по рейсу {flight_number} "
+        "авиакомпания отказала в возврате провозной платы."
+    ),
+}
+
+_AIRLINE_LEGAL_SECTIONS = {
+    "delay": (
+        "В соответствии со статьёй 120 Воздушного кодекса РФ за просрочку "
+        "доставки пассажира перевозчик уплачивает штраф в размере двадцати "
+        "пяти процентов установленного федеральным законом минимального "
+        "размера оплаты труда за каждый час просрочки, но не более "
+        "пятидесяти процентов провозной платы. Кроме того, в силу пункта 5 "
+        "статьи 28 Закона РФ от 07.02.1992 № 2300-1 «О защите прав "
+        "потребителей» исполнитель уплачивает потребителю за каждый день "
+        "просрочки исполнения обязательства неустойку в размере трёх "
+        "процентов цены оказания услуги."
+    ),
+    "cancellation": (
+        "В соответствии со статьями 107 и 108 Воздушного кодекса РФ при "
+        "прекращении договора перевозки по инициативе перевозчика "
+        "пассажир вправе требовать возврата провозной платы в полном "
+        "объёме. В силу статьи 32 Закона РФ от 07.02.1992 № 2300-1 «О "
+        "защите прав потребителей» при отказе от исполнения договора "
+        "оказания услуги по причинам, не зависящим от потребителя, "
+        "уплаченная по договору сумма подлежит возврату."
+    ),
+    "luggage": (
+        "В соответствии со статьёй 119 Воздушного кодекса РФ за утрату, "
+        "недостачу или повреждение (порчу) багажа перевозчик несёт "
+        "ответственность в размере объявленной ценности, а при отсутствии "
+        "объявленной ценности — в размере стоимости багажа, но не более "
+        "шестисот рублей за килограмм веса багажа. В силу пункта 1 статьи "
+        "29 Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей» "
+        "потребитель вправе требовать полного возмещения причинённого "
+        "ущерба."
+    ),
+    "refund_denied": (
+        "В соответствии со статьями 107 и 108 Воздушного кодекса РФ при "
+        "отказе пассажира от перевозки уплаченная за перевозку сумма "
+        "подлежит возврату с удержанием установленных правилами "
+        "перевозчика сборов. В силу пункта 5 статьи 28 Закона РФ от "
+        "07.02.1992 № 2300-1 «О защите прав потребителей» за каждый день "
+        "просрочки возврата уплаченных сумм исполнитель уплачивает "
+        "неустойку в размере трёх процентов цены оказания услуги."
+    ),
+}
+
+_AIRLINE_VIOLATION_FALLBACK = (
+    "Авиакомпания нарушила обязательства по договору воздушной перевозки."
+)
+_AIRLINE_LEGAL_FALLBACK = (
+    "В соответствии со статьями 786, 793 ГК РФ перевозчик обязан возместить "
+    "ущерб, причинённый ненадлежащим исполнением договора перевозки. В силу "
+    "статьи 29 Закона РФ от 07.02.1992 № 2300-1 «О защите прав потребителей» "
+    "потребитель вправе требовать полного возмещения причинённого вреда."
+)
+
+
 def calculate_airline(form_data: dict) -> dict:
-    """Претензия авиакомпании: компенсация за задержку 25 руб./час + штраф 50% (ВК РФ ст. 120)."""
+    """Претензия авиакомпании. Pre-renders готовые секции для python_template."""
     data = dict(form_data)
-    data["calculated_penalty_section"] = ""
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_violation_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    violation = str(data.get("violation_type", "")).strip()
+    flight_number = str(data.get("flight_number") or "").strip() or "—"
+    route = str(data.get("route") or "").strip()
+    flight_date = str(data.get("flight_date") or "").strip()
+    airline_name = str(data.get("airline") or "").strip()
 
     try:
-        ticket = Decimal(str(data["ticket_price"]))
+        ticket = Decimal(str(data.get("ticket_price") or "0"))
     except Exception:
-        return data
-
+        ticket = Decimal("0")
     try:
         delay_hours = int(str(data.get("delay_hours") or "0"))
     except Exception:
         delay_hours = 0
-
     try:
         extra = Decimal(str(data.get("extra_expenses") or "0"))
     except Exception:
         extra = Decimal("0")
-
     try:
         received = Decimal(str(data.get("received_compensation") or "0"))
     except Exception:
         received = Decimal("0")
 
-    parts = []
-    total = Decimal("0")
+    intro_parts = []
+    if airline_name:
+        intro_parts.append(f"Между мной и {airline_name} заключён договор воздушной перевозки")
+    else:
+        intro_parts.append("Между мной и авиакомпанией заключён договор воздушной перевозки")
+    if route:
+        intro_parts.append(f"по маршруту {route}")
+    if flight_number != "—":
+        intro_parts.append(f"(рейс {flight_number})")
+    if flight_date:
+        intro_parts.append(f"с датой вылета {flight_date}")
+    intro = ", ".join(intro_parts) + "."
+    if ticket > 0:
+        intro += f" Стоимость билета составила {_fmt(ticket)} руб."
+    data["calculated_intro_section"] = intro
 
-    if delay_hours > 0:
+    viol_template = _AIRLINE_VIOLATION_SECTIONS.get(violation)
+    if viol_template:
+        data["calculated_violation_section"] = viol_template.format(
+            flight_number=flight_number,
+            delay_hours=delay_hours,
+        )
+    else:
+        data["calculated_violation_section"] = _AIRLINE_VIOLATION_FALLBACK
+
+    data["calculated_legal_section"] = _AIRLINE_LEGAL_SECTIONS.get(
+        violation, _AIRLINE_LEGAL_FALLBACK
+    )
+
+    amount_parts = []
+    total = Decimal("0")
+    if violation == "delay" and delay_hours > 0 and ticket > 0:
         delay_comp = Decimal("25") * Decimal(delay_hours)
         fine = (ticket * Decimal("0.5")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         total += delay_comp + fine
-        parts.append(
-            f"компенсация за задержку {delay_hours} ч: 25 × {delay_hours} = {_fmt(delay_comp)} руб.; "
-            f"штраф 50% от стоимости билета: {_fmt(fine)} руб."
+        amount_parts.append(
+            f"компенсация за задержку {delay_hours} ч.: 25 × {delay_hours} = "
+            f"{_fmt(delay_comp)} руб."
+        )
+        amount_parts.append(
+            f"штраф 50% от стоимости билета (ст. 28 ч. 5 ЗоЗПП): "
+            f"{_fmt(fine)} руб."
         )
         data["calculated_delay_comp"] = _fmt(delay_comp)
         data["calculated_fine"] = _fmt(fine)
+    elif violation in ("cancellation", "refund_denied") and ticket > 0:
+        total += ticket
+        amount_parts.append(f"возврат стоимости билета: {_fmt(ticket)} руб.")
 
     if extra > 0:
         total += extra
-        parts.append(f"доп. расходы: {_fmt(extra)} руб.")
-
-    if not parts:
-        return data
+        amount_parts.append(f"возмещение дополнительных расходов: {_fmt(extra)} руб.")
 
     if received > 0:
         total = max(total - received, Decimal("0"))
-        parts.append(f"уже выплачено: −{_fmt(received)} руб.")
+        amount_parts.append(f"уже выплачено авиакомпанией: −{_fmt(received)} руб.")
 
-    data["calculated_total"] = _fmt(total)
-    data["calculated_penalty_section"] = (
-        "; ".join(parts) + f". Итого к выплате: {_fmt(total)} руб."
+    if amount_parts:
+        data["calculated_amount_section"] = (
+            "Расчёт суммы требования: "
+            + "; ".join(amount_parts)
+            + f". Итого к выплате: {_fmt(total)} руб."
+        )
+        data["calculated_total"] = _fmt(total)
+
+    demand_subject = (
+        f"выплатить {_fmt(total)} руб." if total > 0 else "удовлетворить настоящую претензию"
+    )
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу {demand_subject} в течение тридцати "
+        f"календарных дней с даты получения настоящей претензии. В случае "
+        f"неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"обратиться с жалобой в Федеральное агентство воздушного транспорта "
+        f"(Росавиация) и с иском в суд. Согласно пункту 6 статьи 13 Закона РФ "
+        f"от 07.02.1992 № 2300-1 «О защите прав потребителей» при удовлетворении "
+        f"судом требований потребителя с ответчика взыскивается штраф в "
+        f"размере пятидесяти процентов от суммы, присуждённой потребителю."
     )
     return data
 
