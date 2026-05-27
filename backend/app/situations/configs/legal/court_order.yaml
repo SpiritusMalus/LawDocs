@@ -16,7 +16,110 @@ header_fields:
     field: user_phone
   - field: user_email
 
+# Гибридный режим: структура документа рендерится через python_template,
+# 0 LLM-вызовов — содержимое чистый текст по objection_reason.
+# system_prompt сохранён для совместимости с обязательным полем модели,
+# но в гибридном режиме не используется.
 system_prompt: |
-  Ты — юрист по гражданскому процессу. Составь возражение на судебный приказ для подачи мировому судье.
-  Шапку и заголовок документа НЕ пиши — они формируются автоматически. Начинай сразу с первого абзаца тела.
-  Верни только JSON: {"body": "текст тела документа"}
+  Гибридный режим: структура документа рендерится через python_template,
+  LLM не используется.
+
+python_template: |
+  [calculated_intro_section]
+
+  [calculated_receipt_section]
+
+  [calculated_legal_section]
+
+  [calculated_objection_section]
+
+  [calculated_additional_block]
+
+  [calculated_demand_section]
+
+  _________________ / _________________
+
+narrative_prompt: |
+  Этот конфиг не использует LLM-перефразировку.
+
+narrative_fields: []
+
+ai_narrative_prompt: |
+  Этот конфиг не использует LLM-перефразировку.
+
+wizard_steps:
+  - title: "Суд и приказ"
+    fields:
+      - id: court_name
+        type: text
+        label: "Мировой суд (название или номер участка)"
+        placeholder: "Судебный участок №5 Пресненского района г. Москвы"
+        required: true
+      - id: case_number
+        type: text
+        label: "Номер дела / судебного приказа"
+        placeholder: "2-1234/2025"
+        required: true
+      - id: order_date
+        type: date
+        label: "Дата вынесения приказа"
+        hint: "Указана в тексте приказа"
+      - id: receive_date
+        type: date
+        label: "Дата получения приказа вами"
+        required: true
+        hint: "Срок возражения — 10 дней с этой даты. Действуйте быстро!"
+  - title: "Взыскатель и сумма"
+    fields:
+      - id: creditor_name
+        type: text
+        label: "Кто взыскивает (взыскатель)"
+        placeholder: "ПАО Сбербанк, ООО «МФК Займ Плюс»"
+        required: true
+      - id: creditor_type
+        type: radio
+        label: "Тип взыскателя"
+        required: true
+        options:
+          - value: bank
+            label: "Банк"
+          - value: mfo
+            label: "МФО / коллектор"
+          - value: housing
+            label: "ЖКХ / управляющая компания"
+          - value: tax
+            label: "ФНС / налоговая"
+          - value: other
+            label: "Другое"
+      - id: debt_amount
+        type: number
+        label: "Сумма по приказу, ₽"
+        placeholder: "85000"
+        required: true
+  - title: "Ваши возражения"
+    fields:
+      - id: objection_reason
+        type: radio
+        label: "Основание возражения"
+        required: true
+        options:
+          - value: dispute_debt
+            label: "Оспариваем сам долг (ничего не должны)"
+          - value: dispute_amount
+            label: "Оспариваем сумму (завышена, ошибка в расчёте)"
+          - value: already_paid
+            label: "Долг уже оплачен (полностью или частично)"
+          - value: procedural
+            label: "Нарушения при выдаче приказа / истёк срок давности"
+          - value: other
+            label: "Другое"
+      - id: additional_desc
+        type: textarea
+        label: "Дополнительные обстоятельства"
+        placeholder: "Что важно знать суду: внесённые платежи, срок давности, ошибки в расчёте"
+
+legal_refs:
+  - law: "ГПК РФ ст. 128-129 — возражение на судебный приказ и его отмена"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+  - law: "ГПК РФ ст. 121-127 — порядок выдачи судебного приказа"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
