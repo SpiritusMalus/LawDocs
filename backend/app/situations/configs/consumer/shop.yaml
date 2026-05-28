@@ -112,7 +112,13 @@ wizard_steps:
         hint: "Обычно — дата отказа магазина или дата обращения"
 
 legal_refs:
-  - law: "Закон о защите прав потребителей"
+  - law: "ЗоЗПП ст. 18 — права при обнаружении недостатков товара (замена, ремонт, возврат)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
-  - law: "ГК РФ (качество товара, ст. 475)"
+  - law: "ЗоЗПП ст. 25 — обмен товара надлежащего качества в течение 14 дней"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ЗоЗПП ст. 19, 20 — сроки предъявления требований и устранения недостатков"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ГК РФ ст. 475 — последствия передачи товара ненадлежащего качества"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  - law: "ПП РФ №2463 — Правила продажи товаров (перечень невозвратных товаров)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_374730/"

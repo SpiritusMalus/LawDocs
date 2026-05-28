@@ -123,5 +123,11 @@ wizard_steps:
         placeholder: "Что важно учесть при составлении претензии"
 
 legal_refs:
-  - law: "Трудовой кодекс РФ (ст. 136, 140, 236)"
+  - law: "ТК РФ ст. 136, 140, 236 — сроки выплаты зарплаты, расчёт при увольнении, компенсация за задержку"
     url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  - law: "ТК РФ ст. 353, 356 — полномочия Государственной инспекции труда (ГИТ)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  - law: "ТК РФ ст. 127 — компенсация за неиспользованный отпуск при увольнении"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  - law: "УК РФ ст. 145.1 — уголовная ответственность за невыплату зарплаты свыше 2 месяцев"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"

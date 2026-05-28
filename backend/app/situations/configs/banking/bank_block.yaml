@@ -96,9 +96,9 @@ wizard_steps:
         required: true
 
 legal_refs:
-  - law: "ФЗ от 07.08.2001 №115-ФЗ «О противодействии легализации доходов» (ст. 7)"
+  - law: "ФЗ-115 ст. 7 — основания блокировки счёта банком"
     url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
-  - law: "ГК РФ ст. 845, 856 — обязанности и ответственность банка"
+  - law: "ФЗ-115 ст. 7.7 — реабилитационный механизм через межведомственную комиссию ЦБ"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  - law: "ГК РФ ст. 845, 856 — обязанности и ответственность банка перед клиентом"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
-  - law: "Интернет-приёмная Банка России"
-    url: "https://www.cbr.ru/reception/"
