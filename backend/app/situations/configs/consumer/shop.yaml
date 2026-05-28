@@ -122,3 +122,35 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
   - law: "ПП РФ №2463 — Правила продажи товаров (перечень невозвратных товаров)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+
+legal_refs_by_branch:
+  problem_type:defect:
+    - law: "ЗоЗПП ст. 18 ч. 1 — права потребителя при обнаружении существенного недостатка"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ЗоЗПП ст. 19 — сроки предъявления требований по недостаткам (гарантийный срок)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  problem_type:return14:
+    - law: "ЗоЗПП ст. 25 — обмен/возврат товара надлежащего качества в течение 14 дней"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ПП РФ №2463 — перечень невозвратных товаров надлежащего качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+  problem_type:warranty:
+    - law: "ЗоЗПП ст. 18 ч. 6 — при существенном недостатке — возврат в течение срока службы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ЗоЗПП ст. 20 — устранение недостатков в срок не более 45 дней"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  problem_type:other:
+    - law: "ГК РФ ст. 475 — последствия передачи товара ненадлежащего качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  demand:refund:
+    - law: "ЗоЗПП ст. 22 — срок удовлетворения требования о возврате (10 дней)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  demand:replace:
+    - law: "ЗоЗПП ст. 21 — срок замены товара (7 дней, до 20 дней при проверке)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  demand:repair:
+    - law: "ЗоЗПП ст. 20 — срок устранения недостатков: по соглашению, но не более 45 дней"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  demand:other:
+    - law: "ЗоЗПП ст. 13 — штраф 50% за отказ удовлетворить требование добровольно"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"

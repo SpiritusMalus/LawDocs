@@ -121,3 +121,29 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
   - law: "ЗоЗПП ст. 10, 13, 14 — права потребителя услуг"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  violation_type:preexisting_damage:
+    - law: "ГК РФ ст. 620 ч. 2 — арендатор не отвечает за недостатки, которые были оговорены при сдаче"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 607 — акт приёма-передачи как доказательство состояния имущества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  violation_type:overcharge:
+    - law: "ЗоЗПП ст. 16 — недействительность условий договора, ущемляющих права потребителя"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ЗоЗПП ст. 10 — обязанность предоставить полную информацию о цене услуги"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  violation_type:unauthorized_charge:
+    - law: "ГК РФ ст. 1102 — неосновательное обогащение, возврат незаконно списанных средств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ЗоЗПП ст. 16.1 — запрет на навязывание дополнительных платежей"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  violation_type:other:
+    - law: "ГК РФ ст. 1064 — обязанность возместить причинённый вред"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  has_photo:"yes":
+    - law: "ГПК РФ ст. 55 — фотоматериалы как доказательства по делу"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+  has_photo:"no":
+    - law: "ГК РФ ст. 401 — ответственность наступает только при наличии вины"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

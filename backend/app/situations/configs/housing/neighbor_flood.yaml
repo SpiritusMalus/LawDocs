@@ -148,3 +148,13 @@ legal_refs_by_branch:
   "flood_source:roof":
     - law: "ПП РФ №491 — Правила содержания общего имущества, ответственность УК за кровлю"
       url: "https://www.consultant.ru/document/cons_doc_LAW_62293/"
+  "flood_source:upper_neighbor":
+    - law: "ГК РФ ст. 1064 — обязанность возместить вред, причинённый имуществу"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 210 — бремя содержания имущества лежит на его собственнике"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "flood_source:same_floor":
+    - law: "ГК РФ ст. 1064 — обязанность возместить вред при наличии вины"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 401 — ответственность за вред при доказанной вине причинителя"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

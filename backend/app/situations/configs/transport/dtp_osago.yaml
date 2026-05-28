@@ -115,3 +115,18 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
   - law: "ЗоЗПП ст. 13 — штраф 50%"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  violation_type:delay:
+    - law: "ФЗ-40 «Об ОСАГО» ст. 12 ч. 21 — неустойка 1% от суммы за каждый день просрочки выплаты"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+  violation_type:underestimate:
+    - law: "ФЗ-40 «Об ОСАГО» ст. 12 ч. 13 — независимая экспертиза для определения размера ущерба"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    - law: "Положение ЦБ РФ №432-П — единая методика расчёта ущерба по ОСАГО"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_172971/"
+  violation_type:refusal:
+    - law: "ФЗ-40 «Об ОСАГО» ст. 16.1 — досудебный порядок урегулирования споров"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    - law: "ФЗ-123 «О финансовом уполномоченном» ст. 15 — обращение к финомбудсмену при отказе"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"

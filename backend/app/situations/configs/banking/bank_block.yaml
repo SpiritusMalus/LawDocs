@@ -102,3 +102,32 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
   - law: "ГК РФ ст. 845, 856 — обязанности и ответственность банка перед клиентом"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+
+legal_refs_by_branch:
+  block_reason:suspicious_operations:
+    - law: "ФЗ-115 ст. 7 ч. 2 — обязанность банка документально фиксировать подозрительные операции"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+    - law: "ФЗ-115 ст. 7 ч. 5 — право банка запросить документы у клиента"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  block_reason:source_of_funds:
+    - law: "ФЗ-115 ст. 7 ч. 1 — идентификация клиента и источников происхождения средств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+    - law: "ФЗ-115 ст. 7.7 — реабилитация через межведомственную комиссию при ЦБ"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  block_reason:115fz_monitoring:
+    - law: "ФЗ-115 ст. 6 — операции, подлежащие обязательному контролю"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+    - law: "ФЗ-115 ст. 7.7 — порядок исключения из списка и разблокировки"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  block_reason:other:
+    - law: "ГК РФ ст. 856 — ответственность банка за ненадлежащее совершение операций"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  bank_notification:not_notified:
+    - law: "ФЗ-115 ст. 7 ч. 5.2 — банк обязан уведомить клиента об отказе в проведении операции"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  bank_notification:yes_notified:
+    - law: "ФЗ-115 ст. 7.7 — право клиента представить документы через межведомственную комиссию"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  bank_notification:verbal:
+    - law: "ФЗ-115 ст. 7 ч. 5.2 — уведомление должно быть письменным (нарушение при только устном)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"

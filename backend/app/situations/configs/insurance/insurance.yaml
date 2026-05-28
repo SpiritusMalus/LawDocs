@@ -134,3 +134,21 @@ legal_refs_by_branch:
   policy_type:osago:
     - law: "ФЗ «Об ОСАГО» ст. 14.1 — прямое возмещение убытков через своего страховщика"
       url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+  policy_type:other:
+    - law: "ГК РФ ст. 929 — общие основания договора имущественного страхования"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  incident_type:underestimate:
+    - law: "ФЗ «Об ОСАГО» ст. 12 ч. 13 — независимая экспертиза при несогласии с суммой выплаты"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    - law: "ФЗ-123 ст. 20 — обращение к финомбудсмену при занижении выплаты до 500 000 ₽"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+  incident_type:refusal:
+    - law: "ФЗ-123 ст. 15 — обязательное обращение к финансовому омбудсмену до суда"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+    - law: "ФЗ «Об ОСАГО» ст. 16.1 — досудебный порядок урегулирования при отказе в выплате"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+  incident_type:delay:
+    - law: "ФЗ «Об ОСАГО» ст. 12 ч. 21 — неустойка 1% в день за просрочку выплаты"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    - law: "ФЗ №4015-1 ст. 10 — сроки страховой выплаты (как правило, 10-20 рабочих дней)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_1307/"

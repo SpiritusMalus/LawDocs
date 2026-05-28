@@ -102,3 +102,23 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
   - law: "ЗоЗПП ст. 28, 32 — отказ от услуги, нарушение срока возврата"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  problem_type:not_started:
+    - law: "ЗоЗПП ст. 32 — право отказаться от услуги до её начала с возвратом полной суммы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ГК РФ ст. 782 ч. 2 — отказ исполнителя от договора с возмещением убытков"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  problem_type:partial:
+    - law: "ЗоЗПП ст. 32 — право отказаться от услуги с оплатой фактически оказанной части"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ПП РФ №1441 п. 11 — при одностороннем отказе возвращается разница за неоказанную часть"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
+  problem_type:quality:
+    - law: "ЗоЗПП ст. 29 ч. 1 — права потребителя при ненадлежащем качестве услуги"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ФЗ №273-ФЗ ст. 54 ч. 2 — договор об образовании должен содержать условия об ответственности"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_140174/"
+  problem_type:other:
+    - law: "ПП РФ №1441 — Правила оказания платных образовательных услуг"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"

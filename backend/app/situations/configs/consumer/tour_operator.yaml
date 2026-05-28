@@ -111,3 +111,28 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
   - law: "ГК РФ ст. 782 — отказ от договора возмездного оказания услуг"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+
+legal_refs_by_branch:
+  violation_type:operator_cancelled:
+    - law: "ФЗ-132 ст. 10 — обязанность туроператора возвратить стоимость тура при отмене"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    - law: "ФЗ-132 ст. 14 — полный возврат без штрафов при существенном изменении условий"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+  violation_type:changed_conditions:
+    - law: "ФЗ-132 ст. 10 ч. 5 — изменение существенных условий даёт право отказаться от тура"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    - law: "ГК РФ ст. 450 — расторжение договора при существенном изменении обстоятельств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  violation_type:refund_denied:
+    - law: "ФЗ-132 ст. 10.1 — порядок урегулирования претензий туриста"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    - law: "ЗоЗПП ст. 31 — срок удовлетворения требований потребителя (10 дней)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  violation_type:voluntary_refusal:
+    - law: "ФЗ-132 ст. 10 ч. 3 — право туриста отказаться с возмещением фактических расходов"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    - law: "ЗоЗПП ст. 32 — право отказаться с оплатой фактически понесённых расходов"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  violation_type:other:
+    - law: "ФЗ-132 ст. 17.4 — ответственность туроператора перед туристом"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"

@@ -135,3 +135,16 @@ legal_refs_by_branch:
   "problem_type:illegal_charges":
     - law: "ФЗ «О связи» ст. 54 — порядок оплаты услуг связи, запрет списаний без согласия"
       url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+  "problem_type:no_service":
+    - law: "ФЗ «О связи» ст. 44 — оператор обязан обеспечить оказание услуг в полном объёме"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+    - law: "ЗоЗПП ст. 29 — право потребителя на устранение недостатков или расторжение договора"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  "problem_type:slow_speed":
+    - law: "ФЗ «О связи» ст. 46 — обязанность оператора соответствовать параметрам качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+    - law: "ПП РФ №2811 — Правила оказания услуг связи по передаче данных"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_42156/"
+  "problem_type:other":
+    - law: "ФЗ «О связи» ст. 55 — порядок рассмотрения жалоб абонентов операторами связи"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"

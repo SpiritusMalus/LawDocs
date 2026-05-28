@@ -140,3 +140,16 @@ legal_refs_by_branch:
   "problem_type:bad_treatment":
     - law: "ФЗ-323 ст. 70 — ответственность лечащего врача за причинение вреда здоровью"
       url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
+  "problem_type:refused":
+    - law: "ФЗ-323 ст. 19 — право на получение медицинской помощи в гарантированном объёме"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
+    - law: "ФЗ-323 ст. 11 — запрет на отказ в медицинской помощи"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
+  "problem_type:paid_forced":
+    - law: "ЗоЗПП ст. 16 — недействительность условий об обязательных платных услугах в ОМС"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ФЗ-326 «Об обязательном медицинском страховании» ст. 16 — право на бесплатную помощь по ОМС"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_110928/"
+  "problem_type:other":
+    - law: "ФЗ-323 ст. 79 — обязанности медицинских организаций перед пациентом"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"

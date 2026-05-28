@@ -119,3 +119,36 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
   - law: "КоАП РФ ст. 24.5 — обстоятельства, исключающие производство"
     url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+
+legal_refs_by_branch:
+  objection_reason:not_driving:
+    - law: "КоАП РФ ст. 2.6.1 ч. 2 — освобождение от ответственности если за рулём было другое лицо"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  objection_reason:no_violation:
+    - law: "КоАП РФ ст. 24.5 п. 1 — отсутствие события административного правонарушения"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    - law: "КоАП РФ ст. 26.2 — доказательства, их виды и оценка"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  objection_reason:camera_error:
+    - law: "КоАП РФ ст. 26.8 — показания специальных технических средств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    - law: "КоАП РФ ст. 24.5 п. 2 — отсутствие состава при ненадлежащей фиксации"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  objection_reason:procedural:
+    - law: "КоАП РФ ст. 28.2 — требования к протоколу об административном правонарушении"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    - law: "КоАП РФ ст. 4.5 — сроки давности привлечения к ответственности"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  objection_reason:other:
+    - law: "КоАП РФ ст. 30.7 — виды решений по результатам рассмотрения жалобы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  appeal_to:gibdd_chief:
+    - law: "КоАП РФ ст. 30.1 ч. 1 п. 3 — обжалование вышестоящему должностному лицу"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    - law: "КоАП РФ ст. 30.3 — срок подачи жалобы (10 суток)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+  appeal_to:court:
+    - law: "КоАП РФ ст. 30.1 ч. 1 п. 2 — право обжалования в суд"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    - law: "КоАП РФ ст. 30.5 — сроки рассмотрения жалобы судом"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"

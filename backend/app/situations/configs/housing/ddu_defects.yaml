@@ -111,3 +111,18 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
   - law: "ГК РФ ст. 723 — последствия ненадлежащего качества работы"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+
+legal_refs_by_branch:
+  elimination_period:"15":
+    - law: "ФЗ-214 ст. 7 ч. 2 — срок устранения недостатков не может превышать разумный (как правило 45 дней)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    - law: "ЗоЗПП ст. 20 — срок устранения недостатков товара (до 45 дней)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  elimination_period:"30":
+    - law: "ФЗ-214 ст. 7 ч. 2 — устранение недостатков в разумный срок по соглашению сторон"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+  elimination_period:"45":
+    - law: "ФЗ-214 ст. 7 ч. 2 — 45 дней: предельный разумный срок устранения строительных недостатков"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    - law: "ЗоЗПП ст. 29 ч. 1 — при нарушении срока устранения — право отказаться от договора"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"

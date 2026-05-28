@@ -119,3 +119,16 @@ legal_refs_by_branch:
   "deposit_reason:wear_normal":
     - law: "ГК РФ ст. 616 — обязанности арендодателя по содержанию имущества (нормальный износ)"
       url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "deposit_reason:no_reason":
+    - law: "ГК РФ ст. 1102 — неосновательное обогащение: возврат имущества без законных оснований"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 622 — обязанность арендодателя вернуть залог при прекращении договора"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "deposit_reason:debt_claimed":
+    - law: "ГК РФ ст. 310 — односторонний зачёт депозита в счёт долга требует обоснования"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 410 — зачёт требований возможен только при соответствии условиям"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "deposit_reason:other":
+    - law: "ГК РФ ст. 1102 — возврат суммы залога как неосновательного обогащения"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

@@ -122,3 +122,13 @@ legal_refs_by_branch:
   reason:club_closed:
     - law: "ЗоЗПП ст. 29 ч. 1 — право отказаться от услуги при существенном нарушении условий"
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  reason:terms_changed:
+    - law: "ЗоЗПП ст. 29 ч. 1 п. 3 — расторжение договора при изменении существенных условий"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ГК РФ ст. 450 — расторжение договора при существенном изменении обстоятельств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  reason:voluntary:
+    - law: "ЗоЗПП ст. 32 — право отказаться от услуги в любое время, оплатив фактически оказанную часть"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    - law: "ГК РФ ст. 782 — заказчик вправе отказаться от договора, возместив фактические расходы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

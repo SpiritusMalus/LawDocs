@@ -133,8 +133,35 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"
 
 legal_refs_by_branch:
-  "violation_type:dismissal":
+  violation_type:dismissal:
     - law: "ТК РФ ст. 81 — основания расторжения трудового договора по инициативе работодателя"
       url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
     - law: "ТК РФ ст. 394 — восстановление на работе и компенсация за вынужденный прогул"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  violation_type:salary_delay:
+    - law: "ТК РФ ст. 236 — денежная компенсация за задержку зарплаты (1/150 ставки ЦБ в день)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    - law: "ТК РФ ст. 142 — право работника приостановить работу при задержке свыше 15 дней"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  violation_type:underpayment:
+    - law: "ТК РФ ст. 135 — порядок установления заработной платы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    - law: "ТК РФ ст. 236 — компенсация за задержку или недоплату части заработной платы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  violation_type:vacation:
+    - law: "ТК РФ ст. 114, 122 — ежегодный оплачиваемый отпуск и порядок его предоставления"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    - law: "ТК РФ ст. 124 — запрет на непредоставление отпуска более двух лет подряд"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  violation_type:other:
+    - law: "ТК РФ ст. 21 — основные права работника"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  demand:pay_debt:
+    - law: "ТК РФ ст. 236 — работодатель обязан выплатить долг с процентами за каждый день задержки"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  demand:reinstate:
+    - law: "ТК РФ ст. 394 — немедленное исполнение решения суда о восстановлении на работе"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+  demand:other:
+    - law: "ТК РФ ст. 237 — компенсация морального вреда за нарушение трудовых прав"
       url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"

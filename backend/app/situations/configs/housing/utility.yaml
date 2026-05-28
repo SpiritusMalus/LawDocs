@@ -102,3 +102,32 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
   - law: "ПП РФ №354 пп. 98–103 — перерасчёт платы за некачественные коммунальные услуги"
     url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+
+legal_refs_by_branch:
+  violation_type:overcharge:
+    - law: "ЖК РФ ст. 157 ч. 4 — перерасчёт платы при предоставлении услуг ненадлежащего качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+    - law: "ПП РФ №354 п. 98 — основания и порядок снижения платы за коммунальные услуги"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+  violation_type:poor_service:
+    - law: "ПП РФ №354 п. 101 — критерии ненадлежащего качества коммунальных услуг"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+    - law: "ЖК РФ ст. 161 ч. 2.3 — ответственность управляющей компании за ненадлежащее содержание"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+  violation_type:no_repair:
+    - law: "ПП РФ №491 — правила содержания общего имущества в МКД"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_70821/"
+    - law: "ЖК РФ ст. 162 — обязанности управляющей компании по договору управления"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+  violation_type:other:
+    - law: "ЖК РФ ст. 165 — контроль за деятельностью управляющих организаций"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+  demand:recalculate:
+    - law: "ПП РФ №354 п. 103 — порядок обращения за перерасчётом и сроки его проведения"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+  demand:fix:
+    - law: "ЖК РФ ст. 161 ч. 1 — обязательный стандарт обслуживания МКД"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+  demand:both:
+    - law: "ЗоЗПП ст. 29 ч. 1 — право требовать и устранения недостатков, и снижения цены"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
