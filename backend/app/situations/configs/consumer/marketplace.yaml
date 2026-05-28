@@ -135,22 +135,22 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_511088/"
 
 legal_refs_by_branch:
-  "problem_type:lost":
+  problem_type:lost:
     - law: "ГК РФ ст. 886, 891 — ответственность хранителя (ПВЗ) за утрату переданной вещи"
       url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
-  "problem_type:penalty":
+  problem_type:penalty:
     - law: "ГК РФ ст. 333 — снижение судом несоразмерной неустойки по заявлению должника"
       url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
-  "problem_type:paid_return":
+  problem_type:paid_return:
     - law: "ЗоЗПП ст. 26.1 — права при дистанционной продаже: возврат в течение 7 дней"
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
     - law: "ПП РФ №2463 — запрет взимания платы за возврат товара надлежащего качества"
       url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
-  "problem_type:defect":
+  problem_type:defect:
     - law: "ЗоЗПП ст. 18 — права потребителя при обнаружении недостатков товара"
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
     - law: "ЗоЗПП ст. 18 ч. 3 — ответственность маркетплейса как продавца за качество товара"
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
-  "problem_type:other":
+  problem_type:other:
     - law: "ФЗ «Об отдельных вопросах регулирования платформенной экономики» — ответственность агрегатора"
       url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
