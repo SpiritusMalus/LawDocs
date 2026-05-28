@@ -122,3 +122,15 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
   - law: "ФЗ «Об ОСАГО» ст. 12, 16.1 — применяется при спорах по ОСАГО"
     url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+
+legal_refs_by_branch:
+  policy_type:kasko:
+    - law: "ГК РФ ст. 930 — страхование имущества, страховой интерес"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 932 — страхование ответственности по договору"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    - law: "ГК РФ ст. 940 — форма договора страхования, страховой полис"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  policy_type:osago:
+    - law: "ФЗ «Об ОСАГО» ст. 14.1 — прямое возмещение убытков через своего страховщика"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
