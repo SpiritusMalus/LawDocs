@@ -112,6 +112,51 @@ async def _analyze_with_gigachat(laws: list[str], period: str) -> str:
     return await _call_gigachat(system_prompt, user_prompt)
 
 
+async def _build_link_check_section() -> str:
+    """HTML-секция с результатом HTTP-проверки ссылок legal_refs."""
+    from app.services.link_check import check_legal_refs
+
+    try:
+        results = await check_legal_refs()
+    except Exception as exc:
+        logger.warning("link_check failed: %s", exc)
+        return (
+            "<h3 style='color:#374151'>Проверка ссылок на законодательство</h3>"
+            "<p style='color:#9ca3af;font-size:13px'>Проверка не выполнена (ошибка).</p>"
+        )
+
+    if not results:
+        return ""
+
+    total = len(results)
+    broken = [r for r in results if not r["ok"]]
+    ok_count = total - len(broken)
+
+    if not broken:
+        body = (
+            f"<p style='color:#16a34a;font-size:14px'>✓ Все ссылки доступны ({total}).</p>"
+        )
+    else:
+        rows = ""
+        for r in broken:
+            status = r["status"] if r["status"] is not None else r.get("error", "—")
+            laws = "; ".join(r["laws"]) or "—"
+            situations = ", ".join(r["situations"])
+            rows += (
+                "<li style='margin-bottom:6px'>"
+                f"<span style='color:#dc2626'>[{status}]</span> {laws}<br>"
+                f"<span style='color:#64748b;font-size:12px'>ситуации: {situations} · {r['url']}</span>"
+                "</li>"
+            )
+        body = (
+            f"<p style='font-size:14px'>Доступно {ok_count} из {total}. "
+            f"<strong style='color:#dc2626'>Проблемные ({len(broken)}):</strong></p>"
+            f"<ul style='font-size:13px'>{rows}</ul>"
+        )
+
+    return f"<h3 style='color:#374151'>Проверка ссылок на законодательство</h3>{body}"
+
+
 async def run_law_monitor() -> None:
     now = datetime.now(UTC)
 
@@ -128,6 +173,7 @@ async def run_law_monitor() -> None:
 
     laws = await _fetch_recent_laws(from_date, to_date)
     analysis = await _analyze_with_gigachat(laws, period)
+    link_section = await _build_link_check_section()
 
     if laws:
         laws_html = "".join(f"<li style='margin-bottom:4px'>{law}</li>" for law in laws)
@@ -151,6 +197,8 @@ async def run_law_monitor() -> None:
       <div style="background:#f8fafc;border-left:3px solid #2563eb;padding:16px;border-radius:4px;font-size:14px;line-height:1.7">
         {analysis_html}
       </div>
+
+      {link_section}
 
       <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb">
       <p style="color:#9ca3af;font-size:12px">
