@@ -112,9 +112,13 @@ wizard_steps:
             label: "Другое"
 
 legal_refs:
-  - law: "ФЗ «Об ОСАГО» (ст. 12, 16.1)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
-  - law: "ГК РФ (договор страхования, ст. 929)"
+  - law: "ГК РФ ст. 929 — договор имущественного страхования, обязанность выплаты"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
-  - law: "Закон о защите прав потребителей (неустойка за просрочку)"
+  - law: "ФЗ №4015-1 «Об организации страхового дела» ст. 10 — страховая выплата"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_1229/"
+  - law: "ФЗ-123 «О финансовом уполномоченном» — обязательный досудебный порядок (до 500 000 ₽)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_302456/"
+  - law: "ЗоЗПП ст. 13 — штраф 50% за отказ исполнить требование добровольно"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ФЗ «Об ОСАГО» ст. 12, 16.1 — применяется при спорах по ОСАГО"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"

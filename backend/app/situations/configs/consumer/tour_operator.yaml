@@ -103,7 +103,9 @@ wizard_steps:
         required: true
 
 legal_refs:
-  - law: "ФЗ №132-ФЗ «Об основах туристской деятельности» ст. 10, 10.1"
+  - law: "ФЗ-132 ст. 10, 10.1 — права туриста и обязанности туроператора"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+  - law: "ФЗ-132 ст. 14 — полный возврат при угрозе безопасности туриста (форс-мажор)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
   - law: "ЗоЗПП ст. 28, 32 — отказ от услуги, нарушение срока возврата"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
