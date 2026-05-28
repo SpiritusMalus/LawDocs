@@ -69,6 +69,10 @@ class Settings(BaseSettings):
     # Администрирование (модерация отзывов)
     ADMIN_SECRET: str = ""
 
+    # Ключевая ставка ЦБ РФ (%) — обновлять при изменении (cbr.ru → «Ключевая ставка»)
+    # Актуальная ставка: 21% (решение ЦБ от 25.10.2024, обновлено 2026-05-28)
+    CB_RATE_PERCENT: int = 21
+
     @model_validator(mode="after")
     def check_admin_secret_in_production(self) -> "Settings":
         if self.APP_ENV == "production" and not self.ADMIN_SECRET:

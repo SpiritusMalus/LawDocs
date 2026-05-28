@@ -29,8 +29,6 @@ python_template: |
 
   [calculated_demand_section]
 
-  _________________ / _________________
-
 narrative_fields:
   - problem_desc
 
