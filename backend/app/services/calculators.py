@@ -1743,6 +1743,272 @@ def calculate_rental_deposit(form_data: dict) -> dict:
     return data
 
 
+def calculate_medical(form_data: dict) -> dict:
+    """Претензия медицинской организации. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    clinic = str(data.get("clinic_name") or "").strip() or "медицинской организации"
+    treatment_date_raw = str(data.get("treatment_date") or "").strip()
+    problem_type = str(data.get("problem_type") or "").strip()
+    demand = str(data.get("demand") or "").strip()
+    insurance_type = str(data.get("insurance_type") or "").strip()
+
+    treatment_d = _parse_date(treatment_date_raw)
+    treatment_str = _fmt_date_ru(treatment_d) if treatment_d else treatment_date_raw
+
+    try:
+        paid_amount = Decimal(str(data.get("paid_amount") or "0"))
+    except Exception:
+        paid_amount = Decimal("0")
+
+    insurance_note = ""
+    if insurance_type == "oms":
+        insurance_note = " в рамках обязательного медицинского страхования (ОМС)"
+    elif insurance_type == "paid":
+        insurance_note = " на платной основе"
+
+    intro_parts = [f"Медицинская организация: {clinic}"]
+    if treatment_str:
+        intro_parts.append(f"дата обращения: {treatment_str}{insurance_note}")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    _LEGAL_BY_TYPE = {
+        "refused": (
+            "На основании ст. 19 Федерального закона от 21.11.2011 № 323-ФЗ «Об основах охраны здоровья граждан в "
+            "Российской Федерации» каждый имеет право на медицинскую помощь. Согласно ст. 83 ФЗ-323 медицинская помощь "
+            "в рамках программы государственных гарантий оказывается бесплатно. "
+            "В соответствии со ст. 4 Закона РФ «О защите прав потребителей» исполнитель обязан оказать услугу, "
+            "качество которой соответствует договору."
+        ),
+        "bad_treatment": (
+            "В соответствии с ч. 2 ст. 19 и ст. 98 Федерального закона от 21.11.2011 № 323-ФЗ медицинские организации "
+            "несут ответственность за причинение вреда жизни и (или) здоровью при оказании гражданам медицинской помощи. "
+            "Согласно ст. 1068 ГК РФ юридическое лицо возмещает вред, причинённый его работником при исполнении "
+            "трудовых обязанностей. "
+            "На основании ст. 29 ЗоЗПП потребитель вправе требовать устранения недостатков оказанной услуги."
+        ),
+        "paid_forced": (
+            "Согласно ст. 80 Федерального закона от 21.11.2011 № 323-ФЗ медицинская помощь в рамках программы "
+            "государственных гарантий оказывается бесплатно. "
+            "В соответствии со ст. 84 ФЗ-323 платные медицинские услуги оказываются исключительно при наличии "
+            "добровольного письменного согласия пациента. "
+            "На основании ст. 16 ЗоЗПП условия, ущемляющие права потребителя, ничтожны."
+        ),
+        "confidentiality": (
+            "В соответствии со ст. 13 Федерального закона от 21.11.2011 № 323-ФЗ сведения о факте обращения "
+            "гражданина за медицинской помощью, состоянии его здоровья и диагнозе составляют врачебную тайну. "
+            "Согласно ст. 7 Федерального закона от 27.07.2006 № 152-ФЗ «О персональных данных» операторы обязаны "
+            "обеспечить конфиденциальность персональных данных."
+        ),
+    }
+    data["calculated_legal_section"] = _LEGAL_BY_TYPE.get(
+        problem_type,
+        "На основании ст. 19 Федерального закона от 21.11.2011 № 323-ФЗ каждый имеет право на медицинскую помощь "
+        "надлежащего качества. В соответствии со ст. 4 ЗоЗПП исполнитель обязан оказать услугу надлежащего качества.",
+    )
+
+    if paid_amount > 0 and demand in ("refund", "compensation"):
+        data["calculated_amount_section"] = (
+            f"Сумма незаконно взысканных средств: {_fmt(paid_amount)} руб."
+        )
+    else:
+        data["calculated_amount_section"] = ""
+
+    _DEMAND_TEXTS = {
+        "refund": (
+            f"На основании изложенного прошу вернуть {_fmt(paid_amount)} руб., "
+            f"незаконно взысканных за оказанные медицинские услуги, в течение 10 дней с даты получения настоящей претензии."
+        ),
+        "compensation": (
+            "На основании изложенного прошу возместить расходы на лечение последствий "
+            "в течение 10 дней с даты получения настоящей претензии."
+        ),
+        "redo": (
+            "На основании изложенного прошу провести повторное лечение / исправить допущенные недостатки "
+            "за счёт организации в разумный срок."
+        ),
+        "apology_and_check": (
+            "На основании изложенного прошу провести внутреннюю проверку по факту допущенных нарушений "
+            "и привлечь виновных к дисциплинарной ответственности."
+        ),
+    }
+    demand_text = _DEMAND_TEXTS.get(
+        demand,
+        "На основании изложенного прошу устранить допущенные нарушения в течение 10 дней с даты получения настоящей претензии.",
+    )
+    data["calculated_demand_section"] = (
+        demand_text + " "
+        "В случае неисполнения требования буду вынужден(-а) обратиться с жалобой в Росздравнадзор (roszdravnadzor.gov.ru)"
+        + (", ТФОМС" if insurance_type == "oms" else "")
+        + ", прокуратуру, а также с иском в суд о компенсации морального вреда (ст. 151 ГК РФ)."
+    )
+
+    return data
+
+
+def calculate_marketplace(form_data: dict) -> dict:
+    """Претензия маркетплейсу. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    platform_val = str(data.get("platform") or "").strip()
+    platform_other = str(data.get("platform_other") or "").strip()
+    platform_name = platform_other if platform_val == "other" and platform_other else platform_val.capitalize()
+    product = str(data.get("product_name") or "").strip()
+    order_number = str(data.get("order_number") or "").strip()
+    order_date_raw = str(data.get("order_date") or "").strip()
+    problem_type = str(data.get("problem_type") or "").strip()
+    demand = str(data.get("demand") or "").strip()
+
+    order_d = _parse_date(order_date_raw)
+    order_str = _fmt_date_ru(order_d) if order_d else order_date_raw
+
+    try:
+        order_amount = Decimal(str(data.get("order_amount") or "0"))
+    except Exception:
+        order_amount = Decimal("0")
+    try:
+        withheld_amount = Decimal(str(data.get("withheld_amount") or "0"))
+    except Exception:
+        withheld_amount = Decimal("0")
+
+    claim_amount = withheld_amount if withheld_amount > 0 else order_amount
+
+    intro_parts = [f"Маркетплейс: {platform_name}"]
+    if product:
+        intro_parts.append(f"товар: «{product}»")
+    if order_number:
+        intro_parts.append(f"заказ № {order_number}")
+    if order_str:
+        intro_parts.append(f"дата заказа: {order_str}")
+    intro_parts.append(f"сумма заказа: {_fmt(order_amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    data["calculated_legal_section"] = (
+        "В соответствии со ст. 26.1 Закона РФ «О защите прав потребителей» при дистанционном способе продажи товара "
+        "продавец обязан передать потребителю товар, качество которого соответствует договору. "
+        "Согласно Постановлению Правительства РФ от 31.12.2020 № 2463 (Правила дистанционной торговли) продавец несёт "
+        "ответственность за сохранность товара до момента его передачи потребителю. "
+        "На основании ст. 18 ЗоЗПП потребитель вправе потребовать возврата уплаченной суммы при продаже товара "
+        "ненадлежащего качества."
+        + (
+            " В соответствии с ФЗ от 31.07.2025 № 289-ФЗ «Об отдельных вопросах регулирования платформенной экономики» "
+            "оператор платформы несёт ответственность перед потребителем за товар, реализованный через её инфраструктуру "
+            "(ст. 11), и не вправе взимать с потребителя вознаграждение, не предусмотренное договором (ст. 10)."
+            if problem_type in ("penalty", "paid_return") else ""
+        )
+    )
+
+    if withheld_amount > 0:
+        data["calculated_amount_section"] = f"Спорная (удержанная) сумма: {_fmt(withheld_amount)} руб."
+    else:
+        data["calculated_amount_section"] = f"Сумма к возврату: {_fmt(order_amount)} руб."
+
+    _DEMAND_TEXTS = {
+        "return_money": f"вернуть удержанную сумму в размере {_fmt(claim_amount)} руб.",
+        "refund_order": f"вернуть денежные средства за заказ в размере {_fmt(order_amount)} руб.",
+        "cancel_penalty": f"отменить незаконно начисленный штраф и вернуть {_fmt(claim_amount)} руб.",
+    }
+    demand_text = _DEMAND_TEXTS.get(demand, f"устранить нарушение и вернуть {_fmt(claim_amount)} руб.")
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу {demand_text} в течение 10 дней с даты получения настоящей претензии. "
+        f"В случае отказа буду вынужден(-а) обратиться с жалобой в Роспотребнадзор и с иском в суд; "
+        f"штраф 50% от присуждённой суммы (ст. 13 ЗоЗПП), компенсация морального вреда, судебные расходы."
+    )
+
+    return data
+
+
+def calculate_carsharing(form_data: dict) -> dict:
+    """Претензия каршеринговой компании. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_amount_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    company = str(data.get("company_name") or "").strip() or "каршеринговой компании"
+    trip_date_raw = str(data.get("trip_date") or "").strip()
+    trip_location = str(data.get("trip_location") or "").strip()
+    car_plate = str(data.get("car_plate") or "").strip()
+    order_id = str(data.get("order_id") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+    has_photo = str(data.get("has_photo") or "").strip()
+
+    trip_d = _parse_date(trip_date_raw)
+    trip_str = _fmt_date_ru(trip_d) if trip_d else trip_date_raw
+
+    try:
+        claimed_amount = Decimal(str(data.get("claimed_amount") or "0"))
+    except Exception:
+        claimed_amount = Decimal("0")
+
+    intro_parts = [f"Каршеринговая компания: {company}"]
+    if trip_str:
+        intro_parts.append(f"дата поездки: {trip_str}")
+    if trip_location:
+        intro_parts.append(f"место начала: {trip_location}")
+    if car_plate:
+        intro_parts.append(f"гос. номер: {car_plate}")
+    if order_id:
+        intro_parts.append(f"заказ: {order_id}")
+    intro_parts.append(f"требуемая сумма: {_fmt(claimed_amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    _VIOLATION_LEGAL = {
+        "preexisting_damage": (
+            "Согласно ст. 620 ГК РФ арендодатель несёт ответственность за недостатки имущества, существовавшие "
+            "до передачи его арендатору. На основании ст. 401 ГК РФ ответственность наступает только при наличии вины."
+        ),
+        "overcharge": (
+            "В соответствии со ст. 15 ГК РФ порядок расчёта ущерба должен соответствовать реальным расходам "
+            "на восстановление имущества по рыночным ценам. "
+            "На основании ст. 401 ГК РФ ответственность наступает только при наличии вины арендатора."
+        ),
+        "unauthorized_charge": (
+            "Согласно ст. 10 Закона РФ «О защите прав потребителей» потребитель вправе получить полную информацию "
+            "об услуге и её стоимости до оказания услуги. "
+            "Списание денежных средств без надлежащего уведомления и обоснования нарушает ст. 16 ЗоЗПП."
+        ),
+    }
+    legal_base = _VIOLATION_LEGAL.get(
+        violation_type,
+        "На основании ст. 401 ГК РФ ответственность наступает только при наличии вины. "
+        "Согласно ст. 10 ЗоЗПП потребитель вправе получить полную информацию об услуге.",
+    )
+    photo_note = (
+        " Факт отсутствия повреждений до начала поездки подтверждён фотофиксацией из приложения / "
+        "собственными фотографиями."
+        if has_photo == "yes" else ""
+    )
+    data["calculated_legal_section"] = (
+        legal_base
+        + " В соответствии со ст. 14 ЗоЗПП исполнитель несёт ответственность за вред, причинённый вследствие "
+        "недостатков услуги (неисправный автомобиль, отсутствие фиксации повреждений при выдаче)."
+        + photo_note
+    )
+
+    data["calculated_amount_section"] = f"Сумма к возврату: {_fmt(claimed_amount)} руб."
+
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу вернуть списанную сумму в размере {_fmt(claimed_amount)} руб. "
+        f"в течение 10 дней с даты получения настоящей претензии, а также предоставить документальное "
+        f"подтверждение причин и расчёта ущерба. "
+        f"В случае отказа буду вынужден(-а) обратиться в Роспотребнадзор и с иском в суд; "
+        f"штраф 50% (ст. 13 ЗоЗПП), моральный вред, судебные расходы."
+    )
+
+    return data
+
+
 def calculate_neighbor_flood(form_data: dict) -> dict:
     """Претензия о заливе квартиры соседом. Pre-renders секции для python_template."""
     data = dict(form_data)
@@ -2039,4 +2305,7 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_defects": calculate_ddu_defects,
     "online_course": calculate_online_course,
     "tour_operator": calculate_tour_operator,
+    "medical": calculate_medical,
+    "marketplace": calculate_marketplace,
+    "carsharing": calculate_carsharing,
 }
