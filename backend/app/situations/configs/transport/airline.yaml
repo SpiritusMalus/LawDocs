@@ -49,10 +49,6 @@ narrative_prompt: |
 narrative_fields:
   - problem_desc
 
-ai_narrative_prompt: |
-  Опиши на юридическом языке: рейс, что произошло, какой ущерб понесён.
-  Используй только данные из формы.
-
 wizard_steps:
   - title: "Рейс"
     fields:

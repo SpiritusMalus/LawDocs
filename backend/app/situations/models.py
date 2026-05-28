@@ -45,7 +45,6 @@ class SituationConfig(BaseModel):
     document_type: str = "pretenziya"
     template_file: str | None = None
     system_prompt: str
-    ai_narrative_prompt: str | None = None
     python_template: str | None = None
     narrative_prompt: str | None = None
     narrative_fields: list[str] = []

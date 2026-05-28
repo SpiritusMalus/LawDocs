@@ -44,9 +44,6 @@ narrative_prompt: |
 
 narrative_fields: []
 
-ai_narrative_prompt: |
-  Этот конфиг не использует LLM-перефразировку.
-
 wizard_steps:
   - title: "Суд и приказ"
     fields:
