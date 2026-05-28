@@ -2287,6 +2287,466 @@ def calculate_tour_operator(form_data: dict) -> dict:
     return data
 
 
+def calculate_bank(form_data: dict) -> dict:
+    """Претензия в банк: незаконная комиссия, навязанная страховка, блокировка счёта."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    bank = str(data.get("bank_name") or "").strip() or "банку"
+    contract_num = str(data.get("contract_number") or "").strip()
+    violation_date_raw = str(data.get("violation_date") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+    demand = str(data.get("demand") or "").strip()
+
+    violation_d = _parse_date(violation_date_raw)
+    violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
+
+    try:
+        amount = Decimal(str(data.get("amount") or "0"))
+    except Exception:
+        amount = Decimal("0")
+
+    intro_parts = [f"Банк: {bank}"]
+    if contract_num:
+        intro_parts.append(f"договор/счёт № {contract_num}")
+    if violation_str:
+        intro_parts.append(f"дата события: {violation_str}")
+    if amount > 0:
+        intro_parts.append(f"спорная сумма: {_fmt(amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    if violation_type == "insurance":
+        data["calculated_legal_section"] = (
+            "В соответствии со ст. 7 Федерального закона от 21.12.2013 № 353-ФЗ «О потребительском кредите (займе)» "
+            "страхование при выдаче кредита является добровольным; навязывание страховки как обязательного условия "
+            "противоречит закону. "
+            "Согласно Указанию Банка России от 20.11.2015 № 3854-У потребитель вправе отказаться от договора "
+            "добровольного страхования в течение 30 рабочих дней с момента его заключения (период охлаждения) "
+            "и получить полный возврат уплаченной страховой премии. "
+            "В соответствии со ст. 16 Закона РФ «О защите прав потребителей» условия договора, ущемляющие права "
+            "потребителя, признаются недействительными."
+        )
+    elif violation_type == "block":
+        data["calculated_legal_section"] = (
+            "В соответствии с ч. 5.2 ст. 7 Федерального закона от 07.08.2001 № 115-ФЗ банк обязан уведомить клиента "
+            "об ограничении операций не позднее 5 рабочих дней и сообщить причины при наличии такой возможности. "
+            "Согласно ч. 13.1 ст. 7 ФЗ № 115-ФЗ клиент вправе представить документы, подтверждающие законность "
+            "происхождения денежных средств. "
+            "На основании ст. 845 ГК РФ банк обязан исполнять распоряжения клиента о перечислении и выдаче средств; "
+            "ст. 856 ГК РФ предусматривает ответственность банка за незаконное удержание денежных средств."
+        )
+    elif violation_type == "commission":
+        data["calculated_legal_section"] = (
+            "В соответствии со ст. 16 Закона РФ «О защите прав потребителей» условия договора, обязывающие потребителя "
+            "оплачивать комиссии, не предусмотренные законом, признаются недействительными, а уплаченные суммы подлежат "
+            "возврату. "
+            "Согласно ст. 168 ГК РФ сделка, нарушающая требования закона, является ничтожной. "
+            "На основании ст. 1102 ГК РФ банк обязан вернуть неосновательно полученные денежные средства."
+        )
+    else:
+        data["calculated_legal_section"] = (
+            "В соответствии с Законом РФ «О защите прав потребителей» и нормами ГК РФ банк обязан "
+            "действовать в интересах клиента и возвратить неправомерно полученные денежные средства."
+        )
+
+    if demand == "return_insurance":
+        demand_text = (
+            f"На основании изложенного прошу вернуть страховую премию в размере {_fmt(amount)} руб. "
+            f"в течение 30 рабочих дней с даты получения настоящей претензии."
+        )
+    elif demand == "unblock":
+        demand_text = (
+            "На основании изложенного прошу снять ограничения с банковского счёта/карты "
+            "в течение 10 рабочих дней с даты получения настоящей претензии."
+        )
+    elif demand == "return_commission":
+        demand_text = (
+            f"На основании изложенного прошу вернуть незаконно удержанную комиссию в размере {_fmt(amount)} руб. "
+            f"в течение 30 дней с даты получения настоящей претензии."
+        )
+    else:
+        demand_text = (
+            f"На основании изложенного прошу рассмотреть настоящую претензию и удовлетворить "
+            f"требование в течение 30 дней с даты получения. "
+        )
+
+    demand_text += (
+        " В случае отказа или игнорирования буду вынужден(-а) обратиться с жалобой в Банк России "
+        "(cbr.ru) и Роспотребнадзор, а также с иском в суд."
+    )
+    data["calculated_demand_section"] = demand_text
+
+    return data
+
+
+def calculate_bank_block(form_data: dict) -> dict:
+    """Заявление о снятии ограничений по 115-ФЗ. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_notification_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    bank = str(data.get("bank_name") or "").strip() or "банку"
+    account_number = str(data.get("account_number") or "").strip()
+    violation_date_raw = str(data.get("violation_date") or "").strip()
+    block_reason = str(data.get("block_reason") or "").strip()
+    bank_notification = str(data.get("bank_notification") or "").strip()
+
+    violation_d = _parse_date(violation_date_raw)
+    violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
+
+    try:
+        amount = Decimal(str(data.get("amount") or "0"))
+    except Exception:
+        amount = Decimal("0")
+
+    intro_parts = [f"Банк: {bank}"]
+    if account_number:
+        intro_parts.append(f"счёт/карта: {account_number}")
+    if violation_str:
+        intro_parts.append(f"дата блокировки: {violation_str}")
+    if amount > 0:
+        intro_parts.append(f"сумма заблокированных средств: {_fmt(amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    block_reason_map = {
+        "suspicious_operations": "подозрительные операции (без конкретики)",
+        "source_of_funds": "не подтверждено происхождение средств",
+        "115fz_monitoring": "финансовый мониторинг / 115-ФЗ",
+        "other": "причина не объяснена",
+    }
+    reason_text = block_reason_map.get(block_reason, "причина не указана")
+
+    data["calculated_legal_section"] = (
+        "В соответствии с ч. 13.1 ст. 7 Федерального закона от 07.08.2001 № 115-ФЗ «О противодействии легализации "
+        "(отмыванию) доходов, полученных преступным путём, и финансированию терроризма» клиент вправе представить в банк "
+        "документы и сведения, подтверждающие законность происхождения денежных средств. "
+        "Согласно ч. 13.2 ст. 7 ФЗ № 115-ФЗ банк обязан рассмотреть представленные документы и сообщить о принятом решении "
+        "в течение 10 рабочих дней. "
+        "На основании ст. 845 ГК РФ банк обязан исполнять распоряжения клиента о перечислении и выдаче средств со счёта; "
+        "ст. 856 ГК РФ предусматривает ответственность банка за незаконное удержание денежных средств в виде уплаты "
+        "процентов по ст. 395 ГК РФ."
+    )
+
+    if bank_notification == "not_notified":
+        data["calculated_notification_section"] = (
+            f"Помимо этого, банк нарушил ч. 5.2 ст. 7 ФЗ № 115-ФЗ: клиент не был уведомлён об ограничении операций "
+            f"в установленный срок (не позднее 5 рабочих дней). Причина блокировки по версии банка: {reason_text}."
+        )
+    else:
+        data["calculated_notification_section"] = (
+            f"Причина блокировки по версии банка: {reason_text}."
+        )
+
+    data["calculated_demand_section"] = (
+        "На основании изложенного прошу снять ограничения с банковского счёта/карты "
+        "в течение 10 рабочих дней с даты подачи настоящего заявления. "
+        "В случае отказа или бездействия буду вынужден(-а) обратиться с жалобой в Банк России "
+        "(Интернет-приёмная на cbr.ru) и в Росфинмониторинг; при причинении убытков — с иском в суд "
+        "(ГК РФ ст. 856, 395)."
+    )
+
+    return data
+
+
+def calculate_utility(form_data: dict) -> dict:
+    """Претензия в УК/ТСЖ: перерасчёт, некачественные услуги, ремонт. Pre-renders секции."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    company = str(data.get("company_name") or "").strip() or "управляющей компании"
+    apartment = str(data.get("apartment_address") or "").strip()
+    violation_period = str(data.get("violation_period") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+    demand = str(data.get("demand") or "").strip()
+
+    try:
+        disputed_amount = Decimal(str(data.get("disputed_amount") or "0"))
+    except Exception:
+        disputed_amount = Decimal("0")
+
+    intro_parts = [f"УК/ТСЖ: {company}"]
+    if apartment:
+        intro_parts.append(f"адрес: {apartment}")
+    if violation_period:
+        intro_parts.append(f"период нарушения: {violation_period}")
+    if disputed_amount > 0:
+        intro_parts.append(f"сумма к перерасчёту: {_fmt(disputed_amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "."
+
+    base_legal = (
+        "В соответствии с ч. 1 ст. 161 Жилищного кодекса РФ управление многоквартирным домом должно обеспечивать "
+        "благоприятные и безопасные условия проживания граждан, надлежащее содержание общего имущества. "
+    )
+
+    if violation_type == "overcharge":
+        data["calculated_legal_section"] = (
+            base_legal
+            + "Согласно ст. 157 ЖК РФ размер платы за коммунальные услуги рассчитывается исходя из объёма потребляемых "
+            "коммунальных услуг, определяемого по показаниям приборов учёта. "
+            "Постановление Правительства РФ от 06.05.2011 № 354 устанавливает порядок расчёта и перерасчёта платы "
+            "за коммунальные услуги; начисления сверх норматива без оснований нарушают п. 42–44 данного постановления. "
+            "На основании ст. 16 ЗоЗПП условия, ущемляющие права потребителя, недействительны."
+        )
+    elif violation_type == "poor_service":
+        data["calculated_legal_section"] = (
+            base_legal
+            + "Постановление Правительства РФ от 06.05.2011 № 354 предусматривает ответственность исполнителя за "
+            "предоставление коммунальных услуг ненадлежащего качества; при этом производится перерасчёт платы "
+            "(разделы IX–X постановления). "
+            "Согласно ч. 2.3 ст. 161 ЖК РФ управляющая организация несёт ответственность перед собственниками "
+            "за оказание всех услуг и выполнение работ по надлежащему содержанию и ремонту общего имущества."
+        )
+    elif violation_type == "no_repair":
+        data["calculated_legal_section"] = (
+            base_legal
+            + "Постановление Правительства РФ от 13.08.2006 № 491 устанавливает минимальный перечень работ по "
+            "содержанию и ремонту общего имущества многоквартирного дома, обязательных для управляющей организации. "
+            "Отказ от проведения работ, включённых в минимальный перечень, является нарушением ст. 161 ЖК РФ и "
+            "влечёт административную ответственность по ст. 7.22 КоАП РФ."
+        )
+    else:
+        data["calculated_legal_section"] = (
+            base_legal
+            + "Управляющая компания обязана надлежащим образом исполнять договор управления и устранять нарушения "
+            "в установленные сроки."
+        )
+
+    if demand == "recalculate":
+        if disputed_amount > 0:
+            demand_text = (
+                f"На основании изложенного прошу произвести перерасчёт платы за коммунальные услуги "
+                f"и вернуть излишне уплаченные {_fmt(disputed_amount)} руб. в течение 30 дней."
+            )
+        else:
+            demand_text = (
+                "На основании изложенного прошу произвести перерасчёт платы за коммунальные услуги "
+                "в течение 30 дней с даты получения настоящей претензии."
+            )
+    elif demand == "fix":
+        demand_text = (
+            "На основании изложенного прошу устранить допущенные нарушения "
+            "в течение 30 дней с даты получения настоящей претензии."
+        )
+    else:
+        if disputed_amount > 0:
+            demand_text = (
+                f"На основании изложенного прошу произвести перерасчёт и вернуть {_fmt(disputed_amount)} руб., "
+                f"а также устранить допущенные нарушения в течение 30 дней с даты получения настоящей претензии."
+            )
+        else:
+            demand_text = (
+                "На основании изложенного прошу произвести перерасчёт и устранить допущенные нарушения "
+                "в течение 30 дней с даты получения настоящей претензии."
+            )
+
+    demand_text += (
+        " При неисполнении буду вынужден(-а) обратиться с жалобой в Государственную жилищную инспекцию, "
+        "прокуратуру, а также с иском в суд."
+    )
+    data["calculated_demand_section"] = demand_text
+
+    return data
+
+
+def calculate_gibdd(form_data: dict) -> dict:
+    """Жалоба на постановление ГИБДД. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_legal_section", "")
+    data.setdefault("calculated_objection_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    fine_number = str(data.get("fine_number") or "").strip()
+    violation_date_raw = str(data.get("violation_date") or "").strip()
+    violation_place = str(data.get("violation_place") or "").strip()
+    vehicle = str(data.get("vehicle") or "").strip()
+    violation_article = str(data.get("violation_article") or "").strip()
+    objection_reason = str(data.get("objection_reason") or "").strip()
+    additional_desc = str(data.get("additional_desc") or "").strip()
+    appeal_to = str(data.get("appeal_to") or "").strip()
+
+    violation_d = _parse_date(violation_date_raw)
+    violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
+
+    try:
+        amount = Decimal(str(data.get("amount") or "0"))
+    except Exception:
+        amount = Decimal("0")
+
+    intro_parts = []
+    if fine_number:
+        intro_parts.append(f"постановление № {fine_number}")
+    if violation_str:
+        intro_parts.append(f"дата нарушения: {violation_str}")
+    if violation_place:
+        intro_parts.append(f"место: {violation_place}")
+    if vehicle:
+        intro_parts.append(f"ТС: {vehicle}")
+    if violation_article:
+        intro_parts.append(f"статья: {violation_article}")
+    if amount > 0:
+        intro_parts.append(f"штраф: {_fmt(amount)} руб.")
+    data["calculated_intro_section"] = ", ".join(intro_parts).capitalize() + "." if intro_parts else ""
+
+    data["calculated_legal_section"] = (
+        "В соответствии со ст. 30.1 КоАП РФ постановление по делу об административном правонарушении может быть "
+        "обжаловано вышестоящему должностному лицу либо в суд. "
+        "Согласно ст. 30.3 КоАП РФ жалоба подаётся в течение 10 суток со дня вручения или получения копии постановления. "
+        "На основании ст. 1.5 КоАП РФ лицо подлежит административной ответственности только за те административные "
+        "правонарушения, в отношении которых установлена его вина; все неустранимые сомнения трактуются в его пользу."
+    )
+
+    objection_map = {
+        "not_driving": (
+            "В соответствии с ч. 2 ст. 2.6.1 КоАП РФ собственник транспортного средства освобождается от "
+            "административной ответственности, если докажет, что в момент фиксации нарушения ТС находилось "
+            "в пользовании другого лица. К настоящей жалобе прилагаются документы, подтверждающие данное обстоятельство "
+            "(доверенность / договор аренды / заявление об угоне)."
+        ),
+        "no_violation": (
+            "В соответствии с п. 1 ст. 24.5 КоАП РФ производство по делу об административном правонарушении не может "
+            "быть начато, а начатое производство подлежит прекращению при отсутствии события административного "
+            "правонарушения. Обстоятельства, изложенные в постановлении, не соответствуют действительности."
+        ),
+        "camera_error": (
+            "Согласно ст. 26.8 КоАП РФ показания специальных технических средств оцениваются в совокупности с другими "
+            "доказательствами по делу. Фиксация нарушения произведена техническим средством, данные которого вызывают "
+            "сомнения в достоверности; погрешность прибора должна быть подтверждена действующим сертификатом поверки. "
+            "В соответствии со ст. 26.11 КоАП РФ неустранимые сомнения трактуются в пользу лица, привлекаемого "
+            "к ответственности."
+        ),
+        "procedural": (
+            "В соответствии со ст. 28.2 КоАП РФ нарушения при составлении протокола об административном "
+            "правонарушении являются существенными и влекут признание постановления незаконным. "
+            "Согласно ст. 4.5 КоАП РФ постановление по делу об административном правонарушении не может быть "
+            "вынесено по истечении двух месяцев (по делу, рассматриваемому судьёй, — трёх месяцев) со дня "
+            "совершения административного правонарушения."
+        ),
+        "other": (
+            "В соответствии со ст. 24.1 КоАП РФ задачами производства по делам об административных "
+            "правонарушениях являются всестороннее, полное, объективное и своевременное выяснение обстоятельств "
+            "каждого дела. Вынесенное постановление не соответствует данным требованиям."
+        ),
+    }
+    data["calculated_objection_section"] = objection_map.get(
+        objection_reason,
+        "Постановление является незаконным и подлежит отмене.",
+    )
+
+    if additional_desc:
+        data["calculated_objection_section"] += f" {additional_desc}"
+
+    if appeal_to == "court":
+        appeal_phrase = "в суд"
+    else:
+        appeal_phrase = "вышестоящему должностному лицу ГИБДД"
+
+    fine_ref = f"постановление № {fine_number}" if fine_number else "данное постановление"
+    data["calculated_demand_section"] = (
+        f"На основании изложенного прошу отменить {fine_ref} и прекратить производство по делу "
+        f"на основании п. 1 ст. 24.5 КоАП РФ. "
+        f"Жалоба направлена {appeal_phrase}. "
+        f"К жалобе прилагаются: копия постановления, копия СТС/ПТС."
+    )
+
+    return data
+
+
+def calculate_debt_collector(form_data: dict) -> dict:
+    """Жалоба в ФССП на незаконные действия коллекторов. Pre-renders секции для python_template."""
+    data = dict(form_data)
+    data.setdefault("calculated_intro_section", "")
+    data.setdefault("calculated_violations_section", "")
+    data.setdefault("calculated_recordings_section", "")
+    data.setdefault("calculated_demand_section", "")
+
+    creditor = str(data.get("creditor_name") or "").strip()
+    collector = str(data.get("collector_name") or "").strip()
+    debt_desc = str(data.get("debt_desc") or "").strip()
+    violation_types = str(data.get("violation_types") or "").strip()
+    has_recordings = str(data.get("has_recordings") or "").strip()
+    first_contact_date_raw = str(data.get("first_contact_date") or "").strip()
+
+    first_d = _parse_date(first_contact_date_raw)
+    first_str = _fmt_date_ru(first_d) if first_d else first_contact_date_raw
+
+    intro_parts = []
+    if creditor:
+        intro_parts.append(f"кредитор: {creditor}")
+    if debt_desc:
+        intro_parts.append(f"долг: {debt_desc}")
+    if collector:
+        intro_parts.append(f"коллекторская организация: {collector}")
+    if first_str:
+        intro_parts.append(f"преследование началось с: {first_str}")
+    data["calculated_intro_section"] = ", ".join(intro_parts).capitalize() + "." if intro_parts else ""
+
+    violation_map = {
+        "night_calls": (
+            "1. Коллекторы осуществляют звонки в запрещённое законом время. "
+            "В соответствии с ч. 3 ст. 7 Федерального закона от 03.07.2016 № 230-ФЗ взаимодействие с должником "
+            "в рабочие дни допускается с 08:00 до 22:00 по местному времени, в выходные и праздничные дни — "
+            "с 09:00 до 20:00. Зафиксированные звонки выходят за пределы указанных временных ограничений."
+        ),
+        "frequency": (
+            "1. Коллекторы нарушают установленные лимиты частоты взаимодействия. "
+            "Согласно ч. 3 ст. 7 ФЗ № 230-ФЗ допускается не более 1 звонка в сутки, 2 звонков в неделю "
+            "и 8 звонков в месяц. Фактическое количество звонков превышает установленные нормы."
+        ),
+        "threats": (
+            "1. Коллекторы применяют психологическое давление, угрозы и иные противоправные методы воздействия. "
+            "В соответствии с ч. 2 ст. 6 ФЗ № 230-ФЗ запрещается применять к должнику физическую силу, угрожать "
+            "применением физической силы, причинением вреда здоровью, имуществу, а также оказывать психологическое "
+            "давление, в том числе угрожать уголовным преследованием или разглашением информации."
+        ),
+        "third_parties": (
+            "1. Коллекторы осуществляют взаимодействие с третьими лицами (родственниками, коллегами, работодателем) "
+            "без письменного согласия должника. "
+            "Согласно ч. 5 ст. 4 ФЗ № 230-ФЗ такое взаимодействие допускается только при наличии "
+            "письменного согласия должника, которое им не давалось."
+        ),
+        "no_intro": (
+            "1. Коллекторы не представляются при звонках, не называют организацию и кредитора. "
+            "В соответствии с ч. 4 ст. 7 ФЗ № 230-ФЗ при взаимодействии посредством телефонных переговоров "
+            "взыскатель обязан сообщить свои фамилию, имя, отчество, наименование кредитора и коллекторской "
+            "организации, а также сведения о наличии просроченной задолженности."
+        ),
+        "other": (
+            "1. Коллекторская организация допускает иные нарушения требований ФЗ № 230-ФЗ, "
+            "подробно описанные в прилагаемых материалах."
+        ),
+    }
+    data["calculated_violations_section"] = violation_map.get(
+        violation_types,
+        "Коллекторская организация нарушает требования ФЗ № 230-ФЗ.",
+    )
+
+    if has_recordings == "yes":
+        data["calculated_recordings_section"] = (
+            "Факты нарушений подтверждены аудиозаписями звонков, которые прилагаются к настоящей жалобе."
+        )
+    else:
+        data["calculated_recordings_section"] = ""
+
+    data["calculated_demand_section"] = (
+        "На основании изложенного прошу провести проверку деятельности коллекторской организации "
+        "и привлечь её к административной ответственности по ч. 1 ст. 14.57 КоАП РФ "
+        "(штраф от 50 000 до 500 000 руб.). "
+        "Настоящая жалоба направлена одновременно в Банк России и в прокуратуру. "
+        "К жалобе прилагаются: скриншоты звонков"
+        + (", аудиозаписи разговоров" if has_recordings == "yes" else "")
+        + "."
+    )
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
@@ -2308,4 +2768,9 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "medical": calculate_medical,
     "marketplace": calculate_marketplace,
     "carsharing": calculate_carsharing,
+    "bank": calculate_bank,
+    "bank_block": calculate_bank_block,
+    "utility": calculate_utility,
+    "gibdd": calculate_gibdd,
+    "debt_collector": calculate_debt_collector,
 }
