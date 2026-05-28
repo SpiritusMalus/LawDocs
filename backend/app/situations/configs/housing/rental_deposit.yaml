@@ -111,3 +111,11 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
   - law: "ГК РФ ст. 1102 — неосновательное обогащение"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+
+legal_refs_by_branch:
+  "deposit_reason:damages_fake":
+    - law: "ГК РФ ст. 1064 — обязанность доказать факт и размер причинённого вреда"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "deposit_reason:wear_normal":
+    - law: "ГК РФ ст. 616 — обязанности арендодателя по содержанию имущества (нормальный износ)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

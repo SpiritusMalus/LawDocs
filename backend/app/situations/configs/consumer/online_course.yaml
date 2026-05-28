@@ -98,7 +98,7 @@ wizard_steps:
 legal_refs:
   - law: "ФЗ №273-ФЗ «Об образовании в РФ» ст. 54 — договор об образовании"
     url: "https://www.consultant.ru/document/cons_doc_LAW_140174/"
-  - law: "Постановление Правительства РФ №1563 — Правила платных образовательных услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_363073/"
+  - law: "ПП РФ №1441 — Правила оказания платных образовательных услуг"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
   - law: "ЗоЗПП ст. 28, 32 — отказ от услуги, нарушение срока возврата"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"

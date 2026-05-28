@@ -51,4 +51,5 @@ class SituationConfig(BaseModel):
     wizard_steps: list[WizardStep]
     append_contact_step: bool = True
     legal_refs: list[LegalRef] = []
+    legal_refs_by_branch: dict[str, list[LegalRef]] = {}
     header_fields: list[HeaderField] = []

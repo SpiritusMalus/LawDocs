@@ -126,7 +126,17 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
   - law: "ФЗ-323 ст. 22 — право пациента на получение медицинской документации"
     url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
-  - law: "ПП РФ №1006 — Правила предоставления платных медицинских услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_137726/"
+  - law: "ПП РФ №736 — Правила предоставления платных медицинских услуг (заменил №1006 с 2023 г.)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_447009/"
   - law: "ЗоЗПП ст. 4, 29 — качество услуги и права при недостатках"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  "problem_type:confidentiality":
+    - law: "ФЗ-323 ст. 13 — врачебная тайна, запрет разглашения сведений о пациенте"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
+    - law: "ФЗ-152 «О персональных данных» — защита медицинских персональных данных"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_61801/"
+  "problem_type:bad_treatment":
+    - law: "ФЗ-323 ст. 70 — ответственность лечащего врача за причинение вреда здоровью"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"

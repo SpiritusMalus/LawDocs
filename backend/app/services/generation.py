@@ -16,6 +16,21 @@ from app.models.user import User
 logger = logging.getLogger(__name__)
 
 
+def _resolve_legal_refs(config, form_data: dict) -> list[dict]:
+    refs = list(config.legal_refs)
+    for key, branch_refs in config.legal_refs_by_branch.items():
+        field_id, _, value = key.partition(":")
+        if form_data.get(field_id) == value:
+            refs.extend(branch_refs)
+    seen: set[str] = set()
+    result = []
+    for r in refs:
+        if r.law not in seen:
+            seen.add(r.law)
+            result.append(r)
+    return [r.model_dump() for r in result]
+
+
 async def run_document_generation(
     order_id: str,
     situation_id: str,
@@ -50,7 +65,7 @@ async def run_document_generation(
             try:
                 from app.situations.registry import registry as _registry
                 _config = _registry.get(situation_id)
-                _legal_refs = [ref.model_dump() for ref in (_config.legal_refs if _config else [])]
+                _legal_refs = _resolve_legal_refs(_config, form_data) if _config else []
                 instruction_content = await fill_instruction(situation_id=situation_id, form_data=form_data)
                 instruction_pdf_key = await generate_instruction(
                     order_id=order_id,

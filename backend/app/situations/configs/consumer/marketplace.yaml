@@ -130,6 +130,14 @@ legal_refs:
   - law: "ЗоЗПП ст. 26.1 — дистанционная торговля, ст. 18 — ненадлежащее качество"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
   - law: "Постановление Правительства РФ №2463 — правила дистанционной торговли"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_374730/"
-  - law: "ФЗ №289-ФЗ «О платформенной экономике» — ответственность маркетплейса перед потребителем (с 01.10.2026)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+  - law: "ФЗ №289-ФЗ «Об отдельных вопросах регулирования платформенной экономики» — ответственность маркетплейса перед потребителем (с 01.09.2025)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_511088/"
+
+legal_refs_by_branch:
+  "problem_type:lost":
+    - law: "ГК РФ ст. 886, 891 — ответственность хранителя (ПВЗ) за утрату переданной вещи"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+  "problem_type:penalty":
+    - law: "ГК РФ ст. 333 — снижение судом несоразмерной неустойки по заявлению должника"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"

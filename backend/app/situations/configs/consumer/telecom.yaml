@@ -123,5 +123,15 @@ wizard_steps:
 legal_refs:
   - law: "ФЗ «О связи» — права абонента и обязанности оператора"
     url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
-  - law: "Закон о защите прав потребителей ст. 29"
+  - law: "ЗоЗПП ст. 29 — права потребителя при ненадлежащем качестве услуги"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ЗоЗПП ст. 13 — штраф 50% за отказ исполнить требование добровольно"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  "problem_type:disconnected":
+    - law: "ФЗ «О связи» ст. 44 — порядок и условия расторжения договора оператором"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+  "problem_type:illegal_charges":
+    - law: "ФЗ «О связи» ст. 54 — порядок оплаты услуг связи, запрет списаний без согласия"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"

@@ -140,3 +140,11 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
   - law: "ЖК РФ ст. 161 + ПП РФ №491 — ответственность управляющей компании за общее имущество (стояки)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+
+legal_refs_by_branch:
+  "flood_source:management_company":
+    - law: "ПП РФ №491 — Правила содержания общего имущества, ответственность УК за инженерные системы"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/"
+  "flood_source:roof":
+    - law: "ПП РФ №491 — Правила содержания общего имущества, ответственность УК за кровлю"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/"

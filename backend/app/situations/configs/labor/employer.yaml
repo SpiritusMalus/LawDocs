@@ -131,3 +131,10 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
   - law: "УК РФ ст. 145.1 — уголовная ответственность за невыплату зарплаты свыше 2 месяцев"
     url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"
+
+legal_refs_by_branch:
+  "violation_type:dismissal":
+    - law: "ТК РФ ст. 81 — основания расторжения трудового договора по инициативе работодателя"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    - law: "ТК РФ ст. 394 — восстановление на работе и компенсация за вынужденный прогул"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
