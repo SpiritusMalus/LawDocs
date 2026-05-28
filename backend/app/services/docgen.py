@@ -113,17 +113,37 @@ def _render_right_block(pdf: "FPDF", lines: list[str], line_h: float = 5.5) -> N
             pdf.multi_cell(RIGHT_COL_W, line_h, line.strip(), align="L")
 
 
-def _render_sig_block(pdf: "FPDF", line_h: float = 6.0) -> None:
-    """Блок подписи: дата-бланк слева + подпись/расшифровка-бланк справа. Всё от руки."""
+def _split_last_line(lines: list[str]) -> tuple[list[str], str | None]:
+    """Отделяет последнюю непустую строку, чтобы держать её вместе с блоком подписи."""
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip():
+            return lines[:i], lines[i]
+    return lines, None
+
+
+def _render_sig_block(pdf: "FPDF", line_h: float = 6.0, tail_line: str | None = None) -> None:
+    """Блок подписи: дата-бланк слева + подпись/расшифровка-бланк справа. Всё от руки.
+
+    tail_line — последний абзац тела. Рендерится атомарно вместе с блоком подписи,
+    чтобы подпись не уезжала на новую страницу одна без текста (keep-with-last-line).
+    """
     PAGE_W  = 210.0
     LEFT_M  = 25.0
     RIGHT_M = 20.0
     BODY_W  = PAGE_W - LEFT_M - RIGHT_M
     SIG_W   = 80.0
-    BLOCK_H = 2 * line_h + 5
+    BLOCK_H = 6 + 2 * line_h + 5  # ln(6) перед блоком + две строки + запас
 
-    if pdf.get_y() + BLOCK_H > pdf.h - pdf.b_margin:
+    tail_h = 0.0
+    if tail_line:
+        tail_h = pdf.multi_cell(0, 6, tail_line, dry_run=True, output="HEIGHT") + 1
+
+    if pdf.get_y() + tail_h + BLOCK_H > pdf.h - pdf.b_margin:
         pdf.add_page()
+
+    if tail_line:
+        pdf.multi_cell(0, 6, tail_line)
+        pdf.ln(1)
 
     DATE_TEXT = "«___» _________________ 20___ г."
     SIG_TEXT  = "_________________ / _________________"
@@ -157,14 +177,15 @@ def _docx_to_pdf_legacy(docx_bytes: bytes) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=20)
     pdf.set_font("FreeSans", size=11)
 
-    for line in lines:
+    head_lines, tail_line = _split_last_line(lines)
+    for line in head_lines:
         if not line.strip():
             pdf.ln(3)
         else:
             pdf.multi_cell(0, 6, line)
             pdf.ln(1)
 
-    _render_sig_block(pdf)
+    _render_sig_block(pdf, tail_line=tail_line)
     return bytes(pdf.output())
 
 
@@ -193,14 +214,16 @@ def _render_pdf(header: list[str], title: str, body: str) -> bytes:
         pdf.set_font("FreeSans", size=11)
         pdf.ln(4)
 
-    for line in body.split("\n"):
+    lines = body.split("\n")
+    head_lines, tail_line = _split_last_line(lines)
+    for line in head_lines:
         if not line.strip():
             pdf.ln(3)
             continue
         pdf.multi_cell(0, 6, line)
         pdf.ln(1)
 
-    _render_sig_block(pdf)
+    _render_sig_block(pdf, tail_line=tail_line)
 
     return bytes(pdf.output())
 
@@ -239,20 +262,22 @@ def _instruction_to_pdf(content: str, legal_refs: list[dict]) -> bytes:
         pdf.ln(5)
 
         pdf.set_font("FreeSans", style="B", size=11)
-        pdf.multi_cell(0, 6, "Полезные ссылки на законодательство:")
+        pdf.multi_cell(0, 6, "Ссылки на законы из вашего заявления:")
         pdf.ln(3)
 
         pdf.set_font("FreeSans", size=10)
         for ref in legal_refs:
             law = ref.get("law", "")
             url = ref.get("url", "")
-            if not law or not url:
+            if not law:
                 continue
-            pdf.set_text_color(0, 0, 0)
-            pdf.write(6, f"• {law}:  ")
-            pdf.set_text_color(0, 80, 200)
-            pdf.write(6, "consultant.ru", link=url)
-            pdf.set_text_color(0, 0, 0)
+            pdf.write(6, "• ")
+            if url:
+                pdf.set_text_color(0, 80, 200)
+                pdf.write(6, law, link=url)
+                pdf.set_text_color(0, 0, 0)
+            else:
+                pdf.write(6, law)
             pdf.ln(7)
 
     return bytes(pdf.output())
