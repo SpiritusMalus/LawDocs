@@ -8,7 +8,10 @@ from app.services.docgen import (
     _sanitize_order_id,
     _text_to_docx,
     _find_template,
+    _split_last_line,
+    _render_pdf,
 )
+from app.services.calculators import _ru_date, _sentence_case
 
 
 def test_sanitize_situation_id_valid():
@@ -91,7 +94,7 @@ async def test_generate_document_text_fallback(tmp_path):
     """When no template exists, falls back to text-to-docx."""
     with (
         patch("app.services.docgen.TEMPLATES_DIR", tmp_path),
-        patch("app.services.docgen._docx_to_pdf", return_value=b"%PDF fake"),
+        patch("app.services.docgen._render_pdf", return_value=b"%PDF fake"),
         patch("app.services.docgen.upload_bytes") as mock_upload,
     ):
         mock_upload.return_value = None
@@ -99,10 +102,70 @@ async def test_generate_document_text_fallback(tmp_path):
         docx_key, pdf_key = await generate_document(
             order_id="550e8400-e29b-41d4-a716-446655440000",
             situation_id="shop",
-            content="Текст претензии",
+            body="Текст претензии",
+            header=["Кому: ООО Ромашка"],
+            title="ПРЕТЕНЗИЯ",
             form_data={"problem_type": "defect"},
         )
         assert "pretenziya_shop_" in docx_key
         assert docx_key.endswith(".docx")
         assert pdf_key.endswith(".pdf")
         assert mock_upload.call_count == 2
+
+
+def test_ru_date_formats_iso():
+    assert _ru_date("2024-01-15") == "15 января 2024 года"
+
+
+def test_ru_date_passthrough_on_invalid():
+    assert _ru_date("март–апрель 2026 г.") == "март–апрель 2026 г."
+    assert _ru_date("") == ""
+    assert _ru_date(None) == ""
+
+
+def test_sentence_case_preserves_proper_nouns():
+    assert _sentence_case("по адресу: г. Москва") == "По адресу: г. Москва"
+    assert _sentence_case("") == ""
+
+
+def test_split_last_line_basic():
+    head, tail = _split_last_line(["абзац один", "", "последний абзац"])
+    assert head == ["абзац один", ""]
+    assert tail == "последний абзац"
+
+
+def test_split_last_line_trailing_blanks():
+    head, tail = _split_last_line(["текст", "", ""])
+    assert tail == "текст"
+    assert head == []
+
+
+def test_split_last_line_all_empty():
+    head, tail = _split_last_line(["", ""])
+    assert tail is None
+    assert head == ["", ""]
+
+
+def test_employer_calculator_formats_hire_date_in_russian():
+    from app.services.calculators import calculate_employer
+    result = calculate_employer({
+        "violation_type": "salary_delay",
+        "company_name": "ООО Ромашка",
+        "position": "инженер",
+        "hire_date": "2024-01-15",
+        "debt_period": "март–апрель 2026 г.",
+    })
+    intro = result["calculated_intro_section"]
+    assert "15 января 2024 года" in intro
+    assert "2024-01-15" not in intro
+
+
+def test_dtp_calculator_keeps_city_capitalized():
+    from app.services.calculators import calculate_dtp_osago
+    result = calculate_dtp_osago({
+        "incident_date": "2026-03-14",
+        "incident_location": "г. Москва, ул. Ленина, д. 10",
+    })
+    intro = result["calculated_intro_section"]
+    assert "г. Москва" in intro
+    assert "г. москва" not in intro

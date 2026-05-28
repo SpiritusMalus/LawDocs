@@ -58,6 +58,18 @@ def _fmt_date_ru(d: date) -> str:
     return f"{d.day} {_MONTHS_GENITIVE[d.month - 1]} {d.year} года"
 
 
+def _ru_date(value: str | None) -> str:
+    """ISO-строку даты → «15 января 2024 года». Невалидное значение возвращает как есть."""
+    raw = str(value or "").strip()
+    d = _parse_date(raw)
+    return _fmt_date_ru(d) if d else raw
+
+
+def _sentence_case(s: str) -> str:
+    """Заглавная только первая буква; остальные регистры сохраняются (не ломает «г. Москва»)."""
+    return s[0].upper() + s[1:] if s else s
+
+
 def _ddu_neustoyka(price: Decimal, rate: Decimal, days: int) -> Decimal:
     """ФЗ-214 ст. 6 ч. 2: 1/150 ставки ЦБ × цена × дни (для граждан)."""
     return price * rate / Decimal("100") / Decimal("150") * Decimal(days)
@@ -74,7 +86,7 @@ def calculate_ddu_delay(form_data: dict) -> dict:
 
     developer = str(data.get("developer_name") or "").strip()
     contract_number = str(data.get("contract_number") or "").strip()
-    contract_date = str(data.get("contract_date") or "").strip()
+    contract_date = _ru_date(data.get("contract_date"))
     apartment_address = str(data.get("apartment_address") or "").strip()
 
     # Intro
@@ -404,7 +416,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
     service_name = str(data.get("service_name") or "").strip()
     car_model = str(data.get("car_model") or "").strip()
     car_plate = str(data.get("car_plate") or "").strip()
-    service_date = str(data.get("service_date") or "").strip()
+    service_date = _ru_date(data.get("service_date"))
 
     try:
         price = Decimal(str(data.get("work_price") or "0"))
@@ -714,7 +726,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
 
     violation = str(data.get("violation_type", ""))
     insurance_company = str(data.get("insurance_company") or "").strip()
-    incident_date = str(data.get("incident_date") or "").strip()
+    incident_date = _ru_date(data.get("incident_date"))
     incident_location = str(data.get("incident_location") or "").strip()
     car_model = str(data.get("car_model") or "").strip()
     car_plate = str(data.get("car_plate") or "").strip()
@@ -739,7 +751,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
             f"Я обратился(-лась) в страховую компанию {insurance_company or ''} "
             f"с заявлением о страховом возмещении {claim_date_str}".strip()
         )
-    data["calculated_intro_section"] = ". ".join(intro_parts).capitalize() + "." if intro_parts else ""
+    data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
     # Violation
     data["calculated_violation_section"] = _DTP_OSAGO_VIOLATION_SECTIONS.get(
@@ -902,7 +914,7 @@ def calculate_employer(form_data: dict) -> dict:
     violation = str(data.get("violation_type") or "").strip()
     company_name = str(data.get("company_name") or "").strip()
     position = str(data.get("position") or "").strip()
-    hire_date = str(data.get("hire_date") or "").strip()
+    hire_date = _ru_date(data.get("hire_date"))
     debt_period = str(data.get("debt_period") or "").strip()
 
     # Intro
@@ -1018,9 +1030,9 @@ def calculate_repair(form_data: dict) -> dict:
 
     contractor_name = str(data.get("contractor_name") or "").strip()
     work_type = str(data.get("work_type") or "").strip()
-    contract_date = str(data.get("contract_date") or "").strip()
+    contract_date = _ru_date(data.get("contract_date"))
     contract_number = str(data.get("contract_number") or "").strip()
-    work_end_date = str(data.get("work_end_date") or "").strip()
+    work_end_date = _ru_date(data.get("work_end_date"))
     defect_discovery_date_str = str(data.get("defect_discovery_date") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
@@ -1173,7 +1185,7 @@ def calculate_insurance(form_data: dict) -> dict:
     incident_type = str(data.get("incident_type") or "").strip()
     insurance_company = str(data.get("insurance_company") or "").strip()
     policy_number = str(data.get("policy_number") or "").strip()
-    incident_date = str(data.get("incident_date") or "").strip()
+    incident_date = _ru_date(data.get("incident_date"))
 
     # Intro
     intro_parts = []
@@ -1183,7 +1195,7 @@ def calculate_insurance(form_data: dict) -> dict:
         intro_parts.append(f"{incident_date} наступил страховой случай")
     if insurance_company:
         intro_parts.append(f"Я обратился(-лась) в страховую компанию {insurance_company} с заявлением о выплате страхового возмещения")
-    data["calculated_intro_section"] = ". ".join(intro_parts).capitalize() + "." if intro_parts else ""
+    data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
     data["calculated_violation_section"] = _INSURANCE_VIOLATION_SECTIONS.get(
         incident_type,
@@ -1495,7 +1507,7 @@ def calculate_airline(form_data: dict) -> dict:
     violation = str(data.get("violation_type", "")).strip()
     flight_number = str(data.get("flight_number") or "").strip() or "—"
     route = str(data.get("route") or "").strip()
-    flight_date = str(data.get("flight_date") or "").strip()
+    flight_date = _ru_date(data.get("flight_date"))
     airline_name = str(data.get("airline") or "").strip()
 
     try:
@@ -1627,8 +1639,8 @@ def calculate_court_order(form_data: dict) -> dict:
     data.setdefault("calculated_demand_section", "")
 
     case_num = str(data.get("case_number") or "").strip() or "—"
-    order_date = str(data.get("order_date") or "").strip()
-    receive_date = str(data.get("receive_date") or "").strip()
+    order_date = _ru_date(data.get("order_date"))
+    receive_date = _ru_date(data.get("receive_date"))
     creditor = str(data.get("creditor_name") or "").strip() or "взыскатель"
     objection_reason = str(data.get("objection_reason") or "").strip()
     additional = str(data.get("additional_desc") or "").strip()
