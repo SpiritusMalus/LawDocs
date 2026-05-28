@@ -2592,7 +2592,7 @@ def calculate_gibdd(form_data: dict) -> dict:
         intro_parts.append(f"статья: {violation_article}")
     if amount > 0:
         intro_parts.append(f"штраф: {_fmt(amount)} руб.")
-    data["calculated_intro_section"] = ", ".join(intro_parts).capitalize() + "." if intro_parts else ""
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "." if intro_parts else ""
 
     data["calculated_legal_section"] = (
         "В соответствии со ст. 30.1 КоАП РФ постановление по делу об административном правонарушении может быть "
@@ -2685,7 +2685,7 @@ def calculate_debt_collector(form_data: dict) -> dict:
         intro_parts.append(f"коллекторская организация: {collector}")
     if first_str:
         intro_parts.append(f"преследование началось с: {first_str}")
-    data["calculated_intro_section"] = ", ".join(intro_parts).capitalize() + "." if intro_parts else ""
+    data["calculated_intro_section"] = ", ".join(intro_parts) + "." if intro_parts else ""
 
     violation_map = {
         "night_calls": (

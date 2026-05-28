@@ -211,11 +211,43 @@ def enrich_court_order(form_data: dict) -> dict:
     return calculate_court_order(form_data)
 
 
+def _make_calc_enricher(calculator_name: str):
+    def enricher(form_data: dict) -> dict:
+        sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
+        from app.services.calculators import SITUATION_CALCULATORS
+        return SITUATION_CALCULATORS[calculator_name](form_data)
+    return enricher
+
+
 # Реестр гибридных обогатителей: situation_id → функция
 _HYBRID_ENRICHERS = {
     "ddu_termination": enrich_ddu_termination,
     "rental_deposit": enrich_rental_deposit,
     "court_order": enrich_court_order,
+    "bank": _make_calc_enricher("bank"),
+    "bank_block": _make_calc_enricher("bank_block"),
+    "utility": _make_calc_enricher("utility"),
+    "gibdd": _make_calc_enricher("gibdd"),
+    "debt_collector": _make_calc_enricher("debt_collector"),
+    # Батч 1+2 этапа 4
+    "neighbor_flood": _make_calc_enricher("neighbor_flood"),
+    "ddu_defects": _make_calc_enricher("ddu_defects"),
+    "online_course": _make_calc_enricher("online_course"),
+    "tour_operator": _make_calc_enricher("tour_operator"),
+    "medical": _make_calc_enricher("medical"),
+    "marketplace": _make_calc_enricher("marketplace"),
+    "carsharing": _make_calc_enricher("carsharing"),
+    # Этап 3
+    "employer": _make_calc_enricher("employer"),
+    "gym_refund": _make_calc_enricher("gym_refund"),
+    "insurance": _make_calc_enricher("insurance"),
+    "repair": _make_calc_enricher("repair"),
+    "shop": _make_calc_enricher("shop"),
+    "telecom": _make_calc_enricher("telecom"),
+    "auto_repair": _make_calc_enricher("auto_repair"),
+    "dtp_osago": _make_calc_enricher("dtp_osago"),
+    "airline": _make_calc_enricher("airline"),
+    "ddu_delay": _make_calc_enricher("ddu_delay"),
 }
 
 
