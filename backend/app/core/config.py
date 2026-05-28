@@ -73,6 +73,10 @@ class Settings(BaseSettings):
     # Актуальная ставка: 21% (решение ЦБ от 25.10.2024, обновлено 2026-05-28)
     CB_RATE_PERCENT: int = 21
 
+    # МРОТ (руб.) — обновлять 1 января каждого года (Федеральный закон № 548-ФЗ)
+    # Актуальный МРОТ: 27 093 руб. (с 01.01.2026, обновлено 2026-05-28)
+    MROT: int = 27093
+
     @model_validator(mode="after")
     def check_admin_secret_in_production(self) -> "Settings":
         if self.APP_ENV == "production" and not self.ADMIN_SECRET:
