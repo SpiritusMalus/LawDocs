@@ -99,3 +99,13 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
   - law: "ФЗ «О банках и банковской деятельности»"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5842/"
+
+legal_refs_by_branch:
+  violation_type:block:
+    - law: "ФЗ №115-ФЗ «О противодействии легализации...» ст. 7 — основания блокировки счёта банком"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+    - law: "ФЗ №115-ФЗ ст. 7.2 — порядок и сроки разблокировки"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+  violation_type:insurance:
+    - law: "ФЗ «О потребительском кредите» ст. 7 ч. 10 — запрет навязывать страховку как условие выдачи кредита"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"

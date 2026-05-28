@@ -123,3 +123,18 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
   - law: "ЗоЗПП ст. 13 — штраф 50% за неисполнение в добровольном порядке"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+
+legal_refs_by_branch:
+  termination_reason:delay_2months:
+    - law: "ФЗ-214 ст. 6 ч. 2 — неустойка 1/300 ставки ЦБ за каждый день просрочки"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    - law: "ФЗ-214 ст. 9 ч. 1 п. 1 — право расторгнуть при просрочке более 2 месяцев"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+  termination_reason:defects_major:
+    - law: "ФЗ-214 ст. 7 — гарантийные обязательства застройщика, устранение недостатков"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    - law: "ФЗ-214 ст. 9 ч. 1 п. 2 — право расторгнуть при существенных недостатках"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+  termination_reason:construction_stopped:
+    - law: "ФЗ-214 ст. 9 ч. 1 п. 3 — право расторгнуть при приостановке/прекращении строительства"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
