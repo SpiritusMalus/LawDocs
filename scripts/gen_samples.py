@@ -493,91 +493,60 @@ async def main() -> None:
 
         form_data = {k: v for k, v in sit.items() if not k.startswith("_")}
 
-        print(f"⏳  {sid}…", end=" ", flush=True)
-        try:
+        async def _generate_one(fd: dict) -> tuple[str, str, str]:
+            """Генерирует (header, title, body) для одной ситуации. Бросает исключение при ошибке."""
             python_template = config.get("python_template")
             if python_template:
-                # Гибридный режим: LLM перефразирует только нарратив клиента
                 if sid in _HYBRID_ENRICHERS:
-                    form_data = _HYBRID_ENRICHERS[sid](form_data)
-
+                    fd = _HYBRID_ENRICHERS[sid](fd)
                 narrative_fields = config.get("narrative_fields", [])
                 narrative_prompt = config.get("narrative_prompt", "")
                 raw_narrative = " ".join(
-                    str(form_data.get(f, "")) for f in narrative_fields if form_data.get(f)
+                    str(fd.get(f, "")) for f in narrative_fields if fd.get(f)
                 )
                 if raw_narrative and narrative_prompt:
-                    polished = await call_giga(
-                        token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}"
-                    )
+                    polished = await call_giga(token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}")
                     if _is_refusal(polished):
-                        print(f"⚠  LLM отказала перефразировать нарратив — используем сырой текст")
                         polished = raw_narrative
                 else:
                     polished = raw_narrative
-
-                text = pre_substitute_prompt(python_template, form_data)
-                text = text.replace("{{llm_narrative}}", polished)
+                if not polished.strip() and "{{llm_narrative}}" in python_template:
+                    print(f"⚠  {sid}: нарратив пустой, {{{{llm_narrative}}}} будет пустым")
+                raw_text = pre_substitute_prompt(python_template, fd)
+                raw_text = raw_text.replace("{{llm_narrative}}", polished)
             else:
-                # Стандартный режим: LLM генерирует весь документ
                 sp = config.get("system_prompt", "")
                 if not sp:
-                    print(f"⚠  system_prompt не найден для {sid}")
-                    continue
-                sp = FORMAT_RULES + "\n" + pre_substitute_prompt(sp, form_data)
-                up = build_user_prompt(sid, form_data)
-                text = await call_giga(token, sp, up, validate=True)
-                if _is_refusal(text):
-                    print(f"🚫  GigaChat отказал (content filter): пропускаем {filename}")
-                    print(f"    Ответ: {text[:200]!r}")
-                    continue
-                if len(text.strip()) < 300:
-                    print(f"⚠  GigaChat вернул слишком короткий текст ({len(text.strip())} симв.): пропускаем {filename}")
-                    print(f"    Ответ: {text[:300]!r}")
-                    continue
+                    raise RuntimeError(f"system_prompt не найден для {sid}")
+                sp = FORMAT_RULES + "\n" + pre_substitute_prompt(sp, fd)
+                up = build_user_prompt(sid, fd)
+                raw_text = await call_giga(token, sp, up, validate=True)
+                if _is_refusal(raw_text):
+                    raise RuntimeError(f"GigaChat отказал (content filter): {raw_text[:200]!r}")
+                if len(raw_text.strip()) < 300:
+                    raise RuntimeError(f"GigaChat вернул слишком короткий текст ({len(raw_text.strip())} симв.): {raw_text[:300]!r}")
 
-            _raw_before = text
             header_fields = config.get("header_fields", [])
-            header = _build_header(header_fields, form_data)
-            title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
-            body = _parse_body_json(text) if not python_template else text
-            body = strip_leaked_header(body, header, title)
+            h = _build_header(header_fields, fd)
+            t = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
+            body = _parse_body_json(raw_text) if not python_template else raw_text
+            body = strip_leaked_header(body, h, t)
             body = clean_llm_text(body)
             body = fix_dashes(body)
             if "--debug" in sys.argv:
-                print(f"\n--- RAW ({sid}) ---\n{_raw_before[:400]}\n--- AFTER CLEANUP ---\n{body[:400]}\n")
+                print(f"\n--- RAW ({sid}) ---\n{raw_text[:400]}\n--- AFTER CLEANUP ---\n{body[:400]}\n")
+            return h, t, body
+
+        print(f"⏳  {sid}…", end=" ", flush=True)
+        try:
+            header, title, body = await _generate_one(form_data)
             make_pdf(header, title, body, OUT_DIR / filename)
             print(f"✓  {filename}")
         except Exception as e:
             print(f"\n    ⚠  ошибка ({e!r}), повтор через 3с…", flush=True)
             await asyncio.sleep(3)
             try:
-                if python_template:
-                    if sid in _HYBRID_ENRICHERS:
-                        form_data = _HYBRID_ENRICHERS[sid](form_data)
-                    narrative_fields = config.get("narrative_fields", [])
-                    narrative_prompt = config.get("narrative_prompt", "")
-                    raw_narrative = " ".join(
-                        str(form_data.get(f, "")) for f in narrative_fields if form_data.get(f)
-                    )
-                    if raw_narrative and narrative_prompt:
-                        polished = await call_giga(token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}")
-                        polished = raw_narrative if _is_refusal(polished) else polished
-                    else:
-                        polished = raw_narrative
-                    text = pre_substitute_prompt(python_template, form_data)
-                    text = text.replace("{{llm_narrative}}", polished)
-                else:
-                    sp = FORMAT_RULES + "\n" + pre_substitute_prompt(config.get("system_prompt", ""), form_data)
-                    up = build_user_prompt(sid, form_data)
-                    text = await call_giga(token, sp, up, validate=True)
-                header_fields = config.get("header_fields", [])
-                header = _build_header(header_fields, form_data)
-                title = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
-                body = _parse_body_json(text) if not python_template else text
-                body = strip_leaked_header(body, header, title)
-                body = clean_llm_text(body)
-                body = fix_dashes(body)
+                header, title, body = await _generate_one(form_data)
                 make_pdf(header, title, body, OUT_DIR / filename)
                 print(f"✓  {filename}  (retry)")
             except Exception as e2:

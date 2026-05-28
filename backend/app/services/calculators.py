@@ -5,9 +5,14 @@ Each calculator receives form_data and returns a new dict with injected
 `calculated_*` fields that the system_prompt can reference directly.
 """
 
+import logging
 import re
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+
+from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 _MONTHS_GENITIVE = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
@@ -126,7 +131,8 @@ def calculate_ddu_delay(form_data: dict) -> dict:
         price = Decimal(str(data["contract_price"]))
         rate = Decimal(str(data["cb_rate"]))
         neustoyka = _ddu_neustoyka(price, rate, delay_days)
-    except Exception:
+    except Exception as e:
+        logger.error("calculate_ddu_delay: failed to compute neustoyka: %s", e)
         return data
 
     data["calculated_delay_days"] = str(delay_days)
@@ -177,7 +183,8 @@ def calculate_ddu_termination(form_data: dict) -> dict:
         rate = Decimal(str(data["cb_rate"]))
         interest = _ddu_neustoyka(price, rate, days_used)
         total = price + interest
-    except Exception:
+    except Exception as e:
+        logger.error("calculate_ddu_termination: failed to compute interest: %s", e)
         return data
     data["calculated_days_used"] = str(days_used)
     data["calculated_interest"] = _fmt(interest)
@@ -468,12 +475,15 @@ def calculate_auto_repair(form_data: dict) -> dict:
             )
             total += diff
             amount_parts.append(f"незаконное завышение цены: {_fmt(diff)} руб.")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("calculate_auto_repair: failed to compute overcharge diff: %s", e)
 
-    elif violation == "bad_quality" and price > 0:
-        total += price
-        amount_parts.append(f"стоимость работ к возврату: {_fmt(price)} руб.")
+    elif violation == "bad_quality":
+        if price > 0:
+            total += price
+            amount_parts.append(f"стоимость работ к возврату: {_fmt(price)} руб.")
+        else:
+            logger.warning("calculate_auto_repair: bad_quality but work_price=0, demand will use generic fallback")
 
     if amount_parts:
         data["calculated_amount_section"] = (
@@ -629,8 +639,8 @@ def calculate_gym_refund(form_data: dict) -> dict:
             data["calculated_refund_amount"] = _fmt(refund)
             data["calculated_refund_section"] = f"Сумма к возврату за неиспользованный период: {_fmt(refund)} руб."
             data["calculated_amount_section"] = data["calculated_refund_section"]
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("calculate_gym_refund: failed to compute user-specified refund: %s", e)
 
     if refund == 0:
         purchase = _parse_date(data.get("purchase_date"))
@@ -755,7 +765,8 @@ def calculate_dtp_osago(form_data: dict) -> dict:
 
     try:
         damage = Decimal(str(data["damage_amount"]))
-    except Exception:
+    except Exception as e:
+        logger.error("calculate_dtp_osago: failed to parse damage_amount: %s", e)
         return data
 
     try:
@@ -826,9 +837,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     return data
 
 
-# ⚠️ Обновлять при изменении ключевой ставки ЦБ РФ (cbr.ru → «Ключевая ставка»).
-# Актуальная ставка: 21% (обновлено 2026-05-24, решение ЦБ от 25.10.2024).
-_CB_RATE = Decimal("21")
+_CB_RATE = Decimal(str(settings.CB_RATE_PERCENT))
 
 
 _EMPLOYER_VIOLATION_SECTIONS = {
@@ -930,8 +939,8 @@ def calculate_employer(form_data: dict) -> dict:
                 f"обратиться с жалобой в Государственную инспекцию труда "
                 f"(онлайнинспекция.рф) и с иском в суд."
             )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("calculate_employer: failed to build demand_section for unpaid debt: %s", e)
         return data
 
     delay_days = max((date.today() - last_paid).days, 0)
@@ -940,7 +949,8 @@ def calculate_employer(form_data: dict) -> dict:
         debt = Decimal(str(data["debt_amount"]))
         compensation = debt * Decimal("1") / Decimal("150") * _CB_RATE / Decimal("100") * Decimal(delay_days)
         compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    except Exception:
+    except Exception as e:
+        logger.error("calculate_employer: failed to compute compensation: %s", e)
         return data
 
     data["calculated_delay_days"] = str(delay_days)
@@ -1186,7 +1196,8 @@ def calculate_insurance(form_data: dict) -> dict:
 
     try:
         actual = Decimal(str(data["actual_damage"]))
-    except Exception:
+    except Exception as e:
+        logger.error("calculate_insurance: failed to parse actual_damage: %s", e)
         data["calculated_demand_section"] = (
             "На основании изложенного прошу произвести страховую выплату в полном "
             "объёме, определённом по результатам независимой экспертизы, в течение "
@@ -1375,8 +1386,8 @@ def calculate_telecom(form_data: dict) -> dict:
                         f"сумма к возврату: {_fmt(monthly)} руб. / 30 × {days} дней = "
                         f"{_fmt(refund)} руб."
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("calculate_telecom: failed to compute refund: %s", e)
 
     # Demand
     demand_text = _TELECOM_DEMAND_SECTIONS.get(demand, "устранить нарушения условий договора об оказании услуг связи")

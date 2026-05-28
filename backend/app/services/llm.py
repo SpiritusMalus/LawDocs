@@ -472,13 +472,13 @@ def _parse_body_json(raw: str) -> str:
         pass
 
     # Fallback: ищем "body": "..." или "body": """..."""
-    m = re.search(r'"body"\s*:\s*"(.*)"', text, re.DOTALL)
+    m = re.search(r'"body"\s*:\s*"(.*?)"', text, re.DOTALL)
     if m:
         return m.group(1).replace('\\n', '\n').strip()
 
-    # Если JSON не распознан — возвращаем как есть (защита от падения)
-    logger.warning("Could not parse JSON body from GigaChat response, using raw text")
-    return text
+    # Если JSON не распознан — поднимаем ошибку, чтобы не вставить сырой отказ в документ
+    logger.error("Could not parse JSON body from GigaChat response: %s", text[:200])
+    raise RuntimeError("GigaChat вернул ответ в неожиданном формате (не удалось извлечь body).")
 
 
 async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[str], str]:
@@ -530,6 +530,8 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
 
     body = _parse_body_json(raw)
     body = clean_llm_text(body)
+    if len(body.strip()) < 20:
+        raise RuntimeError("LLM body too short after cleanup — possible empty or artifact-only response.")
 
     reviewed_body, yandex_ok = await _call_yandex_review(body)
     if yandex_ok:
@@ -539,6 +541,8 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
         raw2 = await _call_gigachat(system_prompt, user_prompt + _YANDEX_RETRY_FEEDBACK, validate=True)
         body = _parse_body_json(raw2)
         body = clean_llm_text(body)
+        if len(body.strip()) < 20:
+            raise RuntimeError("LLM body too short after retry cleanup.")
 
     body = _post_substitute_output(body, form_data)
     return body, header, title
