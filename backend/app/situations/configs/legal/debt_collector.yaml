@@ -113,27 +113,27 @@ legal_refs:
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
 
 legal_refs_by_branch:
-  "violation_types:threats":
+  violation_types:threats:
     - law: "УК РФ ст. 119 — угроза убийством или причинением тяжкого вреда здоровью"
       url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"
-  "violation_types:third_parties":
+  violation_types:third_parties:
     - law: "ФЗ-230 ст. 7 ч. 5 — запрет взаимодействия с третьими лицами без их согласия"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
-  "violation_types:night_calls":
+  violation_types:night_calls:
     - law: "ФЗ-230 ст. 7 ч. 3 — запрет взаимодействия в ночное время (22:00-8:00 будни, 20:00-9:00 выходные)"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
-  "violation_types:frequency":
+  violation_types:frequency:
     - law: "ФЗ-230 ст. 7 ч. 3 — ограничение количества звонков: не более 1 в сутки, 2 в неделю, 8 в месяц"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
-  "violation_types:no_intro":
+  violation_types:no_intro:
     - law: "ФЗ-230 ст. 7 ч. 4 — обязанность представиться и назвать организацию при каждом контакте"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
-  "violation_types:other":
+  violation_types:other:
     - law: "ФЗ-230 ст. 6 — общие требования к действиям коллекторов при взаимодействии с должником"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
-  "has_recordings:yes":
+  has_recordings:yes:
     - law: "ГПК РФ ст. 55 — аудиозаписи как доказательства в суде"
       url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
-  "has_recordings:no":
+  has_recordings:no:
     - law: "ФЗ-230 ст. 16 — жалоба в ФССП как основной способ защиты при нарушениях коллекторов"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"

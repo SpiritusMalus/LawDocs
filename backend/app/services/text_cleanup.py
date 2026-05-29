@@ -199,9 +199,22 @@ _QUALITY_ARTIFACTS = (
     re.compile(r'\*{2,}[^\*]+\*{2,}'),
     re.compile(r'\b(violation_type|has_photo|problem_type|damage_claim|night_calls|fine_number|gibdd_unit)\b'),
     re.compile(r'-{2,}'),
+    # Незаполненные шаблонные плейсхолдеры
+    re.compile(r'\{\{[^}]+\}\}'),
+    re.compile(r'\[calculated_[^\]]*\]'),
+    # Отказ GigaChat отвечать
+    re.compile(
+        r'\b(не могу|не в состоянии|как (языковая|ИИ)|как искусственный интеллект|'
+        r'извините, но я|отказываюсь|это невозможно|за пределами моих возможностей)\b',
+        re.IGNORECASE,
+    ),
 )
+
+_MIN_QUALITY_LENGTH = 200
 
 
 def has_quality_artifacts(text: str) -> bool:
-    """True если текст содержит известные артефакты качества (повод для retry)."""
+    """True если текст содержит артефакты качества или слишком короткий (повод для retry)."""
+    if len(text.strip()) < _MIN_QUALITY_LENGTH:
+        return True
     return any(pattern.search(text) for pattern in _QUALITY_ARTIFACTS)

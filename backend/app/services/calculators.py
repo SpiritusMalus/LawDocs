@@ -14,6 +14,7 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 _MONTHS_GENITIVE = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
@@ -1420,9 +1421,6 @@ def calculate_telecom(form_data: dict) -> dict:
     return data
 
 
-# TODO: формула «25 руб./час» — устаревшая редакция ВК РФ ст. 120.
-# Действующая норма: 25% МРОТ × час просрочки, но не более 50% провозной платы.
-# Не правится в пилоте миграции — это юр.фикс отдельной задачей.
 _AIRLINE_VIOLATION_SECTIONS = {
     "delay": (
         "В нарушение договора воздушной перевозки рейс {flight_number} "
@@ -1559,12 +1557,16 @@ def calculate_airline(form_data: dict) -> dict:
     amount_parts = []
     total = Decimal("0")
     if violation == "delay" and delay_hours > 0 and ticket > 0:
-        delay_comp = Decimal("25") * Decimal(delay_hours)
-        fine = (ticket * Decimal("0.5")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        mrot = Decimal(settings.MROT)
+        per_hour = (mrot * Decimal("0.25")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        delay_comp_raw = per_hour * Decimal(delay_hours)
+        cap = (ticket * Decimal("0.5")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        delay_comp = min(delay_comp_raw, cap).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        fine = cap
         total += delay_comp + fine
         amount_parts.append(
-            f"компенсация за задержку {delay_hours} ч.: 25 × {delay_hours} = "
-            f"{_fmt(delay_comp)} руб."
+            f"компенсация за задержку {delay_hours} ч. (25% МРОТ × часы, "
+            f"не более 50% провозной платы): {_fmt(delay_comp)} руб."
         )
         amount_parts.append(
             f"штраф 50% от стоимости билета (ст. 28 ч. 5 ЗоЗПП): "
