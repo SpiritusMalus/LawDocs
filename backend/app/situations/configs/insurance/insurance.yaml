@@ -114,8 +114,8 @@ wizard_steps:
 legal_refs:
   - law: "ГК РФ ст. 929 — договор имущественного страхования, обязанность выплаты"
     url: "https://www.consultant.ru/document/cons_doc_LAW_9027/147e3d1901cf980fa4c40b4d27fbdeb70de1cf80/"
-  - law: "ФЗ №4015-1 «Об организации страхового дела» ст. 10 — страховая сумма, страховая выплата, франшиза"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_1307/"
+  - law: "ФЗ №4015-1 «Об организации страхового дела» ст. 10 — страховая выплата"
+    url: "https://normativ.kontur.ru/document?moduleId=1&documentId=501883#h1277"
   - law: "ФЗ-123 «О финансовом уполномоченном» — обязательный досудебный порядок (до 500 000 ₽)"
     url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h80"
   - law: "ЗоЗПП ст. 13 — штраф 50% за отказ исполнить требование добровольно"
@@ -150,5 +150,5 @@ legal_refs_by_branch:
   incident_type:delay:
     - law: "ФЗ «Об ОСАГО» ст. 12 ч. 21 — неустойка 1% в день за просрочку выплаты"
       url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
-    - law: "ФЗ №4015-1 ст. 10 — страховая сумма и страховая выплата (сроки определяются договором/правилами страхования)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_1307/"
+    - law: "ФЗ №4015-1 ст. 10 — сроки страховой выплаты (как правило, 10-20 рабочих дней)"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=501883#h1277"
