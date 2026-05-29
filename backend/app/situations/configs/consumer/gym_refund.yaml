@@ -107,28 +107,28 @@ wizard_steps:
 
 legal_refs:
   - law: "ЗоЗПП ст. 32 — право отказаться от услуги в любое время"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
   - law: "ГК РФ ст. 782 — расторжение договора возмездного оказания услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/e21d6a868cf614117afa2f93877215e487cd4aee/"
   - law: "ЗоЗПП ст. 28, 31 — неустойка и сроки возврата"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
 
 legal_refs_by_branch:
   reason:medical:
     - law: "ФЗ №323-ФЗ «Об охране здоровья» ст. 27 — обязанность соблюдать медицинские противопоказания"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_121895/1abc990dfeaa52e7e4915c4782380c16cea341c2/"
     - law: "ГК РФ ст. 416 — прекращение обязательства невозможностью исполнения (мед. противопоказание)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/bbd2d71a24d486824488be8b9ddaafd5262c2e5b/"
   reason:club_closed:
     - law: "ЗоЗПП ст. 29 ч. 1 — право отказаться от услуги при существенном нарушении условий"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   reason:terms_changed:
     - law: "ЗоЗПП ст. 29 ч. 1 п. 3 — расторжение договора при изменении существенных условий"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
     - law: "ГК РФ ст. 450 — расторжение договора при существенном изменении обстоятельств"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/c231822b9f355b8c760b3389e80269f0d987870e/"
   reason:voluntary:
     - law: "ЗоЗПП ст. 32 — право отказаться от услуги в любое время, оплатив фактически оказанную часть"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
     - law: "ГК РФ ст. 782 — заказчик вправе отказаться от договора, возместив фактические расходы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/e21d6a868cf614117afa2f93877215e487cd4aee/"

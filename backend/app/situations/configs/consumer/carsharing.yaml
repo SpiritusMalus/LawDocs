@@ -116,34 +116,34 @@ wizard_steps:
 
 legal_refs:
   - law: "ГК РФ ст. 401 — ответственность только при вине"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/94ebfa384dd37d9377ee7b78ab23c150ff69e5b4/"
   - law: "ГК РФ ст. 620 — ответственность арендодателя за скрытые недостатки"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/a28d383ce0fc83410c7005826f649dee0efd4061/"
   - law: "ЗоЗПП ст. 10, 13, 14 — права потребителя услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/e96b1cbe2a0795305a08c97b1a7f34ddab4ae908/"
 
 legal_refs_by_branch:
   violation_type:preexisting_damage:
     - law: "ГК РФ ст. 620 ч. 2 — арендатор не отвечает за недостатки, которые были оговорены при сдаче"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/a28d383ce0fc83410c7005826f649dee0efd4061/"
     - law: "ГК РФ ст. 607 — акт приёма-передачи как доказательство состояния имущества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/8795ca64fac9847b86743ee4c615a8a022cef84f/"
   violation_type:overcharge:
     - law: "ЗоЗПП ст. 16 — недействительность условий договора, ущемляющих права потребителя"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/9eb0f127ead4dc57e7d0a9d4954cf264c4b3cea8/"
     - law: "ЗоЗПП ст. 10 — обязанность предоставить полную информацию о цене услуги"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/e96b1cbe2a0795305a08c97b1a7f34ddab4ae908/"
   violation_type:unauthorized_charge:
     - law: "ГК РФ ст. 1102 — неосновательное обогащение, возврат незаконно списанных средств"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"
     - law: "ЗоЗПП ст. 16.1 — запрет на навязывание дополнительных платежей"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/287ba272fb77db736b18354d3eec00164e7fd104/"
   violation_type:other:
     - law: "ГК РФ ст. 1064 — обязанность возместить причинённый вред"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"
   has_photo:"yes":
     - law: "ГПК РФ ст. 55 — фотоматериалы как доказательства по делу"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/b48406042a309ee368f395fb6f3be1d43c7cbfc2/"
   has_photo:"no":
     - law: "ГК РФ ст. 401 — ответственность наступает только при наличии вины"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/94ebfa384dd37d9377ee7b78ab23c150ff69e5b4/"

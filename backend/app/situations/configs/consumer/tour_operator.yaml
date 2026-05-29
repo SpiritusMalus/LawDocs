@@ -104,35 +104,35 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ-132 ст. 10, 10.1 — права туриста и обязанности туроператора"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_12462/2070f6ea82fa7177009d4d07d2fbad8e5f6695a1/"
   - law: "ФЗ-132 ст. 14 — полный возврат при угрозе безопасности туриста (форс-мажор)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_12462/b3d98f4dc10414887863cc0ee0dfd636b644b25b/"
   - law: "ЗоЗПП ст. 28, 32 — отказ от услуги, нарушение срока возврата"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
   - law: "ГК РФ ст. 782 — отказ от договора возмездного оказания услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/e21d6a868cf614117afa2f93877215e487cd4aee/"
 
 legal_refs_by_branch:
   violation_type:operator_cancelled:
     - law: "ФЗ-132 ст. 10 — обязанность туроператора возвратить стоимость тура при отмене"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/2070f6ea82fa7177009d4d07d2fbad8e5f6695a1/"
     - law: "ФЗ-132 ст. 14 — полный возврат без штрафов при существенном изменении условий"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/b3d98f4dc10414887863cc0ee0dfd636b644b25b/"
   violation_type:changed_conditions:
     - law: "ФЗ-132 ст. 10 ч. 5 — изменение существенных условий даёт право отказаться от тура"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/2070f6ea82fa7177009d4d07d2fbad8e5f6695a1/"
     - law: "ГК РФ ст. 450 — расторжение договора при существенном изменении обстоятельств"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/c231822b9f355b8c760b3389e80269f0d987870e/"
   violation_type:refund_denied:
     - law: "ФЗ-132 ст. 10.1 — порядок урегулирования претензий туриста"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/ae68aa5f7e0b8493847e5ad1c0a7fcf575e54d23/"
     - law: "ЗоЗПП ст. 31 — срок удовлетворения требований потребителя (10 дней)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/30aa7e1b7d9fe18928b8e9bce991ec6ba0d284e2/"
   violation_type:voluntary_refusal:
     - law: "ФЗ-132 ст. 10 ч. 3 — право туриста отказаться с возмещением фактических расходов"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/2070f6ea82fa7177009d4d07d2fbad8e5f6695a1/"
     - law: "ЗоЗПП ст. 32 — право отказаться с оплатой фактически понесённых расходов"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
   violation_type:other:
     - law: "ФЗ-132 ст. 17.4 — ответственность туроператора перед туристом"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_12462/8f7c0cb76139a656b3c3ac8bca2afdfc565e4f13/"

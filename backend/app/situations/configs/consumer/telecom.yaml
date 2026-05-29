@@ -122,29 +122,29 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ «О связи» — права абонента и обязанности оператора"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_43224/16bb16c212b64fca3cd16dac9f4f1f2c2fd34083/"
   - law: "ЗоЗПП ст. 29 — права потребителя при ненадлежащем качестве услуги"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   - law: "ЗоЗПП ст. 13 — штраф 50% за отказ исполнить требование добровольно"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"
 
 legal_refs_by_branch:
   problem_type:disconnected:
     - law: "ФЗ «О связи» ст. 44 — порядок и условия расторжения договора оператором"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/f7a7810cf56882f4ac05d0b11af4fc4a2d3c9d23/"
   problem_type:illegal_charges:
     - law: "ФЗ «О связи» ст. 54 — порядок оплаты услуг связи, запрет списаний без согласия"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/2f67e3d0d095b8e32b4d11e6bfd80a7b134abe5d/"
   problem_type:no_service:
     - law: "ФЗ «О связи» ст. 44 — оператор обязан обеспечить оказание услуг в полном объёме"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/f7a7810cf56882f4ac05d0b11af4fc4a2d3c9d23/"
     - law: "ЗоЗПП ст. 29 — право потребителя на устранение недостатков или расторжение договора"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   problem_type:slow_speed:
     - law: "ФЗ «О связи» ст. 46 — обязанность оператора соответствовать параметрам качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
-    - law: "ПП РФ №2811 — Правила оказания услуг связи по передаче данных"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_42156/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/16bb16c212b64fca3cd16dac9f4f1f2c2fd34083/"
+    - law: "ПП РФ №2606 — Правила оказания услуг связи по передаче данных"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_406236/38295d93f5befdf3dae68a5dab272d99057119ce/"
   problem_type:other:
     - law: "ФЗ «О связи» ст. 55 — порядок рассмотрения жалоб абонентов операторами связи"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_43224/ca94156dc4b1b628b98e5f5f2f7ed4a80c17f18e/"

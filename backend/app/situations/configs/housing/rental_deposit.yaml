@@ -106,29 +106,29 @@ wizard_steps:
 
 legal_refs:
   - law: "ГК РФ ст. 381.1 — обеспечительный платёж"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/86072fde18c3cb11bd54a4c116530062a3daeb6c/"
   - law: "ГК РФ ст. 622 — возврат имущества при прекращении аренды"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/10e66795c5ba71f7dd4e6ed5e559db67255f7e1e/"
   - law: "ГК РФ ст. 1102 — неосновательное обогащение"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"
 
 legal_refs_by_branch:
   deposit_reason:damages_fake:
     - law: "ГК РФ ст. 1064 — обязанность доказать факт и размер причинённого вреда"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"
   deposit_reason:wear_normal:
     - law: "ГК РФ ст. 616 — обязанности арендодателя по содержанию имущества (нормальный износ)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/48340579d9ef659b0993357d26880ff26539297a/"
   deposit_reason:no_reason:
     - law: "ГК РФ ст. 1102 — неосновательное обогащение: возврат имущества без законных оснований"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"
     - law: "ГК РФ ст. 622 — обязанность арендодателя вернуть залог при прекращении договора"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/10e66795c5ba71f7dd4e6ed5e559db67255f7e1e/"
   deposit_reason:debt_claimed:
     - law: "ГК РФ ст. 310 — односторонний зачёт депозита в счёт долга требует обоснования"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/33c65ab7522b599d12e61cc848aebcd09e651f9c/"
     - law: "ГК РФ ст. 410 — зачёт требований возможен только при соответствии условиям"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/ce09e59d11f3a60c30a1601c0f6c7cceb9835dfa/"
   deposit_reason:other:
     - law: "ГК РФ ст. 1102 — возврат суммы залога как неосновательного обогащения"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"

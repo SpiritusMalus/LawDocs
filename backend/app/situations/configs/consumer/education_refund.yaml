@@ -79,14 +79,14 @@ legal_refs:
   - law: "ЗоЗПП ст. 32 — право потребителя отказаться от исполнения договора об услугах"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
   - law: "ЗоЗПП ст. 28 — неустойка за задержку выполнения услуги"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
   - law: "ФЗ №273 «Об образовании» ст. 54 — договор об образовании"
     url: "https://www.consultant.ru/document/cons_doc_LAW_140174/08aac5c6472189568b313849e2854d4ff51e97b4/"
 
 legal_refs_by_branch:
   refund_reason:quality:
     - law: "ЗоЗПП ст. 28 — неустойка 3% в день за услугу ненадлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
   refund_reason:cancellation:
     - law: "ЗоЗПП ст. 32 — полный возврат при расторжении договора по инициативе организации"
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"

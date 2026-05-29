@@ -113,42 +113,42 @@ wizard_steps:
 
 legal_refs:
   - law: "ГК РФ ст. 929 — договор имущественного страхования, обязанность выплаты"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/147e3d1901cf980fa4c40b4d27fbdeb70de1cf80/"
   - law: "ФЗ №4015-1 «Об организации страхового дела» ст. 10 — страховая выплата"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_1307/"
+    url: "https://normativ.kontur.ru/document?moduleId=1&documentId=501883#h1277"
   - law: "ФЗ-123 «О финансовом уполномоченном» — обязательный досудебный порядок (до 500 000 ₽)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+    url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h80"
   - law: "ЗоЗПП ст. 13 — штраф 50% за отказ исполнить требование добровольно"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"
   - law: "ФЗ «Об ОСАГО» ст. 12, 16.1 — применяется при спорах по ОСАГО"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
 
 legal_refs_by_branch:
   policy_type:kasko:
     - law: "ГК РФ ст. 930 — страхование имущества, страховой интерес"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/fb220238329b2ac3d5201c091ff4e119d3db7c74/"
     - law: "ГК РФ ст. 932 — страхование ответственности по договору"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/35be73aad4caa26c7c850fc281400024f81f78be/"
     - law: "ГК РФ ст. 940 — форма договора страхования, страховой полис"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/f8d757bc122599aa0a3b99a028bec0c39791315b/"
   policy_type:osago:
     - law: "ФЗ «Об ОСАГО» ст. 14.1 — прямое возмещение убытков через своего страховщика"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/d1f45e8c5d3e5d2b8d856b6b89936a48fdde6f02/"
   policy_type:other:
     - law: "ГК РФ ст. 929 — общие основания договора имущественного страхования"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/147e3d1901cf980fa4c40b4d27fbdeb70de1cf80/"
   incident_type:underestimate:
     - law: "ФЗ «Об ОСАГО» ст. 12 ч. 13 — независимая экспертиза при несогласии с суммой выплаты"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
     - law: "ФЗ-123 ст. 20 — обращение к финомбудсмену при занижении выплаты до 500 000 ₽"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h107"
   incident_type:refusal:
     - law: "ФЗ-123 ст. 15 — обязательное обращение к финансовому омбудсмену до суда"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h80"
     - law: "ФЗ «Об ОСАГО» ст. 16.1 — досудебный порядок урегулирования при отказе в выплате"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/0d93e8ea8486b165e2cb13b540beb4284b4b7115/"
   incident_type:delay:
     - law: "ФЗ «Об ОСАГО» ст. 12 ч. 21 — неустойка 1% в день за просрочку выплаты"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
     - law: "ФЗ №4015-1 ст. 10 — сроки страховой выплаты (как правило, 10-20 рабочих дней)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_1307/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=501883#h1277"

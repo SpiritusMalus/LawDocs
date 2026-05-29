@@ -114,41 +114,41 @@ wizard_steps:
 
 legal_refs:
   - law: "КоАП РФ ст. 30.1–30.3 — право и порядок обжалования постановления"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42b53d65ef7bdf518041f97994f487e088e8e931/"
   - law: "КоАП РФ ст. 2.6.1 — ответственность владельцев ТС"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/fe56a31c33d64ee209a7de64c1850457e9b86d3c/"
   - law: "КоАП РФ ст. 24.5 — обстоятельства, исключающие производство"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/7f47b148e60467b00c0f1705dac5c97386201451/"
 
 legal_refs_by_branch:
   objection_reason:not_driving:
     - law: "КоАП РФ ст. 2.6.1 ч. 2 — освобождение от ответственности если за рулём было другое лицо"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/fe56a31c33d64ee209a7de64c1850457e9b86d3c/"
   objection_reason:no_violation:
     - law: "КоАП РФ ст. 24.5 п. 1 — отсутствие события административного правонарушения"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/7f47b148e60467b00c0f1705dac5c97386201451/"
     - law: "КоАП РФ ст. 26.2 — доказательства, их виды и оценка"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/747b7ded7acccf4fbd94a98fe212713ae1845601/"
   objection_reason:camera_error:
     - law: "КоАП РФ ст. 26.8 — показания специальных технических средств"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42259d8671cb15223abb0a72f3fe2121c7fa46aa/"
     - law: "КоАП РФ ст. 24.5 п. 2 — отсутствие состава при ненадлежащей фиксации"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/7f47b148e60467b00c0f1705dac5c97386201451/"
   objection_reason:procedural:
     - law: "КоАП РФ ст. 28.2 — требования к протоколу об административном правонарушении"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/86eb9da50d2bebf0f8320070bcc298ad5a93d41a/"
     - law: "КоАП РФ ст. 4.5 — сроки давности привлечения к ответственности"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/66a4b2666eea5f75cd1e947452b66bf52bf024d8/"
   objection_reason:other:
     - law: "КоАП РФ ст. 30.7 — виды решений по результатам рассмотрения жалобы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/772d9a1da3b29166c8d08499cc4d16ef4d5269f4/"
   appeal_to:gibdd_chief:
     - law: "КоАП РФ ст. 30.1 ч. 1 п. 3 — обжалование вышестоящему должностному лицу"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42b53d65ef7bdf518041f97994f487e088e8e931/"
     - law: "КоАП РФ ст. 30.3 — срок подачи жалобы (10 суток)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/9ae21ddd95d2541114102cce9c92efe6fc637266/"
   appeal_to:court:
     - law: "КоАП РФ ст. 30.1 ч. 1 п. 2 — право обжалования в суд"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42b53d65ef7bdf518041f97994f487e088e8e931/"
     - law: "КоАП РФ ст. 30.5 — сроки рассмотрения жалобы судом"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/061d712f0b454cdffee47c3369341cc62fee1dd0/"

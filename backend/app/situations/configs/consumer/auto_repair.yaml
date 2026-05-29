@@ -131,38 +131,38 @@ wizard_steps:
 
 legal_refs:
   - law: "ЗоЗПП ст. 29 — права при недостатках работы"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   - law: "ЗоЗПП ст. 28 — неустойка 3%/день за нарушение срока"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
   - law: "ГК РФ ст. 709, 722 — цена и гарантия по договору подряда"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/7ac1b059cae570f48b3afe418c6ad41b54f166b1/"
 
 legal_refs_by_branch:
   violation_type:bad_quality:
     - law: "ЗоЗПП ст. 29 ч. 1 — права потребителя при ненадлежащем качестве ремонта"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
     - law: "ГК РФ ст. 723 — ответственность подрядчика за ненадлежащее качество работы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/0f3422f73df7bee03d56085359c80be8d2981ead/"
   violation_type:delay:
     - law: "ЗоЗПП ст. 28 ч. 5 — неустойка 3% от цены работы за каждый день просрочки"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
   violation_type:overcharge:
     - law: "ГК РФ ст. 709 ч. 5 — смета является обязательной, превышение требует согласия заказчика"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/7ac1b059cae570f48b3afe418c6ad41b54f166b1/"
     - law: "ЗоЗПП ст. 33 — обязательность сметы и последствия её превышения"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/1536a01e6c5fdae25dce77f54eabf02f32e0c382/"
   violation_type:other:
     - law: "ЗоЗПП ст. 14 — имущественная ответственность за вред, причинённый вследствие недостатков"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/7424b85efed3a9eadfac221e437073b07acddd3e/"
   demand:fix:
     - law: "ЗоЗПП ст. 29 ч. 1 п. 1 — безвозмездное устранение недостатков"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   demand:refund:
     - law: "ЗоЗПП ст. 29 ч. 1 п. 4 — расторжение договора и полный возврат стоимости"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   demand:reduce_price:
     - law: "ЗоЗПП ст. 29 ч. 1 п. 2 — соразмерное уменьшение цены работы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
   demand:other:
     - law: "ГК РФ ст. 15 — возмещение убытков, включая упущенную выгоду"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/4734407fbf4d5eec5306840f8b75b994e5d57090/"

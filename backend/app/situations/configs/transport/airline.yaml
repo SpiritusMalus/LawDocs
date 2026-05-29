@@ -127,47 +127,47 @@ wizard_steps:
 
 legal_refs:
   - law: "Воздушный кодекс РФ ст. 107, 108, 119, 120 — права пассажира при задержке и отмене рейса"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_13744/bb5d02e66b647d78de0be78e4c45c078f05340cb/"
   - law: "Приказ Минтранса РФ №82 (ФАП) — питание через 2 ч, гостиница через 8 ч задержки"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_71492/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_71492/70590e9dfa4fba5a1dde6e3f5a44c342754287cb/"
   - law: "Монреальская конвенция 1999 г. — международные рейсы, ответственность за багаж"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_279611/"
+    url: "https://normativ.kontur.ru/document?moduleId=1&documentId=318059#h43"
   - law: "ЗоЗПП ст. 13 — штраф 50%, неустойка за отказ выплатить компенсацию добровольно"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"
 
 legal_refs_by_branch:
   violation_type:delay:
     - law: "ВК РФ ст. 120 — ответственность перевозчика за просрочку доставки пассажира"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/d5aa18cf87a864f23251cc96cc50c3fd30791d43/"
     - law: "Приказ Минтранса №82 (ФАП) — обязанности перевозчика при задержке: питание, гостиница"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_71492/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_71492/70590e9dfa4fba5a1dde6e3f5a44c342754287cb/"
   violation_type:cancellation:
     - law: "ВК РФ ст. 107 — расторжение договора перевозки по инициативе перевозчика"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/bb5d02e66b647d78de0be78e4c45c078f05340cb/"
     - law: "ВК РФ ст. 108 — возврат провозной платы при отмене рейса"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/626c05522716c9a89b8d27e4a3d2ae0e9eeaeda6/"
   violation_type:luggage:
     - law: "ВК РФ ст. 119 — ответственность перевозчика за утрату, недостачу, повреждение багажа"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/7da511c8b7769ee9bc3b6a02d12e01e4dab9af21/"
     - law: "Монреальская конвенция ст. 17, 19 — ответственность за багаж на международных рейсах"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_279611/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=318059#h43"
   violation_type:refund_denied:
     - law: "ВК РФ ст. 108 — обязанность возврата провозной платы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/626c05522716c9a89b8d27e4a3d2ae0e9eeaeda6/"
     - law: "ЗоЗПП ст. 32 — право отказаться от услуги и вернуть деньги"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
   violation_type:other:
     - law: "ВК РФ ст. 116 — общая ответственность перевозчика перед пассажиром"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/c703a05a2be0a6699c10e5b4858a85b8b4f2f0de/"
   demand:compensation:
     - law: "ВК РФ ст. 120 — размер штрафа за просрочку (25% МРОТ за каждый час, но не более 50%)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/d5aa18cf87a864f23251cc96cc50c3fd30791d43/"
   demand:refund:
     - law: "ВК РФ ст. 108 ч. 2 — возврат 100% стоимости билета при вынужденном отказе"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_13744/626c05522716c9a89b8d27e4a3d2ae0e9eeaeda6/"
   demand:expenses:
     - law: "ГК РФ ст. 15 — возмещение убытков (гостиница, питание, новый билет)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/4734407fbf4d5eec5306840f8b75b994e5d57090/"
   demand:all:
     - law: "ЗоЗПП ст. 15 — компенсация морального вреда при нарушении прав потребителя"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/19c8339aa764510f25f4afcea83230cbf14cb9d3/"

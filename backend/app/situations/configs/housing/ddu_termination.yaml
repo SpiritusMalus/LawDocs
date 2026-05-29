@@ -116,25 +116,25 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ-214 ст. 9 — расторжение ДДУ дольщиком в одностороннем порядке"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/ec477af1fa0c9ca283f1c6b7e9262650fdc94940/"
   - law: "ФЗ-214 ст. 6 — нарушение срока передачи как основание расторжения"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/817620cd3c49f19912fc1ac0f98b10d17f65b75b/"
   - law: "ФЗ-214 ст. 15.5 — возврат денежных средств с эскроу-счёта при расторжении"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51038/7e20edcc51ba599c70fb328204e3ac1226e7d912/"
   - law: "ЗоЗПП ст. 13 — штраф 50% за неисполнение в добровольном порядке"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"
 
 legal_refs_by_branch:
   termination_reason:delay_2months:
     - law: "ФЗ-214 ст. 6 ч. 2 — неустойка 1/300 ставки ЦБ за каждый день просрочки"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/817620cd3c49f19912fc1ac0f98b10d17f65b75b/"
     - law: "ФЗ-214 ст. 9 ч. 1 п. 1 — право расторгнуть при просрочке более 2 месяцев"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/ec477af1fa0c9ca283f1c6b7e9262650fdc94940/"
   termination_reason:defects_major:
     - law: "ФЗ-214 ст. 7 — гарантийные обязательства застройщика, устранение недостатков"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/aeb9f2327f835ecc02fb71b9a0312ead0b844204/"
     - law: "ФЗ-214 ст. 9 ч. 1 п. 2 — право расторгнуть при существенных недостатках"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/ec477af1fa0c9ca283f1c6b7e9262650fdc94940/"
   termination_reason:construction_stopped:
     - law: "ФЗ-214 ст. 9 ч. 1 п. 3 — право расторгнуть при приостановке/прекращении строительства"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51038/ec477af1fa0c9ca283f1c6b7e9262650fdc94940/"
