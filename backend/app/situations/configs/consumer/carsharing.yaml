@@ -136,8 +136,8 @@ legal_refs_by_branch:
   violation_type:unauthorized_charge:
     - law: "ГК РФ ст. 1102 — неосновательное обогащение, возврат незаконно списанных средств"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"
-    - law: "ЗоЗПП ст. 16.1 — запрет на навязывание дополнительных платежей"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/287ba272fb77db736b18354d3eec00164e7fd104/"
+    - law: "ЗоЗПП ст. 16 — запрет навязывать доп. услуги и недействительность ущемляющих условий"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/9eb0f127ead4dc57e7d0a9d4954cf264c4b3cea8/"
   violation_type:other:
     - law: "ГК РФ ст. 1064 — обязанность возместить причинённый вред"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"

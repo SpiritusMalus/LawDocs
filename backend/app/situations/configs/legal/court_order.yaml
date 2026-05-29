@@ -161,7 +161,7 @@ legal_refs_by_branch:
   objection_reason:procedural:
     - law: "ГПК РФ ст. 124 — требования к заявлению о выдаче судебного приказа"
       url: "https://www.consultant.ru/document/cons_doc_LAW_39570/6670c278a73977bd239c618f2419c78c40ca123d/"
-    - law: "ГПК РФ ст. 196 — срок исковой давности как процессуальное возражение"
+    - law: "ГПК РФ ст. 196 — вопросы, разрешаемые судом при принятии решения"
       url: "https://www.consultant.ru/document/cons_doc_LAW_39570/bdb0f692b9e3286707e4034dedd9ce910db67ef4/"
   objection_reason:other:
     - law: "ГПК РФ ст. 128-129 — право должника подать возражение в течение 10 дней"
