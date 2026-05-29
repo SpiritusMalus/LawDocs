@@ -94,18 +94,18 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ «О потребительском кредите (займе)»"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e696dec97870b710b608bf4c5dd2a0a0fd98ba1b/"
   - law: "Закон о защите прав потребителей (ст. 16 — навязанные услуги)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/9eb0f127ead4dc57e7d0a9d4954cf264c4b3cea8/"
   - law: "ФЗ «О банках и банковской деятельности»"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5842/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5842/e452b6541ff9e2aad438b239b6e5ba38a28162da/"
 
 legal_refs_by_branch:
   violation_type:block:
     - law: "ФЗ №115-ФЗ «О противодействии легализации...» ст. 7 — основания блокировки счёта банком"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/3e3e0d20d2919071b55ef95f26f849df6a4f11e8/"
     - law: "ФЗ №115-ФЗ ст. 7.2 — порядок и сроки разблокировки"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_32834/76dcd439fb4d48dfed2595f17fa3e4f585dd8227/"
   violation_type:insurance:
     - law: "ФЗ «О потребительском кредите» ст. 7 ч. 10 — запрет навязывать страховку как условие выдачи кредита"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/5bf96f6f9c3054d6934e4fa63a9dac27e0b56b53/"

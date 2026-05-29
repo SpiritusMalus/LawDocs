@@ -128,29 +128,29 @@ wizard_steps:
 
 legal_refs:
   - law: "ЗоЗПП ст. 26.1 — дистанционная торговля, ст. 18 — ненадлежащее качество"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
   - law: "Постановление Правительства РФ №2463 — правила дистанционной торговли"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"
   - law: "ФЗ №289-ФЗ «Об отдельных вопросах регулирования платформенной экономики» — ответственность маркетплейса перед потребителем (с 01.09.2025)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_511088/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_511088/38bc3ca83c6c00cc216cf61db58552ebcf5bbb8c/"
 
 legal_refs_by_branch:
   problem_type:lost:
     - law: "ГК РФ ст. 886, 891 — ответственность хранителя (ПВЗ) за утрату переданной вещи"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/afbf7746a8ab4a8753f6eeeca8749b7412f21e2a/"
   problem_type:penalty:
     - law: "ГК РФ ст. 333 — снижение судом несоразмерной неустойки по заявлению должника"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/f9732de88783800811973b3a13ef5112de0b5321/"
   problem_type:paid_return:
     - law: "ЗоЗПП ст. 26.1 — права при дистанционной продаже: возврат в течение 7 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/1525b1a2f037db240c8e6a749619f86e53857f13/"
     - law: "ПП РФ №2463 — запрет взимания платы за возврат товара надлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"
   problem_type:defect:
     - law: "ЗоЗПП ст. 18 — права потребителя при обнаружении недостатков товара"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
     - law: "ЗоЗПП ст. 18 ч. 3 — ответственность маркетплейса как продавца за качество товара"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
   problem_type:other:
     - law: "ФЗ «Об отдельных вопросах регулирования платформенной экономики» — ответственность агрегатора"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"

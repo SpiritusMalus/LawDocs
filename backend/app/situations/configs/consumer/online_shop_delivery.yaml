@@ -73,9 +73,9 @@ legal_refs:
   - law: "ЗоЗПП ст. 23.1 — неустойка 0.5% в день при неправомерной непередаче товара"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/cd5055f2729d0ba6bf1c3724ba16ca46ea92e0f7/"
   - law: "ЗоЗПП ст. 18 — права при обнаружении недостатков товара"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
   - law: "ПП РФ №2463 — правила розничной продажи товаров (дистанционная торговля)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"
 
 legal_refs_by_branch:
   problem_type:not_delivered:
@@ -83,7 +83,7 @@ legal_refs_by_branch:
       url: "https://www.consultant.ru/document/cons_doc_LAW_305/cd5055f2729d0ba6bf1c3724ba16ca46ea92e0f7/"
   problem_type:wrong_item:
     - law: "ЗоЗПП ст. 23 ч. 1 — неустойка 1% за ненадлежащее качество"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/fc23b9aa3a5541bc13d6610671e6e66117de2f65/"
   problem_type:damaged:
     - law: "ЗоЗПП ст. 18 — замена товара ненадлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"

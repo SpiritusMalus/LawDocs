@@ -113,44 +113,44 @@ wizard_steps:
 
 legal_refs:
   - law: "ЗоЗПП ст. 18 — права при обнаружении недостатков товара (замена, ремонт, возврат)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
   - law: "ЗоЗПП ст. 25 — обмен товара надлежащего качества в течение 14 дней"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/07e266c138f7d30d498ff235626083e75b770ff3/"
   - law: "ЗоЗПП ст. 19, 20 — сроки предъявления требований и устранения недостатков"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/2c9918ca490dc2eb68bb07347485443dc898183f/"
   - law: "ГК РФ ст. 475 — последствия передачи товара ненадлежащего качества"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/17c385541834fe9a0d0996c1da3f0df8816438d0/"
   - law: "ПП РФ №2463 — Правила продажи товаров (перечень невозвратных товаров)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"
 
 legal_refs_by_branch:
   problem_type:defect:
     - law: "ЗоЗПП ст. 18 ч. 1 — права потребителя при обнаружении существенного недостатка"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
     - law: "ЗоЗПП ст. 19 — сроки предъявления требований по недостаткам (гарантийный срок)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/2c9918ca490dc2eb68bb07347485443dc898183f/"
   problem_type:return14:
     - law: "ЗоЗПП ст. 25 — обмен/возврат товара надлежащего качества в течение 14 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/07e266c138f7d30d498ff235626083e75b770ff3/"
     - law: "ПП РФ №2463 — перечень невозвратных товаров надлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_373622/e4ca7557c9ce6273af99d42c900e8579841fe652/"
   problem_type:warranty:
     - law: "ЗоЗПП ст. 18 ч. 6 — при существенном недостатке — возврат в течение срока службы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/76ae101b731ecc22467fd9f1f14cb9e2b8799026/"
     - law: "ЗоЗПП ст. 20 — устранение недостатков в срок не более 45 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/c771be122fddbc6e3087cbf43aa39a85a960a296/"
   problem_type:other:
     - law: "ГК РФ ст. 475 — последствия передачи товара ненадлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/17c385541834fe9a0d0996c1da3f0df8816438d0/"
   demand:refund:
     - law: "ЗоЗПП ст. 22 — срок удовлетворения требования о возврате (10 дней)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/00616d1e160d7ff7ac8d5a6a8e4525fb75e3b486/"
   demand:replace:
     - law: "ЗоЗПП ст. 21 — срок замены товара (7 дней, до 20 дней при проверке)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/6dd6c070a38a1de71282c1f0206c1d9131d7446c/"
   demand:repair:
     - law: "ЗоЗПП ст. 20 — срок устранения недостатков: по соглашению, но не более 45 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/c771be122fddbc6e3087cbf43aa39a85a960a296/"
   demand:other:
     - law: "ЗоЗПП ст. 13 — штраф 50% за отказ удовлетворить требование добровольно"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"

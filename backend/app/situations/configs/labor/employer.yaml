@@ -124,44 +124,44 @@ wizard_steps:
 
 legal_refs:
   - law: "ТК РФ ст. 136, 140, 236 — сроки выплаты зарплаты, расчёт при увольнении, компенсация за задержку"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/a0a891ee650687026ef53d5d1194983419be6793/"
   - law: "ТК РФ ст. 353, 356 — полномочия Государственной инспекции труда (ГИТ)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/265520162b097e1af18964074ba9f78890b2e681/"
   - law: "ТК РФ ст. 127 — компенсация за неиспользованный отпуск при увольнении"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/2f173da324a5464ef649b88f7347b8a17d200dae/"
   - law: "УК РФ ст. 145.1 — уголовная ответственность за невыплату зарплаты свыше 2 месяцев"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_10699/37fd891311615f23654aa2bd69d386fc6c0c8470/"
 
 legal_refs_by_branch:
   violation_type:dismissal:
     - law: "ТК РФ ст. 81 — основания расторжения трудового договора по инициативе работодателя"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/6a7ba42d8fda3a1ba186a9eb5c806921998ae7d1/"
     - law: "ТК РФ ст. 394 — восстановление на работе и компенсация за вынужденный прогул"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/866dec528c62e132ee3463fa0814d217434849b0/"
   violation_type:salary_delay:
     - law: "ТК РФ ст. 236 — денежная компенсация за задержку зарплаты (1/150 ставки ЦБ в день)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/7c8d2fe49f0c8b8d13723803f2e82228f99b6d7e/"
     - law: "ТК РФ ст. 142 — право работника приостановить работу при задержке свыше 15 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/67f5b7767847d2483a67262f342f35cf922855a2/"
   violation_type:underpayment:
     - law: "ТК РФ ст. 135 — порядок установления заработной платы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/ec0a7a4cf2bbf1f8f89970fd480c3fc9ed860f82/"
     - law: "ТК РФ ст. 236 — компенсация за задержку или недоплату части заработной платы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/7c8d2fe49f0c8b8d13723803f2e82228f99b6d7e/"
   violation_type:vacation:
     - law: "ТК РФ ст. 114, 122 — ежегодный оплачиваемый отпуск и порядок его предоставления"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/cfa9a86846908928276ee2f2274d3d4a0a6c8640/"
     - law: "ТК РФ ст. 124 — запрет на непредоставление отпуска более двух лет подряд"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/5096118a0d71c28f406acf6275cd6c1c36efe705/"
   violation_type:other:
     - law: "ТК РФ ст. 21 — основные права работника"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/b94bd4dad3b39d0497eb33b8fc3d99356959c2da/"
   demand:pay_debt:
     - law: "ТК РФ ст. 236 — работодатель обязан выплатить долг с процентами за каждый день задержки"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/7c8d2fe49f0c8b8d13723803f2e82228f99b6d7e/"
   demand:reinstate:
     - law: "ТК РФ ст. 394 — немедленное исполнение решения суда о восстановлении на работе"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/866dec528c62e132ee3463fa0814d217434849b0/"
   demand:other:
     - law: "ТК РФ ст. 237 — компенсация морального вреда за нарушение трудовых прав"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/aa46013b20309f1679e45f48b21c6ebc37da6e22/"

@@ -97,37 +97,37 @@ wizard_steps:
 
 legal_refs:
   - law: "ЖК РФ ст. 161 — требования к управляющей компании"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/71c7149b7b2a7693ca3f88b93580da0a5376e041/"
   - law: "ЖК РФ ст. 20 — государственный жилищный надзор (ГЖИ)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/b2e6330676521dbd370dc8e1a35e68b0cfe059f3/"
   - law: "ПП РФ №354 пп. 98–103 — перерасчёт платы за некачественные коммунальные услуги"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_114247/f01b049d6d3be0e58d178a4474175ac58896e7e3/"
 
 legal_refs_by_branch:
   violation_type:overcharge:
     - law: "ЖК РФ ст. 157 ч. 4 — перерасчёт платы при предоставлении услуг ненадлежащего качества"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/ec5cb28b6c8828f0e1ecd4adb41f9d3ba2fefa39/"
     - law: "ПП РФ №354 п. 98 — основания и порядок снижения платы за коммунальные услуги"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/f01b049d6d3be0e58d178a4474175ac58896e7e3/"
   violation_type:poor_service:
     - law: "ПП РФ №354 п. 101 — критерии ненадлежащего качества коммунальных услуг"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/f01b049d6d3be0e58d178a4474175ac58896e7e3/"
     - law: "ЖК РФ ст. 161 ч. 2.3 — ответственность управляющей компании за ненадлежащее содержание"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/71c7149b7b2a7693ca3f88b93580da0a5376e041/"
   violation_type:no_repair:
     - law: "ПП РФ №491 — правила содержания общего имущества в МКД"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_70821/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=501747#h337"
     - law: "ЖК РФ ст. 162 — обязанности управляющей компании по договору управления"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/14e9738be002fe3ab76c0d580b863aac1ac65fb7/"
   violation_type:other:
     - law: "ЖК РФ ст. 165 — контроль за деятельностью управляющих организаций"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/7d656b1c876345ecf273e40b4d4a5a7edee07a29/"
   demand:recalculate:
     - law: "ПП РФ №354 п. 103 — порядок обращения за перерасчётом и сроки его проведения"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_114247/f01b049d6d3be0e58d178a4474175ac58896e7e3/"
   demand:fix:
     - law: "ЖК РФ ст. 161 ч. 1 — обязательный стандарт обслуживания МКД"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/71c7149b7b2a7693ca3f88b93580da0a5376e041/"
   demand:both:
     - law: "ЗоЗПП ст. 29 ч. 1 — право требовать и устранения недостатков, и снижения цены"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"

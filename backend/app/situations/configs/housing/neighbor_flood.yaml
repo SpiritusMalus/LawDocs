@@ -135,26 +135,26 @@ wizard_steps:
 
 legal_refs:
   - law: "ГК РФ ст. 1064 — обязанность возмещения вреда"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"
   - law: "ЖК РФ ст. 30 — обязанности собственника помещения"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/249c5f90a05fa67bba29ea9aeccf535cdacf8307/"
   - law: "ЖК РФ ст. 161 + ПП РФ №491 — ответственность управляющей компании за общее имущество (стояки)"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_51057/71c7149b7b2a7693ca3f88b93580da0a5376e041/"
 
 legal_refs_by_branch:
   flood_source:management_company:
     - law: "ПП РФ №491 — Правила содержания общего имущества, ответственность УК за инженерные системы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/ab5315d6a0b82ad22c57f141e8f984d8318914a0/"
   flood_source:roof:
     - law: "ПП РФ №491 — Правила содержания общего имущества, ответственность УК за кровлю"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_62293/ab5315d6a0b82ad22c57f141e8f984d8318914a0/"
   flood_source:upper_neighbor:
     - law: "ГК РФ ст. 1064 — обязанность возместить вред, причинённый имуществу"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"
     - law: "ГК РФ ст. 210 — бремя содержания имущества лежит на его собственнике"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/c63c967d22055f1df0fcfecca564826dedb3b8c7/"
   flood_source:same_floor:
     - law: "ГК РФ ст. 1064 — обязанность возместить вред при наличии вины"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"
     - law: "ГК РФ ст. 401 — ответственность за вред при доказанной вине причинителя"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/94ebfa384dd37d9377ee7b78ab23c150ff69e5b4/"

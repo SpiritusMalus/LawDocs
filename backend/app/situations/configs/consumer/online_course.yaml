@@ -97,28 +97,28 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ №273-ФЗ «Об образовании в РФ» ст. 54 — договор об образовании"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_140174/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_140174/08aac5c6472189568b313849e2854d4ff51e97b4/"
   - law: "ПП РФ №1441 — Правила оказания платных образовательных услуг"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
+    url: "http://publication.pravo.gov.ru/document/View/0001202009210004?index=4"
   - law: "ЗоЗПП ст. 28, 32 — отказ от услуги, нарушение срока возврата"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
 
 legal_refs_by_branch:
   problem_type:not_started:
     - law: "ЗоЗПП ст. 32 — право отказаться от услуги до её начала с возвратом полной суммы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
     - law: "ГК РФ ст. 782 ч. 2 — отказ исполнителя от договора с возмещением убытков"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_9027/e21d6a868cf614117afa2f93877215e487cd4aee/"
   problem_type:partial:
     - law: "ЗоЗПП ст. 32 — право отказаться от услуги с оплатой фактически оказанной части"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
     - law: "ПП РФ №1441 п. 11 — при одностороннем отказе возвращается разница за неоказанную часть"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
+      url: "http://publication.pravo.gov.ru/document/View/0001202009210004?index=4"
   problem_type:quality:
     - law: "ЗоЗПП ст. 29 ч. 1 — права потребителя при ненадлежащем качестве услуги"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
     - law: "ФЗ №273-ФЗ ст. 54 ч. 2 — договор об образовании должен содержать условия об ответственности"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_140174/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_140174/08aac5c6472189568b313849e2854d4ff51e97b4/"
   problem_type:other:
     - law: "ПП РФ №1441 — Правила оказания платных образовательных услуг"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_362652/"
+      url: "http://publication.pravo.gov.ru/document/View/0001202009210004?index=4"

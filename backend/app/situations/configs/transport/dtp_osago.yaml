@@ -110,23 +110,23 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ-40 «Об ОСАГО» ст. 12, 16.1"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
   - law: "ФЗ-123 «О финансовом уполномоченном» — обязателен до суда"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+    url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h80"
   - law: "ЗоЗПП ст. 13 — штраф 50%"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/5311cc4c47a088e5ebc6a23b15f59fa70221f8ce/"
 
 legal_refs_by_branch:
   violation_type:delay:
     - law: "ФЗ-40 «Об ОСАГО» ст. 12 ч. 21 — неустойка 1% от суммы за каждый день просрочки выплаты"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
   violation_type:underestimate:
     - law: "ФЗ-40 «Об ОСАГО» ст. 12 ч. 13 — независимая экспертиза для определения размера ущерба"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
-    - law: "Положение ЦБ РФ №432-П — единая методика расчёта ущерба по ОСАГО"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_172971/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/60bee7e4ad3be3f0b98febf9dd92c0b78e0525d5/"
+    - law: "Положение ЦБ РФ №755-П — единая методика расчёта ущерба по ОСАГО"
+      url: "https://www.cbr.ru/StaticHtml/File/41186/220413-53-1.pdf"
   violation_type:refusal:
     - law: "ФЗ-40 «Об ОСАГО» ст. 16.1 — досудебный порядок урегулирования споров"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_36528/0d93e8ea8486b165e2cb13b540beb4284b4b7115/"
     - law: "ФЗ-123 «О финансовом уполномоченном» ст. 15 — обращение к финомбудсмену при отказе"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_299392/"
+      url: "https://normativ.kontur.ru/document?moduleId=1&documentId=503727#h80"

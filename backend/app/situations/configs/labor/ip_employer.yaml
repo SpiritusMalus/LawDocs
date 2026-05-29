@@ -93,7 +93,7 @@ legal_refs:
   - law: "ТК РФ ст. 16 — основания возникновения трудовых отношений"
     url: "https://www.consultant.ru/document/cons_doc_LAW_34683/3c92ae8cb5e74f9f61fa1592dc431e3747b65015/"
   - law: "ТК РФ ст. 236 — материальная ответственность работодателя за задержку заработной платы"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/7c8d2fe49f0c8b8d13723803f2e82228f99b6d7e/"
 
 legal_refs_by_branch:
   violation_type:no_contract:
@@ -101,4 +101,4 @@ legal_refs_by_branch:
       url: "https://www.consultant.ru/document/cons_doc_LAW_34683/85f34a6cdab77800eb78480c677c9d753edb4737/"
   violation_type:salary_not_paid:
     - law: "ТК РФ ст. 236 — компенсация 1/150 ставки ЦБ за каждый день задержки"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/7c8d2fe49f0c8b8d13723803f2e82228f99b6d7e/"

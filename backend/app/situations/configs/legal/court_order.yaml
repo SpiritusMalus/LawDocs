@@ -115,54 +115,54 @@ wizard_steps:
 
 legal_refs:
   - law: "ГПК РФ ст. 128-129 — возражение на судебный приказ и его отмена"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/9004fef869942e262be4e2563e1d059f1f03fca3/"
   - law: "ГПК РФ ст. 121-127 — порядок выдачи судебного приказа"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_39570/5e1a82d55d8520a8d263301e5efa453b39007301/"
   - law: "ФЗ-229 «Об исполнительном производстве» ст. 43, 45 — прекращение ИП после отмены приказа"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_71450/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_71450/c18c945223e9b2450f9bb3be0485b39e523a9c51/"
 
 legal_refs_by_branch:
   creditor_type:bank:
     - law: "ФЗ-353 «О потребительском кредите» ст. 14 — уступка требований банком"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/580e23d6245eb586a5d5f8757f3ee19b91a18441/"
     - law: "ФЗ-102 «Об ипотеке» ст. 51 — взыскание по ипотечным требованиям через суд"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_18985/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_19396/1e0d7c7450fb3487c18e6c6cb841a9c0ca3003c1/"
   creditor_type:mfo:
     - law: "ФЗ-151 «О микрофинансовой деятельности» ст. 12 — ограничения на начисление процентов"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_112267/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_102112/0737ab7747fb785b896dc6c0ca20a9d2731aae7a/"
     - law: "ФЗ-353 ст. 6 — максимальная полная стоимость кредита (ограничение ростовщических процентов)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"
   creditor_type:housing:
     - law: "ЖК РФ ст. 155 — сроки и порядок оплаты жилья и коммунальных услуг"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/139575aa60e88741a70818912399a939d07f5e2e/"
     - law: "ЖК РФ ст. 153 — обязанность по внесению платы за жилое помещение"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_51057/ac25f6674014f4e07bc0bce2fed78ef07ecda1a9/"
   creditor_type:tax:
     - law: "НК РФ ст. 48 — взыскание налога с физических лиц в судебном порядке"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_19671/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_19671/9cd78ac97620f0718208f3dd6e13946ae42cd99a/"
     - law: "НК РФ ст. 70 — сроки направления требования об уплате налога"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_19671/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_19671/67cc8c7a75f69991558cf92b6a9d1bfdf3ee342a/"
   creditor_type:other:
     - law: "ГПК РФ ст. 122 — требования, по которым выдаётся судебный приказ"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/2e9407b6ca30a709c09d4ae7f907c78032524138/"
   objection_reason:dispute_debt:
     - law: "ГПК РФ ст. 129 — отмена судебного приказа при несогласии должника с требованиями"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/fd3336defa264ba3f3adb30a5f7d9b21017a6ca2/"
   objection_reason:dispute_amount:
     - law: "ГПК РФ ст. 129 — возражение относительно размера взысканной суммы"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/fd3336defa264ba3f3adb30a5f7d9b21017a6ca2/"
     - law: "ГК РФ ст. 333 — снижение неустойки судом при явной несоразмерности"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_5142/f9732de88783800811973b3a13ef5112de0b5321/"
   objection_reason:already_paid:
     - law: "ГПК РФ ст. 129 — исполнение обязательства как основание для отмены приказа"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/fd3336defa264ba3f3adb30a5f7d9b21017a6ca2/"
     - law: "ФЗ-229 ст. 43 ч. 1 п. 1 — прекращение исполнительного производства при погашении долга"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_71450/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_71450/c18c945223e9b2450f9bb3be0485b39e523a9c51/"
   objection_reason:procedural:
     - law: "ГПК РФ ст. 124 — требования к заявлению о выдаче судебного приказа"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/6670c278a73977bd239c618f2419c78c40ca123d/"
     - law: "ГПК РФ ст. 196 — срок исковой давности как процессуальное возражение"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/bdb0f692b9e3286707e4034dedd9ce910db67ef4/"
   objection_reason:other:
     - law: "ГПК РФ ст. 128-129 — право должника подать возражение в течение 10 дней"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/9004fef869942e262be4e2563e1d059f1f03fca3/"

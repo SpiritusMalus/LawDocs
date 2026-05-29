@@ -104,36 +104,36 @@ wizard_steps:
 
 legal_refs:
   - law: "ФЗ-230 ст. 7 — ограничения по способам и времени взаимодействия коллекторов"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_200497/89ed8935f0c77db72c94afba79dd97160ca915a4/"
   - law: "ФЗ-230 ст. 8 — право должника отказаться от взаимодействия с коллекторами"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_200497/4f8fa57d11f8ccf48891d5d46db3ed5d42e431ad/"
   - law: "КоАП РФ ст. 14.57 — административная ответственность коллекторов"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/dc08ef1d6c51e501c571c436e082d4e0a975e781/"
   - law: "ГК РФ ст. 385 — уведомление должника об уступке права требования"
-    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/0c48739925c91a7cc4f5593ddfc7840ccfa01cdb/"
 
 legal_refs_by_branch:
   violation_types:threats:
     - law: "УК РФ ст. 119 — угроза убийством или причинением тяжкого вреда здоровью"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_10699/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_10699/37fd891311615f23654aa2bd69d386fc6c0c8470/"
   violation_types:third_parties:
     - law: "ФЗ-230 ст. 7 ч. 5 — запрет взаимодействия с третьими лицами без их согласия"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/89ed8935f0c77db72c94afba79dd97160ca915a4/"
   violation_types:night_calls:
     - law: "ФЗ-230 ст. 7 ч. 3 — запрет взаимодействия в ночное время (22:00-8:00 будни, 20:00-9:00 выходные)"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/89ed8935f0c77db72c94afba79dd97160ca915a4/"
   violation_types:frequency:
     - law: "ФЗ-230 ст. 7 ч. 3 — ограничение количества звонков: не более 1 в сутки, 2 в неделю, 8 в месяц"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/89ed8935f0c77db72c94afba79dd97160ca915a4/"
   violation_types:no_intro:
     - law: "ФЗ-230 ст. 7 ч. 4 — обязанность представиться и назвать организацию при каждом контакте"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/89ed8935f0c77db72c94afba79dd97160ca915a4/"
   violation_types:other:
     - law: "ФЗ-230 ст. 6 — общие требования к действиям коллекторов при взаимодействии с должником"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/d273bf73ebb15b14ee63a919fb795a39c21d260a/"
   has_recordings:yes:
     - law: "ГПК РФ ст. 55 — аудиозаписи как доказательства в суде"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_39570/b48406042a309ee368f395fb6f3be1d43c7cbfc2/"
   has_recordings:no:
     - law: "ФЗ-230 ст. 16 — жалоба в ФССП как основной способ защиты при нарушениях коллекторов"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_200497/7d677a43ccbcd8283009b51ce455d7577636327b/"
