@@ -138,7 +138,7 @@ legal_refs_by_branch:
     - law: "ФЗ-152 «О персональных данных» — защита медицинских персональных данных"
       url: "https://www.consultant.ru/document/cons_doc_LAW_61801/6c94959bc017ac80140621762d2ac59f6006b08c/"
   problem_type:bad_treatment:
-    - law: "ФЗ-323 ст. 70 — ответственность лечащего врача за причинение вреда здоровью"
+    - law: "ФЗ-323 ст. 70 — права и обязанности лечащего врача"
       url: "https://www.consultant.ru/document/cons_doc_LAW_121895/2c37eeb7b3dac431acdf6e9b8c50416f260213ed/"
   problem_type:refused:
     - law: "ФЗ-323 ст. 19 — право на получение медицинской помощи в гарантированном объёме"

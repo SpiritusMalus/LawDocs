@@ -120,7 +120,7 @@ legal_refs_by_branch:
     - law: "ЖК РФ ст. 162 — обязанности управляющей компании по договору управления"
       url: "https://www.consultant.ru/document/cons_doc_LAW_51057/14e9738be002fe3ab76c0d580b863aac1ac65fb7/"
   violation_type:other:
-    - law: "ЖК РФ ст. 165 — контроль за деятельностью управляющих организаций"
+    - law: "ЖК РФ ст. 165 — обеспечение условий управления МКД, информационное взаимодействие"
       url: "https://www.consultant.ru/document/cons_doc_LAW_51057/7d656b1c876345ecf273e40b4d4a5a7edee07a29/"
   demand:recalculate:
     - law: "ПП РФ №354 п. 103 — порядок обращения за перерасчётом и сроки его проведения"

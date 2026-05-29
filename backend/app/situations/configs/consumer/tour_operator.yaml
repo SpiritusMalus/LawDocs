@@ -121,7 +121,7 @@ legal_refs_by_branch:
   violation_type:changed_conditions:
     - law: "ФЗ-132 ст. 10 ч. 5 — изменение существенных условий даёт право отказаться от тура"
       url: "https://www.consultant.ru/document/cons_doc_LAW_12462/2070f6ea82fa7177009d4d07d2fbad8e5f6695a1/"
-    - law: "ГК РФ ст. 450 — расторжение договора при существенном изменении обстоятельств"
+    - law: "ГК РФ ст. 450 — изменение и расторжение договора при существенном нарушении условий"
       url: "https://www.consultant.ru/document/cons_doc_LAW_5142/c231822b9f355b8c760b3389e80269f0d987870e/"
   violation_type:refund_denied:
     - law: "ФЗ-132 ст. 10.1 — порядок урегулирования претензий туриста"

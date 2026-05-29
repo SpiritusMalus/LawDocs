@@ -117,14 +117,14 @@ wizard_steps:
 legal_refs:
   - law: "ГК РФ ст. 401 — ответственность только при вине"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5142/94ebfa384dd37d9377ee7b78ab23c150ff69e5b4/"
-  - law: "ГК РФ ст. 620 — ответственность арендодателя за скрытые недостатки"
+  - law: "ГК РФ ст. 620 — право арендатора на досрочное расторжение при необговорённых недостатках"
     url: "https://www.consultant.ru/document/cons_doc_LAW_9027/a28d383ce0fc83410c7005826f649dee0efd4061/"
   - law: "ЗоЗПП ст. 10, 13, 14 — права потребителя услуг"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/e96b1cbe2a0795305a08c97b1a7f34ddab4ae908/"
 
 legal_refs_by_branch:
   violation_type:preexisting_damage:
-    - law: "ГК РФ ст. 620 ч. 2 — арендатор не отвечает за недостатки, которые были оговорены при сдаче"
+    - law: "ГК РФ ст. 620 — арендатор вправе расторгнуть договор, если имущество имеет необговорённые недостатки"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/a28d383ce0fc83410c7005826f649dee0efd4061/"
     - law: "ГК РФ ст. 607 — акт приёма-передачи как доказательство состояния имущества"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/8795ca64fac9847b86743ee4c615a8a022cef84f/"
@@ -136,8 +136,8 @@ legal_refs_by_branch:
   violation_type:unauthorized_charge:
     - law: "ГК РФ ст. 1102 — неосновательное обогащение, возврат незаконно списанных средств"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/49f09b23a7383f77a52746e03ffe821d13bd9b4e/"
-    - law: "ЗоЗПП ст. 16.1 — запрет на навязывание дополнительных платежей"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_305/287ba272fb77db736b18354d3eec00164e7fd104/"
+    - law: "ЗоЗПП ст. 16 — запрет навязывать доп. услуги и недействительность ущемляющих условий"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/9eb0f127ead4dc57e7d0a9d4954cf264c4b3cea8/"
   violation_type:other:
     - law: "ГК РФ ст. 1064 — обязанность возместить причинённый вред"
       url: "https://www.consultant.ru/document/cons_doc_LAW_9027/c511835e25e63740cf185038b1ad056526f814e9/"

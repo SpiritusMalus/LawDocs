@@ -135,5 +135,5 @@ legal_refs_by_branch:
     - law: "ГПК РФ ст. 55 — аудиозаписи как доказательства в суде"
       url: "https://www.consultant.ru/document/cons_doc_LAW_39570/b48406042a309ee368f395fb6f3be1d43c7cbfc2/"
   has_recordings:no:
-    - law: "ФЗ-230 ст. 16 — жалоба в ФССП как основной способ защиты при нарушениях коллекторов"
+    - law: "ФЗ-230 ст. 16 — исключение коллекторской организации из госреестра (основание для жалобы в ФССП)"
       url: "https://www.consultant.ru/document/cons_doc_LAW_200497/7d677a43ccbcd8283009b51ce455d7577636327b/"

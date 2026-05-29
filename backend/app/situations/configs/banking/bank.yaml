@@ -93,11 +93,11 @@ wizard_steps:
             label: "Другое"
 
 legal_refs:
-  - law: "ФЗ «О потребительском кредите (займе)»"
+  - law: "ФЗ «О потребительском кредите (займе)» ст. 5 — условия договора потребкредита"
     url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e696dec97870b710b608bf4c5dd2a0a0fd98ba1b/"
   - law: "Закон о защите прав потребителей (ст. 16 — навязанные услуги)"
     url: "https://www.consultant.ru/document/cons_doc_LAW_305/9eb0f127ead4dc57e7d0a9d4954cf264c4b3cea8/"
-  - law: "ФЗ «О банках и банковской деятельности»"
+  - law: "ФЗ «О банках и банковской деятельности» ст. 30 — отношения банка с клиентом, условия договора"
     url: "https://www.consultant.ru/document/cons_doc_LAW_5842/e452b6541ff9e2aad438b239b6e5ba38a28162da/"
 
 legal_refs_by_branch:
