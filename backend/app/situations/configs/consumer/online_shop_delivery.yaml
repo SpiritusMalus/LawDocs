@@ -1,0 +1,89 @@
+id: online_shop_delivery
+category: consumer
+title: "Интернет-магазин — не доставил или подменил товар"
+blurb: "Магазин не доставил заказ, доставил не то или отказывается вернуть деньги"
+examples: "Товар не доставлен, пришёл повреждённый товар, магазин отказывает в возврате"
+
+document_type: pretenziya
+system_prompt: |
+  Составь претензию интернет-магазину о доставке товара, замене или возврате денег, а также взыскании неустойки.
+
+  Основная правовая база: ЗоЗПП ст. 23.1 (неустойка 0.5% в день за неправомерное непередачу товара при предоплате),
+  ст. 18 (права при ненадлежащем качестве), ПП РФ №2463 (правила дистанционной торговли).
+
+  Тон: официальный, указываем на нарушение закона и требуем исправления.
+
+python_template: |
+  [calculated_intro_section]
+
+  {{llm_narrative}}
+
+  [calculated_penalty]
+
+  [calculated_demand_section]
+
+narrative_fields: [complaint_details]
+
+wizard_steps:
+  - title: "Информация о заказе"
+    fields:
+      - id: shop_name
+        type: text
+        label: "Название интернет-магазина"
+        placeholder: "example.ru"
+        required: true
+      - id: order_number
+        type: text
+        label: "Номер заказа"
+        placeholder: "12345678"
+        required: true
+      - id: order_date
+        type: date
+        label: "Дата размещения заказа"
+        required: true
+      - id: order_amount
+        type: number
+        label: "Сумма заказа (руб.)"
+        placeholder: "5000"
+        required: true
+
+  - title: "Проблема с заказом"
+    fields:
+      - id: problem_type
+        type: radio
+        label: "Что произошло?"
+        required: true
+        options:
+          - value: not_delivered
+            label: "Товар не доставлен (прошло более 30 дней)"
+          - value: wrong_item
+            label: "Доставлен не тот товар"
+          - value: damaged
+            label: "Товар пришёл повреждённым"
+          - value: refused_return
+            label: "Магазин отказывает в возврате денег"
+
+      - id: complaint_details
+        type: textarea
+        label: "Подробное описание проблемы"
+        placeholder: "Заказал телефон, прошло 45 дней, товар не пришёл. Написал в поддержку, получил ответ..."
+        required: true
+
+legal_refs:
+  - law: "ЗоЗПП ст. 23.1 — неустойка 0.5% в день при неправомерной непередаче товара"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/cd5055f2729d0ba6bf1c3724ba16ca46ea92e0f7/"
+  - law: "ЗоЗПП ст. 18 — права при обнаружении недостатков товара"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ПП РФ №2463 — правила розничной продажи товаров (дистанционная торговля)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_373622/"
+
+legal_refs_by_branch:
+  problem_type:not_delivered:
+    - law: "ЗоЗПП ст. 23.1 — неустойка 0.5% за каждый день просрочки непередачи товара"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/cd5055f2729d0ba6bf1c3724ba16ca46ea92e0f7/"
+  problem_type:wrong_item:
+    - law: "ЗоЗПП ст. 23 ч. 1 — неустойка 1% за ненадлежащее качество"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  problem_type:damaged:
+    - law: "ЗоЗПП ст. 18 — замена товара ненадлежащего качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"

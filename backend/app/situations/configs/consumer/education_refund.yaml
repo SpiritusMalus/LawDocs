@@ -1,0 +1,92 @@
+id: education_refund
+category: consumer
+title: "Возврат денег за курсы и тренинги (офлайн)"
+blurb: "Вы оплатили курс, но не смогли его пройти и хотите вернуть деньги"
+examples: "Платный курс, тренинг, мастер-класс — требование пропорционального возврата"
+
+document_type: pretenziya
+system_prompt: |
+  Составь претензию к организации, предоставляющей образовательные услуги, о возврате уплаченных денег.
+
+  Основная правовая база: ЗоЗПП ст. 32 (право потребителя отказаться от услуги), ст. 28 (неустойка за задержку),
+  ФЗ №273 «Об образовании» ст. 54 (договор об образовании).
+
+  Тон: уважительный, но настойчивый; ссылаемся на право на возврат и пропорциональный расчёт.
+
+python_template: |
+  [calculated_intro_section]
+
+  {{llm_narrative}}
+
+  [calculated_amount_section]
+
+  [calculated_demand_section]
+
+narrative_fields: [reason_for_refund]
+
+wizard_steps:
+  - title: "Информация об образовательной услуге"
+    fields:
+      - id: school_name
+        type: text
+        label: "Название школы / организации"
+        placeholder: "Школа английского языка «English Plus\""
+        required: true
+      - id: course_name
+        type: text
+        label: "Название курса / тренинга"
+        placeholder: "Интенсив английского для начинающих"
+        required: true
+      - id: paid_amount
+        type: number
+        label: "Сумма оплаты (руб.)"
+        placeholder: "50000"
+        required: true
+
+  - title: "Информация о посещении"
+    fields:
+      - id: total_classes
+        type: number
+        label: "Всего запланировано занятий"
+        placeholder: "20"
+        required: true
+      - id: attended_classes
+        type: number
+        label: "Занятий посещено"
+        placeholder: "5"
+        required: true
+      - id: refund_reason
+        type: radio
+        label: "Причина возврата"
+        required: true
+        options:
+          - value: quality
+            label: "Низкое качество обучения"
+          - value: cancellation
+            label: "Организация отменила курс"
+          - value: personal
+            label: "Личные обстоятельства (болезнь, переезд)"
+          - value: other
+            label: "Иное"
+
+      - id: reason_for_refund
+        type: textarea
+        label: "Подробно опишите причину"
+        placeholder: "Посетил(-а) 5 занятий, понял(-а), что качество преподавания не соответствует описанию. Методика устаревшая..."
+        required: true
+
+legal_refs:
+  - law: "ЗоЗПП ст. 32 — право потребителя отказаться от исполнения договора об услугах"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"
+  - law: "ЗоЗПП ст. 28 — неустойка за задержку выполнения услуги"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  - law: "ФЗ №273 «Об образовании» ст. 54 — договор об образовании"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_140174/08aac5c6472189568b313849e2854d4ff51e97b4/"
+
+legal_refs_by_branch:
+  refund_reason:quality:
+    - law: "ЗоЗПП ст. 28 — неустойка 3% в день за услугу ненадлежащего качества"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/"
+  refund_reason:cancellation:
+    - law: "ЗоЗПП ст. 32 — полный возврат при расторжении договора по инициативе организации"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/758e2cfdf136a621c8f66dcb3372b772c7b5e6e8/"

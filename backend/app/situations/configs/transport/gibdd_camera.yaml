@@ -1,0 +1,87 @@
+id: gibdd_camera
+category: transport
+title: "Штрафы ГИБДД с камер — оспаривание"
+blurb: "Вы получили штраф от камеры фиксации нарушений и хотите его оспорить"
+examples: "Штраф получен не в собственное имя, камера ошиблась, нарушение отсутствует"
+
+document_type: pretenziya
+system_prompt: |
+  Составь жалобу на постановление об административном правонарушении, выданное по результатам фиксации нарушения специальными техническими средствами (камерой).
+
+  Основная правовая база: КоАП РФ ст. 2.6.1 (ответственность собственника только в определённых случаях), ст. 30.1–30.3 (порядок и сроки обжалования).
+
+  Тон: официальный, ссылаемся на КоАП и принцип презумпции невиновности.
+
+python_template: |
+  [calculated_intro_section]
+
+  {{llm_narrative}}
+
+  [calculated_deadline_section]
+
+  [calculated_demand_section]
+
+narrative_fields: [violation_explanation]
+
+wizard_steps:
+  - title: "Информация о постановлении"
+    fields:
+      - id: fine_number
+        type: text
+        label: "Номер постановления"
+        placeholder: "1234567890"
+        required: true
+      - id: fine_date
+        type: date
+        label: "Дата вынесения постановления"
+        required: true
+      - id: fine_amount
+        type: number
+        label: "Размер штрафа (руб.)"
+        placeholder: "500"
+        required: true
+      - id: vehicle_number
+        type: text
+        label: "Номер автомобиля"
+        placeholder: "А123БВ77"
+        required: true
+
+  - title: "Основание для оспаривания"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Какое нарушение?"
+        required: true
+        options:
+          - value: wrong_owner
+            label: "Я не собственник автомобиля в момент нарушения"
+          - value: not_driving
+            label: "Я не водил автомобиль в момент нарушения"
+          - value: camera_error
+            label: "Ошибка камеры (размыто, неправильно прочитала номер)"
+          - value: no_sign
+            label: "Знак об ограничении не установлен"
+          - value: other
+            label: "Иное (опишите ниже)"
+
+      - id: violation_explanation
+        type: textarea
+        label: "Подробное объяснение"
+        placeholder: "Автомобиль был продан 2 дня назад. В момент нарушения собственником был иной человек..."
+        required: true
+
+legal_refs:
+  - law: "КоАП РФ ст. 2.6.1 — ответственность собственников транспортных средств"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/fe56a31c33d64ee209a7de64c1850457e9b86d3c/"
+  - law: "КоАП РФ ст. 30.1 — порядок обжалования постановлений"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42b53d65ef7bdf518041f97994f487e088e8e931/"
+  - law: "КоАП РФ ст. 30.3 — сроки обжалования (10 дней)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34661/9ae21ddd95d2541114102cce9c92efe6fc637266/"
+
+legal_refs_by_branch:
+  violation_type:wrong_owner:
+    - law: "КоАП ст. 2.6.1 (3) — освобождение от ответственности, если авто выбыло из владения"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/fe56a31c33d64ee209a7de64c1850457e9b86d3c/"
+  violation_type:camera_error:
+    - law: "КоАП ст. 30.1 — право на справедливое разбирательство, проверка доказательств"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34661/42b53d65ef7bdf518041f97994f487e088e8e931/"

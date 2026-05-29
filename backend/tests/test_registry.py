@@ -8,6 +8,8 @@ EXPECTED_IDS = {
     "tour_operator", "online_course", "neighbor_flood", "repair", "telecom",
     "medical", "ddu_delay", "ddu_defects", "ddu_termination", "dtp_osago",
     "auto_repair", "debt_collector", "carsharing", "gym_refund",
+    "mfo", "gibdd_camera", "repair_apartment", "online_shop_delivery",
+    "education_refund", "university_admission", "ip_employer",
 }
 
 
@@ -16,7 +18,7 @@ def test_registry_loads_all_situations():
 
 
 def test_registry_len():
-    assert len(registry) == 25
+    assert len(registry) == 32
 
 
 def test_unknown_situation_returns_none():

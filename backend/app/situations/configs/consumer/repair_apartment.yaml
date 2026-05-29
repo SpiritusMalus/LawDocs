@@ -1,0 +1,74 @@
+id: repair_apartment
+category: consumer
+title: "Некачественный ремонт квартиры (частный подрядчик)"
+blurb: "Подрядчик выполнил ремонт с недостатками и отказывается их исправлять"
+examples: "Плохо положена плитка, протечки после ремонта, непрочные конструкции"
+
+document_type: pretenziya
+system_prompt: |
+  Составь претензию подрядчику о безвозмездном устранении недостатков и уплате неустойки.
+
+  Основная правовая база: ЗоЗПП ст. 28 (неустойка 3% в день за нарушение сроков), ст. 29 (права потребителя при недостатках), ГК РФ ст. 723 (ответственность подрядчика).
+
+  Тон: деловой, описываем конкретные недостатки и требуем их исправления.
+
+python_template: |
+  [calculated_intro_section]
+
+  [calculated_violation_section]
+
+  {{llm_narrative}}
+
+  [calculated_penalty]
+
+  [calculated_demand_section]
+
+narrative_fields: [defect_details]
+
+wizard_steps:
+  - title: "Информация о договоре"
+    fields:
+      - id: contractor_name
+        type: text
+        label: "Фамилия и имя подрядчика / название компании"
+        placeholder: "Иван Петров"
+        required: true
+      - id: contract_date
+        type: date
+        label: "Дата заключения договора"
+        required: true
+      - id: contract_number
+        type: text
+        label: "Номер договора (если есть)"
+        placeholder: "ДП-001"
+        required: false
+      - id: contract_amount
+        type: number
+        label: "Стоимость работ (руб.)"
+        placeholder: "100000"
+        required: true
+
+  - title: "Информация о недостатках"
+    fields:
+      - id: defect_discovery_date
+        type: date
+        label: "Дата обнаружения недостатков"
+        required: true
+      - id: defect_details
+        type: textarea
+        label: "Опишите обнаруженные недостатки подробно"
+        placeholder: "Плитка в ванной комнате уложена неровно, видны щели. На потолке появилась протечка..."
+        required: true
+
+legal_refs:
+  - law: "ЗоЗПП ст. 28 — неустойка за нарушение сроков выполнения работ (3% в день)"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"
+  - law: "ЗоЗПП ст. 29 — права потребителя при обнаружении недостатков"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_305/41fd88c62c89ddba445ff85149b17a63b9679810/"
+  - law: "ГК РФ ст. 723 — ответственность подрядчика за ненадлежащее качество"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_9027/0f3422f73df7bee03d56085359c80be8d2981ead/"
+
+legal_refs_by_branch:
+  defect_discovery_date:
+    - law: "ЗоЗПП ст. 28 ч. 5 — взыскание неустойки за каждый день просрочки устранения"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_305/f190d8f6c0d4f03af399cc0efcc722d87a0f83a6/"

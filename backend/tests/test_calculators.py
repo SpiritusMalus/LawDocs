@@ -5,9 +5,15 @@ import pytest
 
 from app.services.calculators import (
     calculate_airline,
+    calculate_education_refund,
     calculate_employer,
+    calculate_gibdd_camera,
+    calculate_mfo,
+    calculate_online_shop_delivery,
     calculate_repair,
+    calculate_repair_apartment,
     calculate_shop,
+    calculate_university_admission,
 )
 
 
@@ -145,3 +151,133 @@ def test_repair_penalty_cap():
     })
     penalty = _parse(result.get("calculated_penalty", "0"))
     assert penalty <= 1000.0
+
+
+def test_mfo_excess_rate_computed():
+    from datetime import date, timedelta
+    ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+    result = calculate_mfo({
+        "mfo_name": "МФО Тест",
+        "loan_amount": "10000",
+        "loan_date": ten_days_ago,
+        "daily_rate": "1.5",
+        "violation_type": "illegal_rate",
+    })
+    assert "calculated_amount_section" in result
+    assert result["calculated_amount_section"] != ""
+
+
+def test_mfo_no_violation_no_calc():
+    result = calculate_mfo({
+        "mfo_name": "МФО Тест",
+        "loan_amount": "10000",
+        "loan_date": "2026-05-01",
+        "daily_rate": "0.8",
+        "violation_type": "illegal_rate",
+    })
+    assert "calculated_amount_section" in result
+
+
+def test_gibdd_camera_deadline_10_days():
+    from datetime import date, timedelta
+    five_days_ago = (date.today() - timedelta(days=5)).isoformat()
+    result = calculate_gibdd_camera({
+        "fine_date": five_days_ago,
+        "fine_amount": "500",
+        "fine_number": "1234",
+        "vehicle_number": "А123БВ77",
+        "violation_type": "wrong_owner",
+    })
+    assert "calculated_deadline_section" in result
+    assert result["calculated_deadline_section"] != ""
+
+
+def test_repair_apartment_penalty_3pct():
+    from datetime import date, timedelta
+    ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+    result = calculate_repair_apartment({
+        "contractor_name": "Иван Петров",
+        "contract_date": "2026-04-01",
+        "contract_amount": "100000",
+        "defect_discovery_date": ten_days_ago,
+    })
+    penalty = _parse(result.get("calculated_penalty", "0"))
+    assert penalty == pytest.approx(30000.0)
+
+
+def test_repair_apartment_penalty_capped():
+    from datetime import date, timedelta
+    long_ago = (date.today() - timedelta(days=200)).isoformat()
+    result = calculate_repair_apartment({
+        "contractor_name": "Иван Петров",
+        "contract_date": "2026-04-01",
+        "contract_amount": "100000",
+        "defect_discovery_date": long_ago,
+    })
+    penalty = _parse(result.get("calculated_penalty", "0"))
+    assert penalty <= 100000.0
+
+
+def test_online_shop_not_delivered_0_5pct():
+    from datetime import date, timedelta
+    ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+    result = calculate_online_shop_delivery({
+        "shop_name": "example.ru",
+        "order_date": ten_days_ago,
+        "order_amount": "10000",
+        "order_number": "12345",
+        "problem_type": "not_delivered",
+    })
+    penalty = _parse(result.get("calculated_penalty", "0"))
+    assert penalty == pytest.approx(500.0)
+
+
+def test_online_shop_wrong_item_1pct():
+    from datetime import date, timedelta
+    ten_days_ago = (date.today() - timedelta(days=10)).isoformat()
+    result = calculate_online_shop_delivery({
+        "shop_name": "example.ru",
+        "order_date": ten_days_ago,
+        "order_amount": "10000",
+        "order_number": "12345",
+        "problem_type": "wrong_item",
+    })
+    penalty = _parse(result.get("calculated_penalty", "0"))
+    assert penalty == pytest.approx(1000.0)
+
+
+def test_education_refund_proportional():
+    result = calculate_education_refund({
+        "school_name": "Школа",
+        "course_name": "Курс",
+        "paid_amount": "50000",
+        "total_classes": "20",
+        "attended_classes": "5",
+    })
+    # 50000 / 20 × 15 = 37500
+    assert "37500" in result["calculated_amount_section"]
+
+
+def test_education_refund_zero_classes_full_refund():
+    result = calculate_education_refund({
+        "school_name": "Школа",
+        "course_name": "Курс",
+        "paid_amount": "50000",
+        "total_classes": "0",
+        "attended_classes": "0",
+    })
+    # total_classes = 0 → full refund
+    assert "50000" in result["calculated_amount_section"]
+
+
+def test_university_admission_formats_correctly():
+    result = calculate_university_admission({
+        "university_name": "МГУ",
+        "specialty": "Математика",
+        "violation_type": "not_admitted",
+        "application_date": "2026-05-01",
+    })
+    assert "calculated_intro_section" in result
+    assert result["calculated_intro_section"] != ""
+    assert "calculated_demand_section" in result
+    assert result["calculated_demand_section"] != ""

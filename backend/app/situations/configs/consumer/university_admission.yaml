@@ -1,0 +1,82 @@
+id: university_admission
+category: consumer
+title: "Нарушения при поступлении в вуз"
+blurb: "Вас незаконно не приняли в вуз или нарушили права при рассмотрении документов"
+examples: "Не рассмотрели документы, потеряли бумаги, ошиблись в ранжировании абитуриентов"
+
+document_type: pretenziya
+system_prompt: |
+  Составь претензию вузу / вышестоящему органу образования о нарушении прав при поступлении.
+
+  Основная правовая база: ФЗ №273 «Об образовании» ст. 55 (право на обучение на принципах равных условий),
+  КАС РФ ст. 218 (оспаривание действий организаций, наделённых публичными полномочиями).
+
+  Тон: официальный, указываем на конкретные нарушения и требуем восстановления прав.
+
+python_template: |
+  [calculated_intro_section]
+
+  {{llm_narrative}}
+
+  [calculated_demand_section]
+
+narrative_fields: [violation_details]
+
+wizard_steps:
+  - title: "Информация о поступлении"
+    fields:
+      - id: university_name
+        type: text
+        label: "Название вуза"
+        placeholder: "МГУ им. М.В. Ломоносова"
+        required: true
+      - id: specialty
+        type: text
+        label: "Специальность / направление подготовки"
+        placeholder: "Прикладная математика и информатика"
+        required: true
+      - id: application_date
+        type: date
+        label: "Дата подачи документов"
+        required: true
+      - id: exam_score
+        type: number
+        label: "Ваш проходной балл"
+        placeholder: "280"
+        required: false
+
+  - title: "Информация о нарушении"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Какое нарушение?"
+        required: true
+        options:
+          - value: not_admitted
+            label: "Не приняли несмотря на соответствие критериям"
+          - value: documents_lost
+            label: "Потеряли поданные документы"
+          - value: wrong_ranking
+            label: "Ошибка в ранжировании / сортировке абитуриентов"
+          - value: deadline_missed
+            label: "Не рассмотрели документы в установленный срок"
+
+      - id: violation_details
+        type: textarea
+        label: "Подробное объяснение"
+        placeholder: "Подал документы 1 июня, проходной балл 280, соответствую всем требованиям, но в списке зачисленных не вижу себя. При запросе в приёмную сказали, что документы потеряны..."
+        required: true
+
+legal_refs:
+  - law: "ФЗ №273 «Об образовании в Российской Федерации» ст. 55 — порядок приёма на обучение"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_140174/296acc03f4dfbea960a2b486d6f0c63402a7b5b9/"
+  - law: "КАС РФ ст. 218 — оспаривание действий организаций, наделённых государственными полномочиями"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_176147/98b69fee6357343965f5b57193fcaaa54b0f21e4/"
+
+legal_refs_by_branch:
+  violation_type:not_admitted:
+    - law: "ФЗ №273 ст. 55 — приём на основе принципов равных условий, не дискриминация"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_140174/296acc03f4dfbea960a2b486d6f0c63402a7b5b9/"
+  violation_type:documents_lost:
+    - law: "КАС РФ ст. 218 — право требовать возмещения убытков, причинённых действиями организации"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_176147/98b69fee6357343965f5b57193fcaaa54b0f21e4/"

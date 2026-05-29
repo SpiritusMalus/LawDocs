@@ -1,0 +1,89 @@
+id: mfo
+category: consumer
+title: "МФО или микрозаймы — высокие проценты"
+blurb: "Микрофинансовая организация взимает проценты выше установленного законом кэпа 1% в день"
+examples: "Микрозайм под 2% в день, требование пересчёта"
+
+document_type: pretenziya
+system_prompt: |
+  Составь досудебную претензию микрофинансовой организации о пересчёте задолженности и возврате излишних процентов.
+
+  Основная правовая база: ФЗ №151 «О микрофинансовой деятельности и микрофинансовых организациях» ст. 9 (максимум 1% в день),
+  ФЗ №353 «О потребительском кредите» ст. 6 (полная стоимость кредита), ГК РФ ст. 395 (проценты за чужие деньги).
+
+  Тон: деловой, уверенный, ссылаемся на конкретные нарушения закона.
+
+python_template: |
+  [calculated_intro_section]
+
+  [calculated_violation_section]
+
+  {{llm_narrative}}
+
+  [calculated_amount_section]
+
+  [calculated_demand_section]
+
+narrative_fields: [problem_description]
+
+wizard_steps:
+  - title: "Информация о микрозайме"
+    fields:
+      - id: mfo_name
+        type: text
+        label: "Название МФО"
+        placeholder: "ООО «МикроПро» или иное"
+        required: true
+      - id: loan_amount
+        type: number
+        label: "Сумма займа (руб.)"
+        placeholder: "10000"
+        required: true
+      - id: loan_date
+        type: date
+        label: "Дата выдачи займа"
+        required: true
+      - id: daily_rate
+        type: number
+        label: "Дневная ставка (% в день)"
+        placeholder: "2.5"
+        required: true
+        hint: "Кэп по закону: 1% в день"
+
+  - title: "Суть нарушения и требования"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Какое нарушение?"
+        required: true
+        options:
+          - value: illegal_rate
+            label: "Проценты выше 1% в день"
+          - value: hidden_fees
+            label: "Скрытые комиссии и сборы"
+          - value: refusal_to_provide_docs
+            label: "Отказ предоставить документы"
+          - value: harassment
+            label: "Преследование и угрозы коллекторов"
+
+      - id: problem_description
+        type: textarea
+        label: "Опишите подробнее, что произошло"
+        placeholder: "Из договора видно, что ставка 2% в день, что в 2 раза выше кэпа 1% по закону..."
+        required: false
+
+legal_refs:
+  - law: "ФЗ №151 «О микрофинансовой деятельности и микрофинансовых организациях» ст. 9 — ограничение процентной ставки"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_102112/bb6d6754d6e7f25a67af999810b15f030c9e313a/"
+  - law: "ФЗ №353 «О потребительском кредите» ст. 6 — полная стоимость кредита, максимальный размер"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"
+  - law: "ГК РФ ст. 395 — проценты за неисполнение денежного обязательства"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_5142/93383099dc4f06165d8d4aac4eeb159db4f6da3d/"
+
+legal_refs_by_branch:
+  violation_type:illegal_rate:
+    - law: "ФЗ №151 ст. 9 — кэп 1% в день для всех займов"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_102112/bb6d6754d6e7f25a67af999810b15f030c9e313a/"
+  violation_type:hidden_fees:
+    - law: "ФЗ №353 ст. 6 — все платежи должны быть включены в ПСК"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"

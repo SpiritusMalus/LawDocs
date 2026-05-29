@@ -1,0 +1,104 @@
+id: ip_employer
+category: labor
+title: "Трудовые споры с ИП-работодателем"
+blurb: "Вы работали у индивидуального предпринимателя и не получили деньги или было нарушено трудовое право"
+examples: "ИП не платит зарплату, нет трудового договора, незаконное увольнение от ИП"
+
+document_type: pretenziya
+system_prompt: |
+  Составь претензию индивидуальному предпринимателю о выплате задолженности по заработной плате и компенсации.
+
+  Основная правовая база: ТК РФ ст. 67.1 (де-факто трудовые отношения при фактическом допущении к работе),
+  ст. 16 (основания возникновения трудовых отношений), ст. 236 (материальная ответственность за задержку выплат).
+
+  Тон: деловой, но твёрдый; указываем на де-факто отношения и требуем выплаты.
+
+python_template: |
+  [calculated_intro_section]
+
+  [calculated_violation_section]
+
+  {{llm_narrative}}
+
+  [calculated_compensation_section]
+
+  [calculated_demand_section]
+
+narrative_fields: [work_conditions]
+
+wizard_steps:
+  - title: "Информация о работодателе"
+    fields:
+      - id: employer_name
+        type: text
+        label: "ФИО индивидуального предпринимателя"
+        placeholder: "Иван Сергеевич Петров"
+        required: true
+      - id: employer_inn
+        type: text
+        label: "ИНН ИП (если известен)"
+        placeholder: "123456789012"
+        required: false
+      - id: position
+        type: text
+        label: "Должность / описание работы"
+        placeholder: "Водитель такси, помощник по хозяйству"
+        required: true
+
+  - title: "Информация о работе и задолженности"
+    fields:
+      - id: work_start
+        type: date
+        label: "Дата начала работы"
+        required: true
+      - id: work_end
+        type: date
+        label: "Дата прекращения работы (если прекратилась)"
+        required: false
+      - id: salary_owed
+        type: number
+        label: "Сумма задолженности по зарплате (руб.)"
+        placeholder: "50000"
+        required: true
+      - id: last_payment_date
+        type: date
+        label: "Дата последней выплаты (если была)"
+        required: false
+
+  - title: "Причина претензии"
+    fields:
+      - id: violation_type
+        type: radio
+        label: "Основное нарушение"
+        required: true
+        options:
+          - value: no_contract
+            label: "Работал без трудового договора"
+          - value: salary_not_paid
+            label: "ИП не платит зарплату"
+          - value: dismissal
+            label: "Незаконное увольнение"
+          - value: no_vacation_pay
+            label: "Не выплачены отпускные при увольнении"
+
+      - id: work_conditions
+        type: textarea
+        label: "Подробно опишите обстоятельства"
+        placeholder: "Работал водителем с 1 января 2026. Договор никогда не заключали. Последний раз получил зарплату 15 апреля 2026, сейчас уже май..."
+        required: true
+
+legal_refs:
+  - law: "ТК РФ ст. 67.1 — последствия фактического допущения работника к работе"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/85f34a6cdab77800eb78480c677c9d753edb4737/"
+  - law: "ТК РФ ст. 16 — основания возникновения трудовых отношений"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/3c92ae8cb5e74f9f61fa1592dc431e3747b65015/"
+  - law: "ТК РФ ст. 236 — материальная ответственность работодателя за задержку заработной платы"
+    url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"
+
+legal_refs_by_branch:
+  violation_type:no_contract:
+    - law: "ТК РФ ст. 67.1 — де-факто трудовые отношения порождают такие же права и обязанности"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/85f34a6cdab77800eb78480c677c9d753edb4737/"
+  violation_type:salary_not_paid:
+    - law: "ТК РФ ст. 236 — компенсация 1/150 ставки ЦБ за каждый день задержки"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_34683/"

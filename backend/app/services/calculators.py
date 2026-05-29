@@ -2772,6 +2772,431 @@ def calculate_debt_collector(form_data: dict) -> dict:
     return data
 
 
+def calculate_mfo(form_data: dict) -> dict:
+    """Претензия к МФО: излишки процентов при ставке > 1%/день (ФЗ №151 ст. 9)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    mfo_name = str(data.get("mfo_name") or "").strip()
+    loan_amount_str = str(data.get("loan_amount") or "0")
+    daily_rate_str = str(data.get("daily_rate") or "0")
+    loan_date = _ru_date(data.get("loan_date"))
+    violation_type = str(data.get("violation_type") or "").strip()
+
+    try:
+        loan_amount = Decimal(loan_amount_str)
+        daily_rate = Decimal(daily_rate_str)
+    except Exception:
+        loan_amount = Decimal("0")
+        daily_rate = Decimal("0")
+
+    # Intro
+    intro = "Я получил(-а) микрозаём"
+    if mfo_name:
+        intro += f" у {mfo_name}"
+    if loan_date:
+        intro += f" от {loan_date}"
+    if loan_amount > 0:
+        intro += f" в размере {_fmt(loan_amount)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Violation
+    if violation_type == "illegal_rate" and daily_rate > Decimal("1.0"):
+        excess_rate = daily_rate - Decimal("1.0")
+        loan_date_obj = _parse_date(data.get("loan_date"))
+        days_since_loan = 0
+        if loan_date_obj:
+            days_since_loan = max((date.today() - loan_date_obj).days, 0)
+
+        excess_amount = loan_amount * excess_rate / Decimal("100") * Decimal(days_since_loan)
+        excess_amount = excess_amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        data["calculated_violation_section"] = (
+            f"Микрофинансовая организация взимает процент в размере {_fmt(daily_rate)}% в день, "
+            f"что превышает установленный законом кэп 1% в день (ФЗ №151 ст. 9)."
+        )
+        data["calculated_amount_section"] = (
+            f"Излишний процент: ({_fmt(daily_rate)}% − 1%) × {_fmt(loan_amount)} руб. × {days_since_loan} дн. = "
+            f"{_fmt(excess_amount)} руб."
+        )
+    else:
+        data["calculated_violation_section"] = (
+            f"Проверена ставка по микрозайму: {_fmt(daily_rate)}% в день."
+        )
+        data["calculated_amount_section"] = ""
+
+    data["calculated_demand_section"] = (
+        "На основании изложенного прошу пересчитать задолженность с учётом установленного закономом "
+        "максимального процента (1% в день по ФЗ №151 ст. 9) и возвратить излишне взысканные суммы "
+        "в течение десяти календарных дней с даты получения настоящей претензии."
+    )
+
+    return data
+
+
+def calculate_gibdd_camera(form_data: dict) -> dict:
+    """Претензия ГИБДД: срок обжалования 10 дней (КоАП ст. 30.3)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_deadline_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    fine_date = _parse_date(data.get("fine_date"))
+    fine_amount_str = str(data.get("fine_amount") or "0")
+    fine_number = str(data.get("fine_number") or "").strip()
+    vehicle_number = str(data.get("vehicle_number") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+
+    try:
+        fine_amount = Decimal(fine_amount_str)
+    except Exception:
+        fine_amount = Decimal("0")
+
+    # Intro
+    intro = "Я получил(-а) постановление"
+    if fine_number:
+        intro += f" № {fine_number}"
+    if fine_date:
+        intro += f" от {_fmt_date_ru(fine_date)}"
+    if violation_type:
+        intro += f" за нарушение: {violation_type}"
+    if vehicle_number:
+        intro += f" (автомобиль {vehicle_number})"
+    if fine_amount > 0:
+        intro += f" на сумму {_fmt(fine_amount)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Deadline
+    if fine_date:
+        deadline_date = fine_date + timedelta(days=10)
+        deadline_str = _fmt_date_ru(deadline_date)
+        data["calculated_deadline_section"] = (
+            f"Срок обжалования по КоАП ст. 30.3: 10 дней со дня получения постановления. "
+            f"Данная претензия подается до {deadline_str} включительно."
+        )
+    else:
+        data["calculated_deadline_section"] = (
+            "Срок обжалования по КоАП ст. 30.3 составляет 10 дней со дня получения постановления."
+        )
+
+    data["calculated_demand_section"] = (
+        "На основании изложенного прошу отменить постановление о привлечении меня к административной ответственности "
+        "в соответствии с КоАП РФ ст. 2.6.1 (я не являюсь собственником в момент нарушения) и КоАП РФ ст. 30.1–30.3 "
+        "(порядок обжалования). "
+        "Прошу рассмотреть жалобу в установленный законом срок."
+    )
+
+    return data
+
+
+def calculate_repair_apartment(form_data: dict) -> dict:
+    """Претензия подрядчику за ремонт: неустойка 3%/день (ЗоЗПП ст. 28)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_penalty"] = ""
+    data["calculated_demand_section"] = ""
+
+    contractor_name = str(data.get("contractor_name") or "").strip()
+    contract_date = _ru_date(data.get("contract_date"))
+    contract_amount_str = str(data.get("contract_amount") or "0")
+    defect_discovery_date = _parse_date(data.get("defect_discovery_date"))
+
+    try:
+        contract_amount = Decimal(contract_amount_str)
+    except Exception:
+        contract_amount = Decimal("0")
+
+    # Intro
+    intro = "Между мной и"
+    if contractor_name:
+        intro += f" {contractor_name}"
+    if contract_date:
+        intro += f" заключен договор подряда от {contract_date}"
+    else:
+        intro += " заключен договор подряда"
+    if contract_amount > 0:
+        intro += f" на сумму {_fmt(contract_amount)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Violation
+    data["calculated_violation_section"] = "При выполнении ремонтных работ выявлены серьёзные недостатки, которые подрядчик отказывается устранять."
+
+    # Penalty
+    if defect_discovery_date and contract_amount > 0:
+        delay_days = max((date.today() - defect_discovery_date).days, 0)
+        penalty = min(contract_amount * Decimal("0.03") * Decimal(delay_days), contract_amount)
+        penalty = penalty.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        data["calculated_penalty"] = _fmt(penalty)
+        data["calculated_demand_section"] = (
+            f"На основании ст. 28 ЗоЗПП за {delay_days} дней просрочки устранения недостатков "
+            f"подрядчик должен уплатить неустойку в размере 3% × {_fmt(contract_amount)} руб. × {delay_days} дн. = "
+            f"{_fmt(penalty)} руб. "
+            f"Прошу выплатить неустойку и безвозмездно устранить недостатки в течение 10 дней."
+        )
+    else:
+        data["calculated_demand_section"] = (
+            "На основании ст. 28, 29 ЗоЗПП прошу безвозмездно устранить выявленные недостатки "
+            "в течение 10 дней с даты получения настоящей претензии. При отказе буду требовать "
+            "уменьшение стоимости работ или расторжение договора и возврат денег."
+        )
+
+    return data
+
+
+def calculate_online_shop_delivery(form_data: dict) -> dict:
+    """Претензия магазину: неустойка 0.5%/день (не доставил) или 1%/день (не то) (ЗоЗПП ст. 23.1)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_penalty"] = ""
+    data["calculated_demand_section"] = ""
+
+    shop_name = str(data.get("shop_name") or "").strip()
+    order_date = _ru_date(data.get("order_date"))
+    order_number = str(data.get("order_number") or "").strip()
+    order_amount_str = str(data.get("order_amount") or "0")
+    problem_type = str(data.get("problem_type") or "").strip()
+
+    try:
+        order_amount = Decimal(order_amount_str)
+    except Exception:
+        order_amount = Decimal("0")
+
+    # Intro
+    intro = "Я сделал(-а) заказ"
+    if shop_name:
+        intro += f" в интернет-магазине {shop_name}"
+    if order_date:
+        intro += f" от {order_date}"
+    if order_number:
+        intro += f" (номер заказа {order_number})"
+    if order_amount > 0:
+        intro += f" на сумму {_fmt(order_amount)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Penalty rate depends on problem type
+    rate = Decimal("0.01")  # 1% по умолчанию
+    rate_desc = "1%"
+    if problem_type == "not_delivered":
+        rate = Decimal("0.005")  # 0.5% (ст. 23.1)
+        rate_desc = "0.5%"
+
+    order_date_obj = _parse_date(data.get("order_date"))
+    if order_date_obj and order_amount > 0:
+        delay_days = max((date.today() - order_date_obj).days, 0)
+        penalty = min(order_amount * rate * Decimal(delay_days), order_amount)
+        penalty = penalty.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        data["calculated_penalty"] = _fmt(penalty)
+
+        if problem_type == "not_delivered":
+            data["calculated_demand_section"] = (
+                f"На основании ст. 23.1 ЗоЗПП магазин должен уплатить неустойку за непередачу товара: "
+                f"{rate_desc} × {_fmt(order_amount)} руб. × {delay_days} дн. = {_fmt(penalty)} руб., "
+                f"а также полностью вернуть сумму предоплаты в течение 10 дней."
+            )
+        else:
+            data["calculated_demand_section"] = (
+                f"На основании ст. 23 ЗоЗПП магазин должен уплатить неустойку за ненадлежащее качество товара: "
+                f"{rate_desc} × {_fmt(order_amount)} руб. × {delay_days} дн. = {_fmt(penalty)} руб., "
+                f"а также заменить товар или вернуть деньги в течение 10 дней."
+            )
+    else:
+        data["calculated_demand_section"] = (
+            "На основании ст. 23.1, 18 ЗоЗПП прошу в течение 10 дней либо доставить товар, "
+            "либо вернуть полную стоимость заказа. При отказе буду требовать неустойку и возмещение убытков."
+        )
+
+    return data
+
+
+def calculate_education_refund(form_data: dict) -> dict:
+    """Претензия школе: пропорциональный возврат за курсы (ЗоЗПП ст. 32)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    school_name = str(data.get("school_name") or "").strip()
+    course_name = str(data.get("course_name") or "").strip()
+    paid_amount_str = str(data.get("paid_amount") or "0")
+    total_classes_str = str(data.get("total_classes") or "0")
+    attended_classes_str = str(data.get("attended_classes") or "0")
+
+    try:
+        paid_amount = Decimal(paid_amount_str)
+        total_classes = int(total_classes_str) if total_classes_str else 0
+        attended_classes = int(attended_classes_str) if attended_classes_str else 0
+    except Exception:
+        paid_amount = Decimal("0")
+        total_classes = 0
+        attended_classes = 0
+
+    # Intro
+    intro = "Я участвовал(-а) в курсе"
+    if course_name:
+        intro += f" «{course_name}»"
+    if school_name:
+        intro += f", организуемом {school_name}"
+    if paid_amount > 0:
+        intro += f", оплатив {_fmt(paid_amount)} руб."
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Calculate refund
+    if total_classes > 0:
+        unattended = total_classes - attended_classes
+        refund = paid_amount / Decimal(total_classes) * Decimal(unattended)
+    else:
+        # Guard: if no total_classes, refund full amount
+        refund = paid_amount
+    refund = refund.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+    data["calculated_amount_section"] = (
+        f"Рассчёт возврата по ст. 32 ЗоЗПП: "
+        f"{_fmt(paid_amount)} руб. ÷ {total_classes} занятий × {total_classes - attended_classes} непосещённых = "
+        f"{_fmt(refund)} руб. к возврату."
+    )
+
+    data["calculated_demand_section"] = (
+        f"На основании ст. 32 ЗоЗПП (право потребителя отказаться от услуги) и ст. 28 (неустойка за задержку) "
+        f"прошу вернуть мне {_fmt(refund)} руб. в течение 10 дней с даты получения претензии."
+    )
+
+    return data
+
+
+def calculate_university_admission(form_data: dict) -> dict:
+    """Претензия вузу: нарушение прав при поступлении (ФЗ №273 ст. 55)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    university_name = str(data.get("university_name") or "").strip()
+    specialty = str(data.get("specialty") or "").strip()
+    violation_type = str(data.get("violation_type") or "").strip()
+    application_date = _ru_date(data.get("application_date"))
+
+    # Intro
+    intro = "Я подал(-а) документы на поступление"
+    if specialty:
+        intro += f" по специальности {specialty}"
+    if university_name:
+        intro += f" в {university_name}"
+    if application_date:
+        intro += f" {application_date}"
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Demand (no calculation, just format)
+    violation_map = {
+        "not_admitted": "несоответствию правилам приёма либо ошибке при обработке документов",
+        "documents_lost": "потере поданных мной документов",
+        "wrong_ranking": "ошибке в ранжировании абитуриентов",
+        "deadline_missed": "нарушению установленных сроков рассмотрения документов",
+    }
+
+    violation_desc = violation_map.get(violation_type, "нарушению прав при поступлении")
+
+    data["calculated_demand_section"] = (
+        f"На основании ФЗ №273 ст. 55 (право на обучение на принципах равных условий) "
+        f"и КАС РФ ст. 218 (оспаривание действий организаций) "
+        f"в связи с {violation_desc} прошу: "
+        f"(1) провести проверку решения об отказе в приёме; "
+        f"(2) издать приказ о зачислении либо возобновить рассмотрение заявки. "
+        f"В противном случае буду оспаривать решение в административном суде."
+    )
+
+    return data
+
+
+def calculate_ip_employer(form_data: dict) -> dict:
+    """Претензия ИП-работодателю: компенсация 1/150 × ставка ЦБ (ТК РФ ст. 236)."""
+    data = dict(form_data)
+    data["calculated_intro_section"] = ""
+    data["calculated_violation_section"] = ""
+    data["calculated_compensation_section"] = ""
+    data["calculated_amount_section"] = ""
+    data["calculated_demand_section"] = ""
+
+    employer_name = str(data.get("employer_name") or "").strip()
+    employer_inn = str(data.get("employer_inn") or "").strip()
+    position = str(data.get("position") or "").strip()
+    work_start = _ru_date(data.get("work_start"))
+    work_end = _ru_date(data.get("work_end"))
+    salary_owed_str = str(data.get("salary_owed") or "0")
+    violation_type = str(data.get("violation_type") or "").strip()
+    last_payment_date = _parse_date(data.get("last_payment_date"))
+
+    try:
+        salary_owed = Decimal(salary_owed_str)
+    except Exception:
+        salary_owed = Decimal("0")
+
+    # Intro
+    intro = "Я работаю (работал(-а))"
+    if position:
+        intro += f" в должности {position}"
+    intro += " у индивидуального предпринимателя"
+    if employer_name:
+        intro += f" {employer_name}"
+    if employer_inn:
+        intro += f" (ИНН {employer_inn})"
+    if work_start:
+        intro += f" с {work_start}"
+    if work_end:
+        intro += f" по {work_end}"
+    intro += "."
+    data["calculated_intro_section"] = intro
+
+    # Violation
+    violation_map = {
+        "no_contract": "При фактическом допущении к работе договор трудовой не был оформлен.",
+        "salary_not_paid": "ИП задолжал заработную плату.",
+        "dismissal": "ИП произвёл незаконное увольнение.",
+        "no_vacation_pay": "ИП не выплатил отпускные при увольнении.",
+    }
+    data["calculated_violation_section"] = violation_map.get(
+        violation_type,
+        "ИП нарушил трудовое законодательство.",
+    )
+
+    # Compensation (similar to employer)
+    if last_payment_date and salary_owed > 0:
+        delay_days = max((date.today() - last_payment_date).days, 0)
+        compensation = salary_owed * Decimal("1") / Decimal("150") * _CB_RATE / Decimal("100") * Decimal(delay_days)
+        compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+        data["calculated_compensation"] = _fmt(compensation)
+        total = salary_owed + compensation
+        data["calculated_compensation_section"] = (
+            f"Компенсация за задержку {delay_days} дней: "
+            f"{_fmt(salary_owed)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дней = "
+            f"{_fmt(compensation)} руб. (ТК РФ ст. 236). "
+            f"Итого к выплате: {_fmt(total)} руб."
+        )
+        data["calculated_amount_section"] = data["calculated_compensation_section"]
+    else:
+        data["calculated_amount_section"] = f"Сумма задолженности: {_fmt(salary_owed)} руб."
+
+    data["calculated_demand_section"] = (
+        f"На основании ТК РФ ст. 67.1 (де-факто трудовые отношения) и ст. 236 "
+        f"(компенсация за задержку выплат) прошу выплатить мне задолженность "
+        f"и компенсацию в течение трёх рабочих дней с даты получения претензии. "
+        f"В противном случае буду обращаться в Трудовую инспекцию и в суд."
+    )
+
+    return data
+
+
 SITUATION_CALCULATORS: dict[str, callable] = {
     "ddu_delay": calculate_ddu_delay,
     "ddu_termination": calculate_ddu_termination,
@@ -2798,4 +3223,11 @@ SITUATION_CALCULATORS: dict[str, callable] = {
     "utility": calculate_utility,
     "gibdd": calculate_gibdd,
     "debt_collector": calculate_debt_collector,
+    "mfo": calculate_mfo,
+    "gibdd_camera": calculate_gibdd_camera,
+    "repair_apartment": calculate_repair_apartment,
+    "online_shop_delivery": calculate_online_shop_delivery,
+    "education_refund": calculate_education_refund,
+    "university_admission": calculate_university_admission,
+    "ip_employer": calculate_ip_employer,
 }
