@@ -27,6 +27,13 @@ import {
   Wrench,
   PhoneOff,
   Dumbbell,
+  Banknote,
+  Camera,
+  PaintRoller,
+  PackageX,
+  BookOpen,
+  School,
+  UserCog,
   HelpCircle,
 } from "lucide-react";
 import { type Situation, type SituationId } from "@/lib/situations";
@@ -59,6 +66,13 @@ const SITUATION_ICONS: Record<SituationId, LucideIcon> = {
   debt_collector: PhoneOff,
   carsharing: KeyRound,
   gym_refund: Dumbbell,
+  mfo: Banknote,
+  gibdd_camera: Camera,
+  repair_apartment: PaintRoller,
+  online_shop_delivery: PackageX,
+  education_refund: BookOpen,
+  university_admission: School,
+  ip_employer: UserCog,
   other: HelpCircle,
 };
 
