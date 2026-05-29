@@ -10,6 +10,7 @@ import logging
 
 import httpx
 
+from app.situations.legal_sources import check_consistency
 from app.situations.registry import registry
 
 logger = logging.getLogger(__name__)
@@ -64,8 +65,21 @@ async def check_legal_refs() -> list[dict]:
         meta = by_url[check["url"]]
         check["situations"] = sorted(meta["situations"])
         check["laws"] = sorted(meta["laws"])
+        # Консистентность: упоминает ли текст law: закон, на который ведёт URL.
+        # Рассинхроны (consultant-ссылка ведёт не на тот закон) собираем отдельно;
+        # закрытые источники (normativ/cbr/pravo) — status='manual', не флагаем.
+        check["mismatches"] = [
+            {"law": law, "expected": res["expected"], "doc_id": res["doc_id"]}
+            for law in check["laws"]
+            for res in (check_consistency(law, check["url"]),)
+            if res["status"] in ("mismatch", "unknown")
+        ]
         results.append(check)
 
     broken = sum(1 for r in results if not r["ok"])
-    logger.info("link_check_done", extra={"action": "link_check_done", "total": len(results), "broken": broken})
+    mismatched = sum(1 for r in results if r["mismatches"])
+    logger.info(
+        "link_check_done",
+        extra={"action": "link_check_done", "total": len(results), "broken": broken, "mismatched": mismatched},
+    )
     return results

@@ -23,8 +23,11 @@ async def main() -> int:
         print("Нет ссылок для проверки.")
         return 0
 
+    from app.situations.legal_sources import is_manual_source
+
     results.sort(key=lambda r: (r["ok"], r["url"]))
     broken = 0
+    manual_down = 0
     for r in results:
         mark = "✓" if r["ok"] else "✗"
         status = r["status"] if r["status"] is not None else r.get("error", "—")
@@ -34,11 +37,30 @@ async def main() -> int:
         if r["redirected_to"]:
             print(f"    → редирект: {r['redirected_to']}")
         if not r["ok"]:
-            broken += 1
+            # Закрытые источники (normativ/cbr/pravo) недоступны для бота и часто
+            # отдают ошибку — это не повод падать, их проверяют вручную.
+            if is_manual_source(r["url"]):
+                manual_down += 1
+            else:
+                broken += 1
+
+    # Рассинхроны: текст law: не соответствует закону, на который ведёт URL.
+    mismatched = [r for r in results if r.get("mismatches")]
+    if mismatched:
+        print("\n⚠ РАССИНХРОН текста и ссылки (закон в law: ≠ документ в URL):")
+        for r in mismatched:
+            for m in r["mismatches"]:
+                expected = m["expected"] or f"неизвестный документ {m['doc_id']}"
+                print(f"  ✗ «{m['law']}»")
+                print(f"      URL ведёт на: {expected} ({r['url']})")
 
     total = len(results)
-    print(f"\nИтого: {total - broken}/{total} доступны, проблемных: {broken}")
-    return 1 if broken else 0
+    miss = sum(len(r["mismatches"]) for r in mismatched)
+    print(
+        f"\nИтого: проблемных consultant-ссылок: {broken}, рассинхронов: {miss}, "
+        f"закрытых источников недоступно (проверить вручную): {manual_down} из {total}"
+    )
+    return 1 if (broken or miss) else 0
 
 
 if __name__ == "__main__":
