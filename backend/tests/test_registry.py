@@ -119,3 +119,37 @@ def test_all_required_fields_have_labels():
                     assert field.label, (
                         f"Required field '{field.id}' in '{config.id}' has no label"
                     )
+
+
+def _all_legal_refs():
+    """Все legal_refs (включая ветки) как (situation_id, law, url)."""
+    for config in registry.all():
+        refs = list(config.legal_refs)
+        for branch in config.legal_refs_by_branch.values():
+            refs += branch
+        for ref in refs:
+            if ref.url:
+                yield config.id, ref.law or "", ref.url
+
+
+def test_legal_refs_consistency():
+    """Текст law: должен упоминать закон, на который ведёт consultant-ссылка.
+
+    Ловит подмену документа (например, текст про ФЗ-289, а URL ведёт на ПП №2463),
+    а также ссылки на LAW_XXX, которых нет в реестре legal_sources. Закрытые источники
+    (normativ.kontur/cbr.ru/pravo.gov.ru) пропускаются — их проверяют вручную.
+    """
+    from app.situations.legal_sources import check_consistency
+
+    problems = []
+    for situation_id, law, url in _all_legal_refs():
+        res = check_consistency(law, url)
+        if res["status"] == "mismatch":
+            problems.append(f"{situation_id}: «{law}» → URL ведёт на {res['expected']}")
+        elif res["status"] == "unknown":
+            problems.append(
+                f"{situation_id}: «{law}» → неизвестный документ {res['doc_id']} "
+                "(добавьте в legal_sources.py)"
+            )
+
+    assert not problems, "Рассинхрон law: и URL:\n" + "\n".join(problems)
