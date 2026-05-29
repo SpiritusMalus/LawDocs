@@ -73,7 +73,7 @@ wizard_steps:
         required: false
 
 legal_refs:
-  - law: "ФЗ №151 «О микрофинансовой деятельности и микрофинансовых организациях» ст. 9 — ограничение процентной ставки"
+  - law: "ФЗ №151 «О микрофинансовой деятельности и микрофинансовых организациях» ст. 9 — права и обязанности МФО при выдаче займа"
     url: "https://www.consultant.ru/document/cons_doc_LAW_102112/bb6d6754d6e7f25a67af999810b15f030c9e313a/"
   - law: "ФЗ №353 «О потребительском кредите» ст. 6 — полная стоимость кредита, максимальный размер"
     url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"
@@ -82,8 +82,8 @@ legal_refs:
 
 legal_refs_by_branch:
   violation_type:illegal_rate:
-    - law: "ФЗ №151 ст. 9 — кэп 1% в день для всех займов"
-      url: "https://www.consultant.ru/document/cons_doc_LAW_102112/bb6d6754d6e7f25a67af999810b15f030c9e313a/"
+    - law: "ФЗ №353 ст. 6 — предельная ПСК и ограничение ставки (ростовщические проценты)"
+      url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"
   violation_type:hidden_fees:
     - law: "ФЗ №353 ст. 6 — все платежи должны быть включены в ПСК"
       url: "https://www.consultant.ru/document/cons_doc_LAW_155986/e52bee2d092465172cd750d5a23927f45bb3d017/"
