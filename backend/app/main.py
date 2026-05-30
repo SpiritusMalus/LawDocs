@@ -296,6 +296,7 @@ async def _data_retention_loop() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from decimal import Decimal
     if settings.APP_ENV == "production" and not settings.FERNET_KEY:
         raise RuntimeError(
             "FERNET_KEY не задан в production. "
@@ -303,6 +304,36 @@ async def lifespan(app: FastAPI):
         )
     configs_dir = Path(__file__).parent / "situations" / "configs"
     registry.load(configs_dir)
+
+    from app.services.cbr import fetch_cb_rate
+    from app.services.notifications import send_telegram_alert
+    _cbr_logger = logging.getLogger("cbr")
+    fetched_rate = await fetch_cb_rate()
+    if fetched_rate is not None:
+        if fetched_rate != Decimal(str(settings.CB_RATE_PERCENT)):
+            _cbr_logger.warning(
+                "cb_rate_changed",
+                extra={
+                    "action": "cb_rate_changed",
+                    "old": settings.CB_RATE_PERCENT,
+                    "new": str(fetched_rate),
+                },
+            )
+            await send_telegram_alert(
+                f"⚠️ Ставка ЦБ изменилась: {settings.CB_RATE_PERCENT}% → {fetched_rate}%\n"
+                f"Обновите CB_RATE_PERCENT в .env и задеплойте."
+            )
+        settings.CB_RATE_PERCENT = int(fetched_rate)
+        _cbr_logger.info(
+            "cb_rate_loaded",
+            extra={"action": "cb_rate_loaded", "rate": str(fetched_rate)},
+        )
+    else:
+        _cbr_logger.warning(
+            "cb_rate_fetch_failed",
+            extra={"action": "cb_rate_fetch_failed", "fallback": settings.CB_RATE_PERCENT},
+        )
+
     task = asyncio.create_task(_cleanup_draft_orders())
     law_task = asyncio.create_task(_law_monitor_loop())
     retry_task = asyncio.create_task(_auto_retry_loop())
