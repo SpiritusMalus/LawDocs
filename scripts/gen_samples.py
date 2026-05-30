@@ -15,10 +15,12 @@ from app.core.config import settings
 from app.services.calculators import SITUATION_CALCULATORS
 from app.services.docgen import _render_right_block, _render_sig_block, _split_last_line
 from app.services.llm import fill_template
+from app.situations.registry import registry
 
 ROOT      = Path(__file__).parent.parent
 DATA_FILE = Path(__file__).parent / "sample_fake_data.yaml"
 OUT_DIR   = ROOT / "frontend" / "public" / "samples"
+CONFIGS_DIR = Path(__file__).parent.parent / "backend" / "app" / "situations" / "configs"
 ARIAL     = "/Library/Fonts/Arial Unicode.ttf"
 ARIAL_B   = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 
@@ -99,6 +101,11 @@ async def main() -> None:
     if not settings.GIGACHAT_AUTH_KEY and not (settings.YANDEX_API_KEY and settings.YANDEX_FOLDER_ID):
         print("❌  Не настроен ни GigaChat, ни YandexGPT в backend/.env")
         return
+
+    # Загружаем реестр ситуаций (как в проде main.py:lifespan). Без этого
+    # registry.get(...) внутри fill_template вернёт None → ситуация уйдёт в
+    # полный режим со свободной генерацией и пустыми плейсхолдерами.
+    registry.load(CONFIGS_DIR)
 
     with open(DATA_FILE, encoding="utf-8") as f:
         situations = yaml.safe_load(f)

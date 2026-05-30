@@ -240,7 +240,10 @@ async def _call_yandex_review(draft: str) -> tuple[str, bool]:
                 logger.warning("YandexGPT review truncated (finish_reason=length), keeping GigaChat draft")
                 return draft, False
             # Защита от выброшенного содержания: вычитка не должна заметно укорачивать текст.
-            if len(result.strip()) < 0.85 * len(draft.strip()):
+            # Чистка форматирования (markdown, метки, ЗАГЛАВНЫЕ) законно укорачивает
+            # текст на единицы процентов. Отбрасываем только при ЗАМЕТНОЙ потере (>40%) —
+            # это уже не вычитка, а выброшенное содержание.
+            if len(result.strip()) < 0.6 * len(draft.strip()):
                 logger.warning(
                     "YandexGPT review shrank text %d→%d chars, keeping GigaChat draft",
                     len(draft.strip()), len(result.strip()),

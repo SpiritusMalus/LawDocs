@@ -18,11 +18,19 @@ python_template: |
 
   {{llm_narrative}}
 
-  [calculated_penalty]
-
   [calculated_demand_section]
 
 narrative_fields: [complaint_details]
+
+header_fields:
+  - label: "Руководителю"
+    field: shop_name
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
 
 wizard_steps:
   - title: "Информация о заказе"

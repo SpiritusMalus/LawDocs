@@ -33,6 +33,18 @@ narrative_prompt: |
 
 narrative_fields: [work_conditions]
 
+header_fields:
+  - label: "Индивидуальному предпринимателю"
+    field: employer_name
+  - prefix: "ИНН "
+    field: employer_inn
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 wizard_steps:
   - title: "Информация о работодателе"
     fields:
