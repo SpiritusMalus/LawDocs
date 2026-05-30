@@ -350,8 +350,7 @@
   user_address: 100009, г. Москва, ул. Образцовая, д. 7, кв. 34
   user_phone: +7 (999) 888-88-88
   user_email: ivanova@example.ru
-  company_name: ООО «Яндекс.Драйв», ИНН 9710050529, 119021, г. Москва, ул. Льва Толстого,
-    д. 16
+  company_name: ООО «Яндекс.Драйв», ИНН 9710050529
   company_address: 119021, г. Москва, ул. Льва Толстого, д. 16
   trip_date: '2026-04-28'
   trip_location: г. Москва, Варшавское ш., у д. 87
@@ -370,8 +369,7 @@
   user_address: 100010, г. Москва, ул. Образцовая, д. 2, кв. 77
   user_phone: +7 (999) 888-88-88
   user_email: ivanova@example.ru
-  club_name: World Class (ООО «Уорлд Класс»), г. Москва, ул. Тверская-Ямская 1-я,
-    д. 23
+  club_name: World Class (ООО «Уорлд Класс»)
   club_address: г. Москва, ул. Тверская-Ямская 1-я, д. 23
   purchase_date: '2025-10-01'
   subscription_period: 12 месяцев (до 01.10.2026)
@@ -476,6 +474,8 @@
   user_address: 100001, г. Москва, ул. Образцовая, д. 1, кв. 1
   user_phone: +7 (999) 999-99-99
   user_email: ivanov@example.ru
+  gibdd_department: Центр автоматизированной фиксации административных правонарушений
+    ГИБДД ГУ МВД России по г. Москве
   fine_number: '18810177260315001234'
   fine_date: '2026-04-10'
   fine_amount: 500

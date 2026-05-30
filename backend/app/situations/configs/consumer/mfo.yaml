@@ -26,6 +26,16 @@ python_template: |
 
 narrative_fields: [problem_description]
 
+header_fields:
+  - label: "Руководителю"
+    field: mfo_name
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 wizard_steps:
   - title: "Информация о микрозайме"
     fields:

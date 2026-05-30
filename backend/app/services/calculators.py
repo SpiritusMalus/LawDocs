@@ -52,7 +52,18 @@ def _parse_date(value: str | None) -> date | None:
 
 
 def _fmt(amount: Decimal) -> str:
-    return str(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    """Денежная сумма: разделитель тысяч (неразрывный пробел), копейки только если они есть.
+
+    39990 → «39 990», 1234.50 → «1 234,50». Разделитель — U+00A0, чтобы число
+    не разрывалось переносом строки в PDF.
+    """
+    q = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    whole = int(q)
+    kopecks = int((q - whole) * 100)
+    int_str = f"{whole:,}".replace(",", " ")
+    if kopecks:
+        return f"{int_str},{kopecks:02d}"
+    return int_str
 
 
 def _fmt_date_ru(d: date) -> str:
@@ -111,8 +122,8 @@ def calculate_ddu_delay(form_data: dict) -> dict:
         return data
     delay_days = max((actual - planned).days, 0)
 
-    planned_str = str(data.get("planned_transfer_date") or "").strip()
-    actual_str = str(data.get("actual_transfer_date") or "").strip()
+    planned_str = _fmt_date_ru(planned)
+    actual_str = _ru_date(data.get("actual_transfer_date"))
     if actual_str:
         viol = (
             f"Согласно договору квартира должна была быть передана {planned_str}. "
@@ -164,7 +175,7 @@ def calculate_ddu_delay(form_data: dict) -> dict:
             " Прошу также передать объект долевого строительства в разумный срок."
             if not actual_str else ""
         )
-        + " В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        + " В случае неисполнения требования в добровольном порядке оставляю за собой право "
         "обратиться с иском в суд, а также с жалобой в Роспотребнадзор и "
         "Министерство строительства и жилищно-коммунального хозяйства РФ."
     )
@@ -274,7 +285,7 @@ def calculate_shop(form_data: dict) -> dict:
 
     store_name = str(data.get("store_name") or "").strip()
     product_name = str(data.get("product_name") or "").strip()
-    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    purchase_date = _ru_date(data.get("purchase_date"))
     problem_type = str(data.get("problem_type") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
@@ -289,8 +300,8 @@ def calculate_shop(form_data: dict) -> dict:
         intro = f"Мной приобретён товар: {product_name}"
     if store_name:
         intro += f" в магазине «{store_name}»"
-    if purchase_date_str:
-        intro += f" {purchase_date_str}"
+    if purchase_date:
+        intro += f" {purchase_date}"
     if price > 0:
         intro += f", стоимостью {_fmt(price)} руб."
     intro += "."
@@ -326,7 +337,7 @@ def calculate_shop(form_data: dict) -> dict:
         f"На основании изложенного прошу {demand_text} в течение десяти дней "
         f"с даты получения настоящей претензии (статья 22 Закона РФ от 07.02.1992 № 2300-1)."
         + (f" Прошу также выплатить неустойку в размере {_fmt(penalty)} руб." if penalty > 0 else "")
-        + " В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться "
+        + " В случае неисполнения требования в добровольном порядке оставляю за собой право обратиться "
         "с иском в суд. При удовлетворении судом требований с ответчика будет взыскан штраф "
         "в размере пятидесяти процентов от присуждённой суммы (статья 13 Закона РФ от 07.02.1992 "
         "№ 2300-1), а также компенсация морального вреда."
@@ -425,7 +436,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
         price = Decimal("0")
 
     # Intro
-    intro = f"Я сдал(-а) автомобиль {car_model}" if car_model else "Я сдал(-а) автомобиль"
+    intro = f"Мной передан автомобиль {car_model}" if car_model else "Мной передан автомобиль"
     if car_plate:
         intro += f" (г/н {car_plate})"
     if service_name:
@@ -514,7 +525,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
     )
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу {demand_text}. "
-        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"В случае неисполнения требования в добровольном порядке оставляю за собой право "
         f"обратиться с иском в суд. Согласно пункту 6 статьи 13 Закона РФ от 07.02.1992 "
         f"№ 2300-1 «О защите прав потребителей» при удовлетворении судом требований "
         f"потребителя с ответчика взыскивается штраф в размере пятидесяти процентов "
@@ -609,7 +620,7 @@ def calculate_gym_refund(form_data: dict) -> dict:
     data["calculated_demand_section"] = ""
 
     club_name = str(data.get("club_name") or "").strip()
-    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    purchase_date = _ru_date(data.get("purchase_date"))
     subscription_period = str(data.get("subscription_period") or "").strip()
     reason = str(data.get("reason") or "").strip()
 
@@ -622,8 +633,8 @@ def calculate_gym_refund(form_data: dict) -> dict:
     intro = f"Мной приобретён абонемент"
     if club_name:
         intro += f" в фитнес-клубе «{club_name}»"
-    if purchase_date_str:
-        intro += f" {purchase_date_str}"
+    if purchase_date:
+        intro += f" {purchase_date}"
     if subscription_period:
         intro += f", сроком {subscription_period}"
     if sub_price > 0:
@@ -634,7 +645,7 @@ def calculate_gym_refund(form_data: dict) -> dict:
     reason_labels = {
         "club_closed": "Фитнес-клуб прекратил оказание услуг (закрылся или перенёс деятельность), что лишает потребителя возможности воспользоваться оплаченным абонементом.",
         "terms_changed": "Фитнес-клуб в одностороннем порядке изменил условия предоставления услуг, ухудшив положение потребителя по сравнению с условиями договора.",
-        "medical": "Потребителю выявлены медицинские противопоказания к занятиям физической культурой, исключающие возможность использования абонемента.",
+        "medical": "У потребителя выявлены медицинские противопоказания к занятиям физической культурой, исключающие возможность использования абонемента.",
         "voluntary": "Потребитель принял решение об отказе от дальнейшего использования фитнес-услуг и расторжении договора в соответствии с действующим законодательством.",
     }
     data["calculated_violation_section"] = reason_labels.get(
@@ -683,10 +694,11 @@ def calculate_gym_refund(form_data: dict) -> dict:
             f"физкультурно-оздоровительных услуг и возвратить уплаченные денежные средства "
             f"в размере {_fmt(refund)} руб. в течение десяти дней с даты получения "
             f"настоящей претензии (статья 31 Закона РФ от 07.02.1992 № 2300-1). "
-            f"При нарушении срока возврата буду начислять неустойку в размере трёх "
+            f"При нарушении срока возврата подлежит уплате неустойка в размере трёх "
             f"процентов от суммы задолженности за каждый день просрочки (статья 28 "
-            f"часть 5 Закона РФ от 07.02.1992 № 2300-1). При отказе — обращение в суд: "
-            f"штраф 50% от присуждённой суммы (статья 13 Закона), компенсация морального вреда."
+            f"часть 5 Закона РФ от 07.02.1992 № 2300-1). В случае отказа оставляю за собой "
+            f"право обратиться в суд с требованием о взыскании штрафа в размере пятидесяти "
+            f"процентов от присуждённой суммы (статья 13 Закона) и компенсации морального вреда."
         )
 
     return data
@@ -731,26 +743,30 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     incident_location = str(data.get("incident_location") or "").strip()
     car_model = str(data.get("car_model") or "").strip()
     car_plate = str(data.get("car_plate") or "").strip()
-    claim_date_str = str(data.get("claim_date") or "").strip()
+    claim_date_str = _ru_date(data.get("claim_date"))
     policy_number = str(data.get("policy_number") or "").strip()
 
     # Intro
-    intro_parts = []
+    # Первое предложение про ДТП собираем слитно (фрагменты одной фразы), не через «. »
+    dtp_sentence = ""
     if incident_date and incident_location:
-        intro_parts.append(f"{incident_date} по адресу: {incident_location} произошло ДТП")
+        dtp_sentence = f"{incident_date} по адресу: {incident_location} произошло ДТП"
     elif incident_date:
-        intro_parts.append(f"{incident_date} произошло ДТП")
-    if car_model:
-        s = f"с участием моего транспортного средства {car_model}"
+        dtp_sentence = f"{incident_date} произошло ДТП"
+    if dtp_sentence and car_model:
+        dtp_sentence += f" с участием моего транспортного средства {car_model}"
         if car_plate:
-            s += f" (г/н {car_plate})"
-        intro_parts.append(s)
+            dtp_sentence += f" (г/н {car_plate})"
+
+    intro_parts = []
+    if dtp_sentence:
+        intro_parts.append(dtp_sentence)
     if policy_number:
         intro_parts.append(f"виновник ДТП застрахован по полису ОСАГО {policy_number}")
     if claim_date_str:
+        ic = f" в страховую компанию {insurance_company}" if insurance_company else ""
         intro_parts.append(
-            f"Я обратился(-лась) в страховую компанию {insurance_company or ''} "
-            f"с заявлением о страховом возмещении {claim_date_str}".strip()
+            f"Мной подано заявление о страховом возмещении{ic} {claim_date_str}"
         )
     data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
@@ -842,7 +858,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
         f"в размере {_fmt(claim_base)} руб."
         + (f", а также неустойку в размере {_fmt(penalty)} руб." if penalty > 0 else "")
         + " в течение десяти календарных дней с даты получения настоящей претензии. "
-        "В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        "В случае неисполнения требования в добровольном порядке оставляю за собой право "
         "обратиться к финансовому уполномоченному в соответствии с Федеральным законом "
         "от 04.06.2018 № 123-ФЗ, а в последующем — с иском в суд."
     )
@@ -949,7 +965,7 @@ def calculate_employer(form_data: dict) -> dict:
             data["calculated_demand_section"] = (
                 f"На основании изложенного прошу выплатить задолженность в размере "
                 f"{_fmt(debt)} руб. в течение трёх рабочих дней с даты получения "
-                f"настоящей претензии. В случае неисполнения буду вынужден(-а) "
+                f"настоящей претензии. В случае неисполнения оставляю за собой право "
                 f"обратиться с жалобой в Государственную инспекцию труда "
                 f"(онлайнинспекция.рф) и с иском в суд."
             )
@@ -987,8 +1003,8 @@ def calculate_employer(form_data: dict) -> dict:
         f"На основании изложенного прошу выплатить задолженность по заработной плате "
         f"в размере {_fmt(debt)} руб. и компенсацию за задержку в размере "
         f"{_fmt(compensation)} руб., итого {_fmt(total)} руб., в течение трёх рабочих "
-        f"дней с даты получения настоящей претензии. В случае неисполнения буду "
-        f"вынужден(-а) обратиться с жалобой в Государственную инспекцию труда "
+        f"дней с даты получения настоящей претензии. В случае неисполнения "
+        f"оставляю за собой право обратиться с жалобой в Государственную инспекцию труда "
         f"(онлайнинспекция.рф), прокуратуру, а также с иском в суд."
     )
 
@@ -1035,7 +1051,7 @@ def calculate_repair(form_data: dict) -> dict:
     contract_date = _ru_date(data.get("contract_date"))
     contract_number = str(data.get("contract_number") or "").strip()
     work_end_date = _ru_date(data.get("work_end_date"))
-    defect_discovery_date_str = str(data.get("defect_discovery_date") or "").strip()
+    defect_discovery_date_str = _ru_date(data.get("defect_discovery_date"))
     demand = str(data.get("demand") or "").strip()
 
     try:
@@ -1106,7 +1122,7 @@ def calculate_repair(form_data: dict) -> dict:
     if penalty > 0:
         demand_section += f" Прошу также выплатить неустойку в размере {_fmt(penalty)} руб."
     demand_section += (
-        " В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        " В случае неисполнения требования в добровольном порядке оставляю за собой право "
         "обратиться с иском в суд. При удовлетворении судом требований с ответчика "
         "будет взыскан штраф в размере пятидесяти процентов от присуждённой суммы "
         "(статья 13 Закона РФ от 07.02.1992 № 2300-1), а также компенсация морального вреда."
@@ -1196,7 +1212,7 @@ def calculate_insurance(form_data: dict) -> dict:
     elif incident_date:
         intro_parts.append(f"{incident_date} наступил страховой случай")
     if insurance_company:
-        intro_parts.append(f"Я обратился(-лась) в страховую компанию {insurance_company} с заявлением о выплате страхового возмещения")
+        intro_parts.append(f"Мной подано в страховую компанию {insurance_company} заявление о выплате страхового возмещения")
     data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
     data["calculated_violation_section"] = _INSURANCE_VIOLATION_SECTIONS.get(
@@ -1348,7 +1364,7 @@ def calculate_telecom(form_data: dict) -> dict:
     contract_number = str(data.get("contract_number") or "").strip()
     service_type = str(data.get("service_type") or "").strip()
     problem_type = str(data.get("problem_type") or "").strip()
-    problem_start_date_str = str(data.get("problem_start_date") or "").strip()
+    problem_start_date_str = _ru_date(data.get("problem_start_date"))
     demand = str(data.get("demand") or "").strip()
 
     service_labels = {
@@ -1412,7 +1428,7 @@ def calculate_telecom(form_data: dict) -> dict:
     if refund > 0 and demand in ("refund", "cancel_charges"):
         demand_section += f" Сумма к возврату: {_fmt(refund)} руб."
     demand_section += (
-        " В случае неисполнения требования буду вынужден(-а) обратиться "
+        " В случае неисполнения требования оставляю за собой право обратиться "
         "с жалобой в Роскомнадзор, а также с иском в суд. При удовлетворении "
         "судом требований с ответчика будет взыскан штраф в размере пятидесяти "
         "процентов от присуждённой суммы (статья 13 Закона РФ от 07.02.1992 № 2300-1)."
@@ -1601,7 +1617,7 @@ def calculate_airline(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу {demand_subject} в течение тридцати "
         f"календарных дней с даты получения настоящей претензии. В случае "
-        f"неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"неисполнения требования в добровольном порядке оставляю за собой право "
         f"обратиться с жалобой в Федеральное агентство воздушного транспорта "
         f"(Росавиация) и с иском в суд. Согласно пункту 6 статьи 13 Закона РФ "
         f"от 07.02.1992 № 2300-1 «О защите прав потребителей» при удовлетворении "
@@ -1641,7 +1657,7 @@ def calculate_court_order(form_data: dict) -> dict:
     data.setdefault("calculated_additional_block", "")
     data.setdefault("calculated_demand_section", "")
 
-    case_num = str(data.get("case_number") or "").strip() or "—"
+    case_num = str(data.get("case_number") or "").strip()
     order_date = _ru_date(data.get("order_date"))
     receive_date = _ru_date(data.get("receive_date"))
     creditor = str(data.get("creditor_name") or "").strip() or "взыскатель"
@@ -1653,11 +1669,14 @@ def calculate_court_order(form_data: dict) -> dict:
     except Exception:
         amount = Decimal("0")
 
-    intro_parts = ["Судебный приказ", f"№ {case_num}"]
+    intro_parts = ["Судебный приказ"]
+    if case_num:
+        intro_parts.append(f"№ {case_num}")
     if order_date:
         intro_parts.append(f"от {order_date}")
     intro_parts.append(f"взыскатель — {creditor}")
-    intro_parts.append(f"сумма взыскания — {_fmt(amount)} руб.")
+    if amount > 0:
+        intro_parts.append(f"сумма взыскания — {_fmt(amount)} руб.")
     data["calculated_intro_section"] = ", ".join(intro_parts) + "."
 
     receipt_text = (
@@ -1688,8 +1707,9 @@ def calculate_court_order(form_data: dict) -> dict:
     if additional:
         data["calculated_additional_block"] = additional
 
+    order_ref = f" № {case_num}" if case_num else ""
     demand_text = (
-        f"На основании изложенного прошу отменить судебный приказ № {case_num} "
+        f"На основании изложенного прошу отменить судебный приказ{order_ref} "
         f"полностью на основании статьи 129 Гражданского процессуального кодекса РФ. "
         f"К возражению прилагается: копия документа, подтверждающего дату получения "
         f"судебного приказа."
@@ -1710,8 +1730,8 @@ def calculate_rental_deposit(form_data: dict) -> dict:
 
     landlord = str(data.get("landlord_name") or "").strip() or "арендодателю"
     apartment = str(data.get("apartment_address") or "").strip()
-    move_in = str(data.get("move_in_date") or "").strip()
-    move_out = str(data.get("move_out_date") or "").strip()
+    move_in = _ru_date(data.get("move_in_date"))
+    move_out = _ru_date(data.get("move_out_date"))
     contract_num = str(data.get("contract_number") or "").strip()
     deposit_reason = str(data.get("deposit_reason") or "").strip()
 
@@ -1759,7 +1779,7 @@ def calculate_rental_deposit(form_data: dict) -> dict:
     demand_text = (
         f"На основании изложенного прошу вернуть обеспечительный платёж в размере "
         f"{_fmt(deposit)} руб. в течение 10 дней с даты получения настоящей претензии. "
-        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) "
+        f"В случае неисполнения требования в добровольном порядке оставляю за собой право "
         f"обратиться в суд с требованием о возврате суммы залога, уплате процентов за "
         f"пользование чужими деньгами (ст. 395 ГК РФ), взыскании морального вреда и "
         f"судебных расходов."
@@ -1868,7 +1888,7 @@ def calculate_medical(form_data: dict) -> dict:
     )
     data["calculated_demand_section"] = (
         demand_text + " "
-        "В случае неисполнения требования буду вынужден(-а) обратиться с жалобой в Росздравнадзор (roszdravnadzor.gov.ru)"
+        "В случае неисполнения требования оставляю за собой право обратиться с жалобой в Росздравнадзор (roszdravnadzor.gov.ru)"
         + (", ТФОМС" if insurance_type == "oms" else "")
         + ", прокуратуру, а также с иском в суд о компенсации морального вреда (ст. 151 ГК РФ)."
     )
@@ -1946,7 +1966,7 @@ def calculate_marketplace(form_data: dict) -> dict:
 
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу {demand_text} в течение 10 дней с даты получения настоящей претензии. "
-        f"В случае отказа буду вынужден(-а) обратиться с жалобой в Роспотребнадзор и с иском в суд; "
+        f"В случае отказа оставляю за собой право обратиться с жалобой в Роспотребнадзор и с иском в суд; "
         f"штраф 50% от присуждённой суммы (ст. 13 ЗоЗПП), компенсация морального вреда, судебные расходы."
     )
 
@@ -2028,7 +2048,7 @@ def calculate_carsharing(form_data: dict) -> dict:
         f"На основании изложенного прошу вернуть списанную сумму в размере {_fmt(claimed_amount)} руб. "
         f"в течение 10 дней с даты получения настоящей претензии, а также предоставить документальное "
         f"подтверждение причин и расчёта ущерба. "
-        f"В случае отказа буду вынужден(-а) обратиться в Роспотребнадзор и с иском в суд; "
+        f"В случае отказа оставляю за собой право обратиться в Роспотребнадзор и с иском в суд; "
         f"штраф 50% (ст. 13 ЗоЗПП), моральный вред, судебные расходы."
     )
 
@@ -2084,7 +2104,7 @@ def calculate_neighbor_flood(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу возместить причинённый ущерб в размере {_fmt(damage_amount)} руб. "
         f"в течение 10 дней с даты получения настоящей претензии. "
-        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться в суд "
+        f"В случае неисполнения требования в добровольном порядке оставляю за собой право обратиться в суд "
         f"с требованием о взыскании суммы ущерба, компенсации морального вреда (ст. 151 ГК РФ) и судебных расходов."
     )
 
@@ -2141,7 +2161,7 @@ def calculate_ddu_defects(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу устранить все перечисленные недостатки в срок {elimination_period} календарных дней "
         f"с даты получения настоящей претензии. "
-        f"В случае неисполнения требования в добровольном порядке буду вынужден(-а) обратиться в суд с требованием: "
+        f"В случае неисполнения требования в добровольном порядке оставляю за собой право обратиться в суд с требованием: "
         f"безвозмездного устранения недостатков или возмещения расходов на их устранение, "
         f"неустойки в размере 1% от цены договора за каждый день просрочки, "
         f"компенсации морального вреда, штрафа в размере 50% от присуждённой суммы."
@@ -2228,7 +2248,7 @@ def calculate_online_course(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу вернуть денежные средства в размере {_fmt(refund_amount)} руб. "
         f"в течение 10 дней с даты получения настоящей претензии. "
-        f"В случае отказа буду вынужден(-а) обратиться в суд с требованием о взыскании суммы долга, "
+        f"В случае отказа оставляю за собой право обратиться в суд с требованием о взыскании суммы долга, "
         f"неустойки 3% за каждый день просрочки, компенсации морального вреда и штрафа 50% (ч. 6 ст. 13 ЗоЗПП)."
     )
 
@@ -2306,7 +2326,7 @@ def calculate_tour_operator(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         f"На основании изложенного прошу вернуть денежные средства в размере {_fmt(refund_due)} руб. "
         f"в течение 10 дней с даты получения настоящей претензии. "
-        f"В случае отказа буду вынужден(-а) обратиться в суд с требованием о взыскании суммы долга, "
+        f"В случае отказа оставляю за собой право обратиться в суд с требованием о взыскании суммы долга, "
         f"неустойки 3% за каждый день просрочки, компенсации морального вреда и штрафа 50% (ч. 6 ст. 13 ЗоЗПП)."
     )
 
@@ -2399,7 +2419,7 @@ def calculate_bank(form_data: dict) -> dict:
         )
 
     demand_text += (
-        " В случае отказа или игнорирования буду вынужден(-а) обратиться с жалобой в Банк России "
+        " В случае отказа или игнорирования оставляю за собой право обратиться с жалобой в Банк России "
         "(cbr.ru) и Роспотребнадзор, а также с иском в суд."
     )
     data["calculated_demand_section"] = demand_text
@@ -2470,7 +2490,7 @@ def calculate_bank_block(form_data: dict) -> dict:
     data["calculated_demand_section"] = (
         "На основании изложенного прошу снять ограничения с банковского счёта/карты "
         "в течение 10 рабочих дней с даты подачи настоящего заявления. "
-        "В случае отказа или бездействия буду вынужден(-а) обратиться с жалобой в Банк России "
+        "В случае отказа или бездействия оставляю за собой право обратиться с жалобой в Банк России "
         "(Интернет-приёмная на cbr.ru) и в Росфинмониторинг; при причинении убытков — с иском в суд "
         "(ГК РФ ст. 856, 395)."
     )
@@ -2572,7 +2592,7 @@ def calculate_utility(form_data: dict) -> dict:
             )
 
     demand_text += (
-        " При неисполнении буду вынужден(-а) обратиться с жалобой в Государственную жилищную инспекцию, "
+        " При неисполнении оставляю за собой право обратиться с жалобой в Государственную жилищную инспекцию, "
         "прокуратуру, а также с иском в суд."
     )
     data["calculated_demand_section"] = demand_text
@@ -2795,7 +2815,7 @@ def calculate_mfo(form_data: dict) -> dict:
         daily_rate = Decimal("0")
 
     # Intro
-    intro = "Я получил(-а) микрозаём"
+    intro = "Мной получен микрозаём"
     if mfo_name:
         intro += f" у {mfo_name}"
     if loan_date:
@@ -2858,18 +2878,27 @@ def calculate_gibdd_camera(form_data: dict) -> dict:
         fine_amount = Decimal("0")
 
     # Intro
-    intro = "Я получил(-а) постановление"
+    intro = "Мною получено постановление"
     if fine_number:
         intro += f" № {fine_number}"
     if fine_date:
         intro += f" от {_fmt_date_ru(fine_date)}"
-    if violation_type:
-        intro += f" за нарушение: {violation_type}"
     if vehicle_number:
-        intro += f" (автомобиль {vehicle_number})"
+        intro += f" в отношении автомобиля {vehicle_number}"
     if fine_amount > 0:
-        intro += f" на сумму {_fmt(fine_amount)} руб."
+        intro += f" о наложении штрафа на сумму {_fmt(fine_amount)} руб"
     intro += "."
+
+    # Основание для несогласия — по типу нарушения (русский текст, не сырое значение)
+    violation_map = {
+        "wrong_owner": "Я не являюсь собственником автомобиля, зафиксированного в момент нарушения.",
+        "not_driving": "В момент фиксации нарушения я не управлял указанным транспортным средством — оно находилось во владении другого лица.",
+        "camera_error": "Камера зафиксировала нарушение некорректно: данные о транспортном средстве или обстоятельствах нарушения недостоверны.",
+        "no_sign": "Дорожный знак или разметка, ограничивающие движение, в месте фиксации отсутствовали либо не были видны.",
+    }
+    reason = violation_map.get(violation_type, "")
+    if reason:
+        intro += f" {reason}"
     data["calculated_intro_section"] = intro
 
     # Deadline
@@ -2971,7 +3000,7 @@ def calculate_online_shop_delivery(form_data: dict) -> dict:
         order_amount = Decimal("0")
 
     # Intro
-    intro = "Я сделал(-а) заказ"
+    intro = "Мной оформлен заказ"
     if shop_name:
         intro += f" в интернет-магазине {shop_name}"
     if order_date:
@@ -3042,13 +3071,13 @@ def calculate_education_refund(form_data: dict) -> dict:
         attended_classes = 0
 
     # Intro
-    intro = "Я участвовал(-а) в курсе"
+    intro = "Мной приобретено обучение по курсу"
     if course_name:
         intro += f" «{course_name}»"
     if school_name:
-        intro += f", организуемом {school_name}"
+        intro += f", организованному {school_name}"
     if paid_amount > 0:
-        intro += f", оплатив {_fmt(paid_amount)} руб."
+        intro += f", стоимостью {_fmt(paid_amount)} руб."
     intro += "."
     data["calculated_intro_section"] = intro
 
@@ -3087,7 +3116,7 @@ def calculate_university_admission(form_data: dict) -> dict:
     application_date = _ru_date(data.get("application_date"))
 
     # Intro
-    intro = "Я подал(-а) документы на поступление"
+    intro = "Мной поданы документы на поступление"
     if specialty:
         intro += f" по специальности {specialty}"
     if university_name:
@@ -3143,14 +3172,14 @@ def calculate_ip_employer(form_data: dict) -> dict:
         salary_owed = Decimal("0")
 
     # Intro
-    intro = "Я работаю (работал(-а))"
-    if position:
-        intro += f" в должности {position}"
-    intro += " у индивидуального предпринимателя"
+    intro = "Между мной и индивидуальным предпринимателем"
     if employer_name:
         intro += f" {employer_name}"
     if employer_inn:
         intro += f" (ИНН {employer_inn})"
+    intro += " сложились трудовые отношения"
+    if position:
+        intro += f" с фактическим выполнением работы в должности {position}"
     if work_start:
         intro += f" с {work_start}"
     if work_end:
@@ -3192,7 +3221,7 @@ def calculate_ip_employer(form_data: dict) -> dict:
         f"На основании ТК РФ ст. 67.1 (де-факто трудовые отношения) и ст. 236 "
         f"(компенсация за задержку выплат) прошу выплатить мне задолженность "
         f"и компенсацию в течение трёх рабочих дней с даты получения претензии. "
-        f"В противном случае буду обращаться в Трудовую инспекцию и в суд."
+        f"В противном случае оставляю за собой право обратиться в Трудовую инспекцию и в суд."
     )
 
     return data

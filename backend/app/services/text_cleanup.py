@@ -172,6 +172,8 @@ def clean_llm_text(text: str) -> str:
 
     result = "\n".join(cleaned)
     result = re.sub(r'\n{3,}', '\n\n', result)
+    # Двойная точка (напр. «… руб..») → одна. Многоточие «...» не трогаем.
+    result = re.sub(r'(?<!\.)\.\.(?!\.)', '.', result)
     # Capitalize первой кириллической буквы строки
     result = re.sub(r'(?m)^([а-яё])', lambda m: m.group(1).upper(), result)
     # Восстанавливаем аббревиатуры
@@ -182,11 +184,14 @@ def clean_llm_text(text: str) -> str:
 
 
 def fix_dashes(text: str) -> str:
-    """Заменяет двойные/тройные дефисы и en-dash на длинное тире (—)."""
+    """Заменяет двойные/тройные дефисы и en-dash на длинное тире (—), схлопывает
+    соседние длинные тире (— —), возникающие при пустых полях-разделителях."""
     text = re.sub(r'-{2,}', '—', text)
     text = re.sub(r'–{2,}', '—', text)
     text = re.sub(r'[-–][-–]+', '—', text)
     text = re.sub(r'(?m)^- ', '— ', text)
+    # Соседние длинные тире (с пробелами между) → одно
+    text = re.sub(r'—(?:\s*—)+', '—', text)
     return text
 
 

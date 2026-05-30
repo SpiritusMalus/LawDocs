@@ -24,6 +24,16 @@ python_template: |
 
 narrative_fields: [reason_for_refund]
 
+header_fields:
+  - label: "Руководителю"
+    field: school_name
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 wizard_steps:
   - title: "Информация об образовательной услуге"
     fields:
@@ -72,7 +82,7 @@ wizard_steps:
       - id: reason_for_refund
         type: textarea
         label: "Подробно опишите причину"
-        placeholder: "Посетил(-а) 5 занятий, понял(-а), что качество преподавания не соответствует описанию. Методика устаревшая..."
+        placeholder: "Посетил 5 занятий, качество преподавания не соответствует описанию. Методика устаревшая..."
         required: true
 
 legal_refs:

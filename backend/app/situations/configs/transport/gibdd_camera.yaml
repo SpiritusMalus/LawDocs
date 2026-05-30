@@ -23,6 +23,16 @@ python_template: |
 
 narrative_fields: [violation_explanation]
 
+header_fields:
+  - label: "В:"
+    field: gibdd_department
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
+
 wizard_steps:
   - title: "Информация о постановлении"
     fields:

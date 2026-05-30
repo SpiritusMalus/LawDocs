@@ -5,9 +5,11 @@ import pytest
 
 from app.services.calculators import (
     calculate_airline,
+    calculate_court_order,
     calculate_education_refund,
     calculate_employer,
     calculate_gibdd_camera,
+    calculate_ip_employer,
     calculate_mfo,
     calculate_online_shop_delivery,
     calculate_repair,
@@ -15,6 +17,7 @@ from app.services.calculators import (
     calculate_shop,
     calculate_university_admission,
 )
+from app.services.text_cleanup import fix_dashes
 
 
 def _airline(violation="delay", delay_hours=0, ticket_price=0.0):
@@ -254,8 +257,8 @@ def test_education_refund_proportional():
         "total_classes": "20",
         "attended_classes": "5",
     })
-    # 50000 / 20 × 15 = 37500
-    assert "37500" in result["calculated_amount_section"]
+    # 50000 / 20 × 15 = 37500 (формат с разделителем тысяч: «37 500»)
+    assert "37500" in result["calculated_amount_section"].replace(" ", "")
 
 
 def test_education_refund_zero_classes_full_refund():
@@ -267,7 +270,7 @@ def test_education_refund_zero_classes_full_refund():
         "attended_classes": "0",
     })
     # total_classes = 0 → full refund
-    assert "50000" in result["calculated_amount_section"]
+    assert "50000" in result["calculated_amount_section"].replace(" ", "")
 
 
 def test_university_admission_formats_correctly():
@@ -281,3 +284,80 @@ def test_university_admission_formats_correctly():
     assert result["calculated_intro_section"] != ""
     assert "calculated_demand_section" in result
     assert result["calculated_demand_section"] != ""
+
+
+# ── Регрессии качества генерации (BUG 3/4/5) ──────────────────
+
+_ALL_SECTION_KEYS = (
+    "calculated_intro_section",
+    "calculated_violation_section",
+    "calculated_amount_section",
+    "calculated_demand_section",
+    "calculated_compensation_section",
+    "calculated_deadline_section",
+)
+
+
+def _all_text(result: dict) -> str:
+    return " ".join(str(result.get(k, "")) for k in _ALL_SECTION_KEYS)
+
+
+def test_gibdd_camera_maps_violation_to_russian():
+    # BUG 5: сырое enum-значение не должно попадать в текст
+    result = calculate_gibdd_camera({
+        "fine_date": "2026-04-10",
+        "fine_amount": "500",
+        "fine_number": "1234",
+        "vehicle_number": "А123БВ77",
+        "violation_type": "not_driving",
+    })
+    intro = result["calculated_intro_section"]
+    assert "not_driving" not in intro
+    assert "не управлял" in intro
+
+
+def test_gibdd_camera_unknown_violation_no_raw_leak():
+    result = calculate_gibdd_camera({
+        "fine_date": "2026-04-10",
+        "fine_amount": "500",
+        "violation_type": "other",
+    })
+    assert "other" not in result["calculated_intro_section"].split()
+
+
+def test_court_order_empty_fields_no_double_dash():
+    # BUG 3: пустые поля не должны давать соседние тире «— —»
+    result = calculate_court_order({
+        "case_number": "",
+        "order_date": "",
+        "creditor_name": "",
+        "debt_amount": "0",
+        "objection_reason": "dispute_amount",
+    })
+    text = _all_text(result)
+    assert "— —" not in text
+    assert "№ —" not in text
+    assert "№ ," not in text  # пустой номер не оставляет висячего «№»
+
+
+def test_no_gendered_suffix_in_calculators():
+    # BUG 4: ни в одном выводе не должно быть «(-а)»
+    samples = [
+        calculate_gibdd_camera({"fine_date": "2026-04-10", "fine_amount": "500", "violation_type": "wrong_owner"}),
+        calculate_mfo({"mfo_name": "ООО МФК", "loan_amount": "15000", "loan_date": "2026-03-01", "daily_rate": "2.0", "violation_type": "illegal_rate"}),
+        calculate_education_refund({"school_name": "Школа", "course_name": "Курс", "paid_amount": "90000", "total_classes": "60", "attended_classes": "12", "refund_reason": "quality"}),
+        calculate_university_admission({"university_name": "МГУ", "specialty": "Математика", "violation_type": "not_admitted", "application_date": "2026-05-01"}),
+        calculate_ip_employer({"employer_name": "ИП Петров", "employer_inn": "7727000001", "position": "продавец", "work_start": "2025-09-01", "work_end": "2026-04-30", "salary_owed": "78000", "last_payment_date": "2026-03-31", "violation_type": "salary_not_paid"}),
+        calculate_shop({"product_name": "Товар", "product_price": "10000", "problem_type": "defect", "purchase_date": "2026-01-01", "appeal_date": "2026-02-01", "demand": "refund"}),
+    ]
+    for r in samples:
+        assert "(-а)" not in _all_text(r), f"gendered form leaked: {_all_text(r)!r}"
+
+
+def test_fix_dashes_collapses_adjacent_em():
+    assert fix_dashes("текст — — текст") == "текст — текст"
+    assert fix_dashes("№ — от — —") == "№ — от —"
+    # регресс: дефисы по-прежнему превращаются в длинное тире
+    assert fix_dashes("a--b") == "a—b"
+    # одиночное тире-разделитель не трогаем
+    assert fix_dashes("взыскатель — Иванов") == "взыскатель — Иванов"

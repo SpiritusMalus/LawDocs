@@ -24,7 +24,26 @@ python_template: |
 
   [calculated_demand_section]
 
+narrative_prompt: |
+  Ты — помощник юриста. Кратко (2–4 предложения) изложи официально-деловым стилем
+  фактические обстоятельства работы у ИП: характер и условия труда, как именно
+  оформлялись (или не оформлялись) отношения, обстоятельства нарушения. НЕ повторяй
+  сумму долга, расчёт компенсации и требования — они изложены в других разделах.
+  Исправь орфографию и грамматику. Верни ТОЛЬКО текст абзаца, без вступлений.
+
 narrative_fields: [work_conditions]
+
+header_fields:
+  - label: "Индивидуальному предпринимателю"
+    field: employer_name
+  - prefix: "ИНН "
+    field: employer_inn
+  - label: "От:"
+    field: user_full_name
+  - field: user_address
+  - prefix: "тел. "
+    field: user_phone
+  - field: user_email
 
 wizard_steps:
   - title: "Информация о работодателе"
