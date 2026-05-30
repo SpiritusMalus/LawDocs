@@ -1,412 +1,28 @@
 """
-Генерация 32 PDF-образцов: GigaChat генерирует текст, fpdf2 рисует PDF.
+Генерация 32 PDF-образцов через прод-пайплайн генерации текста (fill_template:
+GigaChat → проверка YandexGPT), fpdf2 рисует PDF с водяным знаком «ОБРАЗЕЦ».
 Запуск: cd backend && source .venv/bin/activate && python3 ../scripts/gen_samples.py
+        (опционально --only id1,id2)
 """
 import asyncio
-import os
-import re
 import sys
-import uuid
 import yaml
-import httpx
 from fpdf import FPDF
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
-from app.services.docgen import _build_header, _render_right_block, _render_sig_block
-from app.services.llm import _parse_body_json
+from app.core.config import settings
+from app.services.docgen import _render_right_block, _render_sig_block, _split_last_line
+from app.services.llm import fill_template
 
-ROOT       = Path(__file__).parent.parent
-ENV_FILE   = ROOT / "backend" / ".env"
-DATA_FILE  = Path(__file__).parent / "sample_fake_data.yaml"
-OUT_DIR    = ROOT / "frontend" / "public" / "samples"
-CONFIGS    = ROOT / "backend" / "app" / "situations" / "configs"
-ARIAL      = "/Library/Fonts/Arial Unicode.ttf"
-ARIAL_B    = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
-GIGA_AUTH  = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
-GIGA_API   = "https://gigachat.devices.sberbank.ru/api/v1"
+ROOT      = Path(__file__).parent.parent
+DATA_FILE = Path(__file__).parent / "sample_fake_data.yaml"
+OUT_DIR   = ROOT / "frontend" / "public" / "samples"
+ARIAL     = "/Library/Fonts/Arial Unicode.ttf"
+ARIAL_B   = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
 
-# Правила форматирования — добавляются к каждому system_prompt
-FORMAT_RULES = """
-ПРАВИЛА — строго обязательны:
 
-1. Верни ТОЛЬКО JSON вида {"body": "текст тела документа"}. Никаких пояснений, предисловий, комментариев вне JSON.
-
-2. Шапку и заголовок документа НЕ пиши — они формируются автоматически. Начинай тело сразу с первого абзаца. НЕ повторяй в теле личные данные заявителя (ФИО, адрес, паспорт, телефон, email) — они уже есть в шапке.
-
-3. Основной текст — сразу с фактов (когда, что, договор). Не начинай с «Прошу рассмотреть», «Настоящей претензией» и подобных вступлений.
-
-4. Текст — обычный регистр. Не пиши ЗАГЛАВНЫМИ слова внутри текста.
-
-5. Не упоминай названия переменных формы (violation_type, has_photo и т.п.) — применяй их смысл по-русски молча.
-
-6. НЕ пиши квадратные скобки — подставляй значения из данных напрямую.
-
-7. Не используй markdown (**жирный**, *курсив*, # заголовки).
-
-8. Используй ТОЛЬКО длинное тире (—). Одинарный дефис (-) как пауза или в перечислениях — ЗАПРЕЩЁН. ЗАПРЕЩЕНО двойное тире (--).
-
-9. Дату и подпись не выводи — они добавляются автоматически.
-
-10. Аббревиатуры организационно-правовых форм — ВСЕГДА заглавными буквами: ООО, АО, ПАО, ГБУ, МБУ, ИП, ФГУП, МУП. Например: «ООО «Стройгрупп»», «АО «Альфа-Банк»», «ГБУ «Жилищник»» — никогда не «ооо» или «Ооо».
-"""
-
-
-# ── helpers ───────────────────────────────────────────────────
-
-def load_env(path: Path) -> dict:
-    env = {}
-    try:
-        for line in path.read_text().splitlines():
-            line = line.strip()
-            if line and not line.startswith("#") and "=" in line:
-                k, _, v = line.partition("=")
-                env[k.strip()] = v.strip()
-    except FileNotFoundError:
-        pass
-    return env
-
-
-def find_situation_config(situation_id: str) -> dict:
-    for f in CONFIGS.rglob("*.yaml"):
-        d = yaml.safe_load(f.read_text())
-        if d.get("id") == situation_id:
-            return d
-    return {}
-
-
-def find_system_prompt(situation_id: str) -> str:
-    return find_situation_config(situation_id).get("system_prompt", "")
-
-
-# Алиасы: ключи из system_prompt → ключи из YAML-данных
-_FIELD_ALIASES: dict[str, list[str]] = {
-    "full_name":       ["user_full_name", "full_name"],
-    "contact_address": ["user_address", "contact_address"],
-    "phone":           ["user_phone", "phone"],
-    "email":           ["user_email", "email"],
-    "name":            ["user_full_name", "full_name", "name"],
-    "address":         ["user_address", "contact_address", "address"],
-}
-
-
-def pre_substitute_prompt(system_prompt: str, form_data: dict) -> str:
-    """Подставляет реальные значения вместо [field_name] в system_prompt."""
-    def replacer(m: re.Match) -> str:
-        key = m.group(1)
-        if key in form_data and form_data[key]:
-            return str(form_data[key])
-        for alias_key, candidates in _FIELD_ALIASES.items():
-            if key == alias_key:
-                for candidate in candidates:
-                    if candidate in form_data and form_data[candidate]:
-                        return str(form_data[candidate])
-        return m.group(0)  # оставляем как есть, если значение не найдено
-    return re.sub(r"\[([a-z_]+)\]", replacer, system_prompt)
-
-
-def build_user_prompt(situation_id: str, form_data: dict) -> str:
-    lines = [f"Ситуация: {situation_id}", "", "Данные:"]
-    for k, v in form_data.items():
-        if v is not None and str(v).strip():
-            lines.append(f"- {k}: {str(v)[:800]}")
-    return "\n".join(lines)
-
-
-# ── Hybrid-mode calculator (для ситуаций с python_template) ──
-
-from datetime import date as _date
-from decimal import Decimal as _Decimal, ROUND_HALF_UP as _ROUND_HALF_UP
-
-_MONTHS_GENITIVE = [
-    "января", "февраля", "марта", "апреля", "мая", "июня",
-    "июля", "августа", "сентября", "октября", "ноября", "декабря",
-]
-
-_DDU_TERMINATION_REASON_TEXTS = {
-    # Творительный падеж — используется после «в связи с»
-    "delay_2months": (
-        "нарушением предусмотренного договором срока передачи объекта долевого "
-        "строительства более чем на два месяца (п. 1 ч. 1 ст. 9 Федерального закона № 214-ФЗ)"
-    ),
-    "defects_major": (
-        "существенным нарушением требований к качеству объекта долевого "
-        "строительства (п. 2 ч. 1 ст. 9 Федерального закона № 214-ФЗ)"
-    ),
-    "construction_stopped": (
-        "прекращением или приостановлением строительства многоквартирного дома "
-        "при наличии обстоятельств, очевидно свидетельствующих о том, что в "
-        "предусмотренный договором срок объект долевого строительства не будет "
-        "передан участнику долевого строительства "
-        "(п. 3 ч. 1 ст. 9 Федерального закона № 214-ФЗ)"
-    ),
-    "other": "",
-}
-
-
-def _parse_date_any(value) -> "_date | None":
-    if not value:
-        return None
-    s = str(value).strip()
-    for fmt in ("%Y-%m-%d", "%d.%m.%Y"):
-        try:
-            from datetime import datetime
-            return datetime.strptime(s, fmt).date()
-        except ValueError:
-            pass
-    return None
-
-
-def _fmt_date_ru(d: "_date") -> str:
-    return f"{d.day} {_MONTHS_GENITIVE[d.month - 1]} {d.year} года"
-
-
-def enrich_ddu_termination(form_data: dict) -> dict:
-    """Обогащает form_data вычисленными полями для гибридного шаблона ddu_termination."""
-    data = dict(form_data)
-
-    reason_code = str(data.get("termination_reason", ""))
-    data["termination_reason_text"] = _DDU_TERMINATION_REASON_TEXTS.get(reason_code, reason_code)
-
-    cd = _parse_date_any(data.get("contract_date"))
-    pd_ = _parse_date_any(data.get("payment_date"))
-    if cd:
-        data["formatted_contract_date"] = _fmt_date_ru(cd)
-    if pd_:
-        data["formatted_payment_date"] = _fmt_date_ru(pd_)
-
-    # Пересчитываем финансы (либо берём из fake data если уже заданы)
-    if pd_ and not data.get("calculated_days_used"):
-        days = max((_date.today() - pd_).days, 0)
-        try:
-            price = _Decimal(str(data["contract_price"]))
-            rate = _Decimal(str(data["cb_rate"]))
-            interest = price * rate / _Decimal("100") / _Decimal("150") * _Decimal(days)
-            total = price + interest
-            data["calculated_days_used"] = str(days)
-            data["calculated_interest"] = str(
-                interest.quantize(_Decimal("0.01"), rounding=_ROUND_HALF_UP)
-            )
-            data["calculated_total_return"] = str(
-                total.quantize(_Decimal("0.01"), rounding=_ROUND_HALF_UP)
-            )
-        except Exception:
-            pass
-
-    return data
-
-
-def enrich_rental_deposit(form_data: dict) -> dict:
-    """Обогащает form_data вычисленными полями для гибридного шаблона rental_deposit."""
-    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-    from app.services.calculators import calculate_rental_deposit
-    return calculate_rental_deposit(form_data)
-
-
-def enrich_court_order(form_data: dict) -> dict:
-    """Обогащает form_data вычисленными полями для гибридного шаблона court_order."""
-    sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-    from app.services.calculators import calculate_court_order
-    return calculate_court_order(form_data)
-
-
-def _make_calc_enricher(calculator_name: str):
-    def enricher(form_data: dict) -> dict:
-        sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-        from app.services.calculators import SITUATION_CALCULATORS
-        return SITUATION_CALCULATORS[calculator_name](form_data)
-    return enricher
-
-
-# Реестр гибридных обогатителей: situation_id → функция
-_HYBRID_ENRICHERS = {
-    "ddu_termination": enrich_ddu_termination,
-    "rental_deposit": enrich_rental_deposit,
-    "court_order": enrich_court_order,
-    "bank": _make_calc_enricher("bank"),
-    "bank_block": _make_calc_enricher("bank_block"),
-    "utility": _make_calc_enricher("utility"),
-    "gibdd": _make_calc_enricher("gibdd"),
-    "debt_collector": _make_calc_enricher("debt_collector"),
-    # Батч 1+2 этапа 4
-    "neighbor_flood": _make_calc_enricher("neighbor_flood"),
-    "ddu_defects": _make_calc_enricher("ddu_defects"),
-    "online_course": _make_calc_enricher("online_course"),
-    "tour_operator": _make_calc_enricher("tour_operator"),
-    "medical": _make_calc_enricher("medical"),
-    "marketplace": _make_calc_enricher("marketplace"),
-    "carsharing": _make_calc_enricher("carsharing"),
-    # Этап 3
-    "employer": _make_calc_enricher("employer"),
-    "gym_refund": _make_calc_enricher("gym_refund"),
-    "insurance": _make_calc_enricher("insurance"),
-    "repair": _make_calc_enricher("repair"),
-    "shop": _make_calc_enricher("shop"),
-    "telecom": _make_calc_enricher("telecom"),
-    "auto_repair": _make_calc_enricher("auto_repair"),
-    "dtp_osago": _make_calc_enricher("dtp_osago"),
-    "airline": _make_calc_enricher("airline"),
-    "ddu_delay": _make_calc_enricher("ddu_delay"),
-    # Оставшиеся 7 ситуаций без образца
-    "mfo": _make_calc_enricher("mfo"),
-    "gibdd_camera": _make_calc_enricher("gibdd_camera"),
-    "ip_employer": _make_calc_enricher("ip_employer"),
-    "online_shop_delivery": _make_calc_enricher("online_shop_delivery"),
-    "repair_apartment": _make_calc_enricher("repair_apartment"),
-    "education_refund": _make_calc_enricher("education_refund"),
-    "university_admission": _make_calc_enricher("university_admission"),
-}
-
-
-# ── GigaChat ──────────────────────────────────────────────────
-
-async def get_token(auth_key: str) -> str:
-    async with httpx.AsyncClient(verify=False) as c:
-        r = await c.post(
-            GIGA_AUTH,
-            headers={"Authorization": f"Basic {auth_key}",
-                     "RqUID": str(uuid.uuid4()),
-                     "Content-Type": "application/x-www-form-urlencoded"},
-            data={"scope": "GIGACHAT_API_PERS"}, timeout=15,
-        )
-        r.raise_for_status()
-        return r.json()["access_token"]
-
-
-_RETRY_FEEDBACK = (
-    "\n\nВАЖНО: предыдущий ответ содержал ошибки. Повтори, строго соблюдая правила:\n"
-    "- Верни ТОЛЬКО JSON: {\"body\": \"...текст...\"} — без шапки, без заголовка, без пояснений вне JSON\n"
-    "- НЕ пиши метки разделов: «Шапка:», «Описание:», «Требование:», «Нарушение:», «Расчёт:» и любые подобные\n"
-    "- НЕ пиши условные конструкции («Если X = Y», «если указан...») — применяй их молча\n"
-    "- НЕ пиши дату составления документа\n"
-    "- НЕ используй **жирный** или *курсив*\n"
-    "- НЕ пиши слова ЗАГЛАВНЫМИ БУКВАМИ внутри текста"
-)
-
-
-def _has_quality_artifacts(text: str) -> bool:
-    if len(text.strip()) < 300:
-        return True
-    return has_quality_artifacts(text)
-
-
-async def _call_once(token: str, system_prompt: str, user_prompt: str) -> str:
-    async with httpx.AsyncClient(verify=False) as c:
-        r = await c.post(
-            f"{GIGA_API}/chat/completions",
-            headers={"Authorization": f"Bearer {token}"},
-            json={"model": "GigaChat",
-                  "messages": [{"role": "system", "content": system_prompt},
-                                {"role": "user",   "content": user_prompt}],
-                  "temperature": 0.2, "max_tokens": 4096},
-            timeout=90,
-        )
-        r.raise_for_status()
-        return r.json()["choices"][0]["message"]["content"]
-
-
-async def call_giga(token: str, system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
-    text = await _call_once(token, system_prompt, user_prompt)
-    if validate:
-        for attempt in range(1, 3):
-            if not _has_quality_artifacts(text):
-                break
-            print(f"    ⚠  артефакты форматирования (попытка {attempt}), повтор…")
-            text = await _call_once(token, system_prompt, user_prompt + _RETRY_FEEDBACK)
-    return text
-
-
-# ── Детектор отказа GigaChat ──────────────────────────────────
-
-_REFUSAL_MARKERS = [
-    "временно ограничены",
-    "языковая модель",
-    "генеративные языковые модели",
-    "не могу помочь",
-    "не могу выполнить",
-    "не могу составить",
-    "не предоставляю консультации",
-    "не предоставляю юридические",
-    "не могу дать медицинские",
-    "чувствительные темы",
-    "ограничены разговоры",
-    "не обладают собственным мнением",
-]
-
-
-def _is_refusal(text: str) -> bool:
-    low = text.lower()
-    return any(marker in low for marker in _REFUSAL_MARKERS)
-
-
-# ── PDF helpers ───────────────────────────────────────────────
-
-_DOC_TYPE_TITLES = {
-    "pretenziya": "ПРЕТЕНЗИЯ",
-    "zhaloba": "ЖАЛОБА",
-    "zayavlenie": "ЗАЯВЛЕНИЕ",
-    "vozrazhenie": "ВОЗРАЖЕНИЕ",
-    "hodatajstvo": "ХОДАТАЙСТВО",
-    "uvedomlenie": "УВЕДОМЛЕНИЕ",
-}
-
-
-# ── Постобработка текста LLM ──────────────────────────────────
-
-_TITLE_WORDS_LC = frozenset({
-    "претензия", "жалоба", "возражение", "заявление", "ходатайство", "уведомление",
-})
-
-_BODY_START_RE = re.compile(
-    r'^([«""]|в\s|на\s|я,\s|настоящим|прошу|требую|сообщаю|уведомляю|обращаюсь|\d[^0-9])',
-    re.IGNORECASE,
-)
-# Строки-шапки начинающиеся с почтового индекса (6 цифр) или номера телефона
-_HEADER_LINE_RE = re.compile(r'^\d{6}[,\s]|^\+7|^8[-\s(]')
-
-
-def strip_leaked_header(body: str, header: list[str], title: str) -> str:
-    """Убирает из начала body шапку и заголовок, если GigaChat их всё равно написал.
-
-    Стратегия: удаляем с начала все короткие строки (<= 80 символов) пока не встретим
-    первую строку которая явно является телом (длинная, начинается с прописной или цифры
-    и не является заголовком/шапочной).
-    """
-    title_lc = title.lower()
-    lines = body.split("\n")
-    start = 0
-
-    for i, line in enumerate(lines):
-        s = line.strip()
-        if not s:
-            continue
-        s_lc = s.lower()
-        # Явный заголовок → пропускаем
-        if s_lc in _TITLE_WORDS_LC or s.upper() in {t.upper() for t in _TITLE_WORDS_LC}:
-            start = i + 1
-            continue
-        # Строка совпадает с заголовком документа
-        if s_lc == title_lc:
-            start = i + 1
-            continue
-        # Почтовый индекс или телефон → шапочная строка, пропускаем
-        if _HEADER_LINE_RE.match(s):
-            start = i + 1
-            continue
-        # Короткая строка (шапочная) → пропускаем
-        if len(s) <= 80 and not _BODY_START_RE.match(s):
-            start = i + 1
-            continue
-        # Дошли до тела
-        break
-
-    while start < len(lines) and not lines[start].strip():
-        start += 1
-    return "\n".join(lines[start:])
-
-
-# ── PDF renderer ──────────────────────────────────────────────
+# ── PDF ───────────────────────────────────────────────────────
 
 class _SamplePDF(FPDF):
     """FPDF с footer-дисклеймером на каждой странице."""
@@ -454,14 +70,18 @@ def make_pdf(
         pdf.set_font("A", size=11)
         pdf.ln(4)
 
-    for line in body.split("\n"):
+    # Последняя строка тела рендерится атомарно с блоком подписи
+    # (keep-with-last-line), чтобы подпись не уезжала на новую страницу одна.
+    lines = body.split("\n")
+    head_lines, tail_line = _split_last_line(lines)
+    for line in head_lines:
         if not line.strip():
             pdf.ln(3)
         else:
             pdf.multi_cell(0, 6, line)
             pdf.ln(1)
 
-    _render_sig_block(pdf)
+    _render_sig_block(pdf, tail_line=tail_line)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     pdf.output(str(out_path))
@@ -470,16 +90,13 @@ def make_pdf(
 # ── main ──────────────────────────────────────────────────────
 
 async def main() -> None:
-    import sys
     only = set()
     if "--only" in sys.argv:
         idx = sys.argv.index("--only")
         only = set(sys.argv[idx + 1].split(","))
 
-    env = load_env(ENV_FILE)
-    auth_key = env.get("GIGACHAT_AUTH_KEY", "")
-    if not auth_key:
-        print("❌  GIGACHAT_AUTH_KEY не найден в backend/.env")
+    if not settings.GIGACHAT_AUTH_KEY and not (settings.YANDEX_API_KEY and settings.YANDEX_FOLDER_ID):
+        print("❌  Не настроен ни GigaChat, ни YandexGPT в backend/.env")
         return
 
     with open(DATA_FILE, encoding="utf-8") as f:
@@ -487,63 +104,19 @@ async def main() -> None:
     if only:
         situations = [s for s in situations if s["_id"] in only]
 
-    print("Получаем токен GigaChat…")
-    token = await get_token(auth_key)
-    print(f"✓  Токен получен. Генерируем {len(situations)} документов.\n")
+    print(f"Генерируем {len(situations)} документов через прод-пайплайн (GigaChat → YandexGPT).\n")
 
     for sit in situations:
         sid      = sit["_id"]
         filename = sit["_filename"]
-        config   = find_situation_config(sid)
-        if not config:
-            print(f"⚠  конфиг не найден для {sid}")
-            continue
-
         form_data = {k: v for k, v in sit.items() if not k.startswith("_")}
 
         async def _generate_one(fd: dict) -> tuple[str, str, str]:
-            """Генерирует (header, title, body) для одной ситуации. Бросает исключение при ошибке."""
-            python_template = config.get("python_template")
-            if python_template:
-                if sid in _HYBRID_ENRICHERS:
-                    fd = _HYBRID_ENRICHERS[sid](fd)
-                narrative_fields = config.get("narrative_fields", [])
-                narrative_prompt = config.get("narrative_prompt", "")
-                raw_narrative = " ".join(
-                    str(fd.get(f, "")) for f in narrative_fields if fd.get(f)
-                )
-                if raw_narrative and narrative_prompt:
-                    polished = await call_giga(token, narrative_prompt, f"Исправь и перефразируй: {raw_narrative}")
-                    if _is_refusal(polished):
-                        polished = raw_narrative
-                else:
-                    polished = raw_narrative
-                if not polished.strip() and "{{llm_narrative}}" in python_template:
-                    print(f"⚠  {sid}: нарратив пустой, {{{{llm_narrative}}}} будет пустым")
-                raw_text = pre_substitute_prompt(python_template, fd)
-                raw_text = raw_text.replace("{{llm_narrative}}", polished)
-            else:
-                sp = config.get("system_prompt", "")
-                if not sp:
-                    raise RuntimeError(f"system_prompt не найден для {sid}")
-                sp = FORMAT_RULES + "\n" + pre_substitute_prompt(sp, fd)
-                up = build_user_prompt(sid, fd)
-                raw_text = await call_giga(token, sp, up, validate=True)
-                if _is_refusal(raw_text):
-                    raise RuntimeError(f"GigaChat отказал (content filter): {raw_text[:200]!r}")
-                if len(raw_text.strip()) < 300:
-                    raise RuntimeError(f"GigaChat вернул слишком короткий текст ({len(raw_text.strip())} симв.): {raw_text[:300]!r}")
-
-            header_fields = config.get("header_fields", [])
-            h = _build_header(header_fields, fd)
-            t = _DOC_TYPE_TITLES.get(config.get("document_type", ""), "ПРЕТЕНЗИЯ")
-            body = _parse_body_json(raw_text) if not python_template else raw_text
-            body = strip_leaked_header(body, h, t)
-            body = clean_llm_text(body)
-            body = fix_dashes(body)
+            # Прод-пайплайн: enrich + hybrid/full + YandexGPT review + post-substitute + cleanup
+            body, header, title = await fill_template(sid, fd)
             if "--debug" in sys.argv:
-                print(f"\n--- RAW ({sid}) ---\n{raw_text[:400]}\n--- AFTER CLEANUP ---\n{body[:400]}\n")
-            return h, t, body
+                print(f"\n--- BODY ({sid}) ---\n{body[:400]}\n")
+            return header, title, body
 
         print(f"⏳  {sid}…", end=" ", flush=True)
         try:
@@ -560,7 +133,7 @@ async def main() -> None:
             except Exception as e2:
                 print(f"❌  {sid}: {e2!r}")
 
-    print(f"\nГотово → frontend/public/samples/")
+    print("\nГотово → frontend/public/samples/")
 
 
 if __name__ == "__main__":
