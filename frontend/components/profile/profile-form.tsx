@@ -6,6 +6,7 @@ import { Check } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { KeyRotation } from "@/components/profile/key-rotation";
 
 interface ProfileFormProps {
   initialName: string | null;
@@ -208,6 +209,9 @@ export function ProfileForm({ initialName, email, processingRestricted }: Profil
             {isDeleting ? "Отзываем..." : "Отозвать согласие на обработку данных"}
           </Button>
         </div>
+      </div>
+      <div className="pt-6 border-t border-gray-100">
+        <KeyRotation />
       </div>
     </div>
     </>
