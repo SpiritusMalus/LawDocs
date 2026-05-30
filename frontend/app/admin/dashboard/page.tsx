@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition, useCallback } from "react";
 import { LogIn, LogOut, ExternalLink } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { adminLoginAction, adminLogoutAction } from "../reviews/actions";
+import { adminLoginAction, adminLogoutAction } from "../actions";
 
 type Period = "day" | "week" | "month" | "all";
 
