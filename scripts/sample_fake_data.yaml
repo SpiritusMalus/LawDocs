@@ -456,3 +456,105 @@
   first_contact_date: '2026-04-02'
   has_recordings: 'yes'
   region: Санкт-Петербурге
+- _id: mfo
+  _filename: obrazec_mfo_webbankir.pdf
+  user_full_name: Иванов Иван Иванович
+  user_address: 100001, г. Москва, ул. Образцовая, д. 1, кв. 1
+  user_phone: +7 (999) 999-99-99
+  user_email: ivanov@example.ru
+  mfo_name: ООО МФК «Вэббанкир», ИНН 7733812126, 125466, г. Москва, ул. Соколово-Мещерская, д. 29
+  loan_amount: 15000
+  loan_date: '2026-03-01'
+  daily_rate: 2.0
+  violation_type: illegal_rate
+  problem_description: По договору ставка составляет 2% в день, что вдвое превышает
+    установленный законом максимум 1% в день. За 40 дней начислено 12 000 рублей процентов
+    вместо допустимых 6 000 рублей.
+- _id: gibdd_camera
+  _filename: obrazec_gibdd_camera_postanovlenie.pdf
+  user_full_name: Иванов Иван Иванович
+  user_address: 100001, г. Москва, ул. Образцовая, д. 1, кв. 1
+  user_phone: +7 (999) 999-99-99
+  user_email: ivanov@example.ru
+  fine_number: '18810177260315001234'
+  fine_date: '2026-04-10'
+  fine_amount: 500
+  vehicle_number: А123ВС777
+  violation_type: not_driving
+  violation_explanation: В момент фиксации нарушения 05.04.2026 автомобилем управлял
+    не я, а другое лицо по доверенности. Готов предоставить договор аренды и письменные
+    объяснения фактического водителя.
+- _id: ip_employer
+  _filename: obrazec_ip_employer_nevyplata.pdf
+  user_full_name: Иванова Мария Ивановна
+  user_address: 100003, г. Москва, ул. Образцовая, д. 3, кв. 20
+  user_phone: +7 (999) 777-77-77
+  user_email: ivanova@example.ru
+  employer_name: ИП Сидоров Сергей Сергеевич
+  employer_inn: '772700000001'
+  position: продавец-консультант
+  work_start: '2025-09-01'
+  work_end: '2026-04-30'
+  salary_owed: 78000
+  last_payment_date: '2026-03-31'
+  violation_type: salary_not_paid
+  work_conditions: Работала по графику 5/2 в торговой точке. Трудовой договор
+    подписан не был, зарплату выдавали наличными. За апрель и часть марта расчёт
+    не произведён.
+- _id: online_shop_delivery
+  _filename: obrazec_online_shop_delivery_ozon.pdf
+  user_full_name: Иванов Иван Иванович
+  user_address: 100001, г. Москва, ул. Образцовая, д. 1, кв. 1
+  user_phone: +7 (999) 999-99-99
+  user_email: ivanov@example.ru
+  shop_name: ООО «Интернет Решения» (OZON), ИНН 7704217370, 123112, г. Москва, Пресненская наб., д. 10
+  order_number: '0123456789-0001'
+  order_date: '2026-04-05'
+  order_amount: 24990
+  problem_type: not_delivered
+  complaint_details: Оплаченный заказ не доставлен в срок. По трек-номеру статус
+    «передан в доставку» не меняется три недели. На обращения в поддержку отвечают
+    шаблонными отписками, деньги не возвращают.
+- _id: repair_apartment
+  _filename: obrazec_repair_apartment_remstroy.pdf
+  user_full_name: Иванов Иван Иванович
+  user_address: 100001, г. Москва, ул. Образцовая, д. 1, кв. 1
+  user_phone: +7 (999) 999-99-99
+  user_email: ivanov@example.ru
+  contractor_name: ООО «РемСтрой», ИНН 7706123456, г. Москва, ул. Ремонтная, д. 4
+  contract_date: '2026-01-15'
+  contract_number: РС-2026/14
+  contract_amount: 320000
+  defect_discovery_date: '2026-04-01'
+  defect_details: 'После завершения ремонта обнаружены существенные недостатки:
+    отслоение плитки в санузле, неровная стяжка пола с перепадом до 2 см, протечка
+    в местах подключения смесителя. Подрядчик устранять отказывается.'
+- _id: education_refund
+  _filename: obrazec_education_refund_skillfactory.pdf
+  user_full_name: Иванова Мария Ивановна
+  user_address: 100002, г. Москва, ул. Образцовая, д. 2, кв. 10
+  user_phone: +7 (999) 888-88-88
+  user_email: ivanova@example.ru
+  school_name: ООО «Скилфэктори», ИНН 7726465627
+  course_name: Python-разработчик с нуля
+  paid_amount: 90000
+  total_classes: 60
+  attended_classes: 12
+  refund_reason: quality
+  reason_for_refund: 'Качество обучения не соответствует заявленному: занятия ведут
+    стажёры, обратная связь по домашним заданиям не предоставляется, обещанная
+    стажировка не организована. Прошу вернуть оплату за непройденную часть курса.'
+- _id: university_admission
+  _filename: obrazec_university_admission_otkaz.pdf
+  user_full_name: Петрова Анна Сергеевна
+  user_address: 100004, г. Москва, ул. Образцовая, д. 4, кв. 7
+  user_phone: +7 (999) 666-66-66
+  user_email: petrova@example.ru
+  university_name: ФГБОУ ВО «Московский политехнический университет»
+  specialty: Информатика и вычислительная техника
+  application_date: '2026-07-20'
+  exam_score: 264
+  violation_type: wrong_ranking
+  violation_details: 'В конкурсном списке мой результат 264 балла учтён неверно:
+    индивидуальные достижения (10 баллов за аттестат с отличием) не добавлены, из-за
+    чего я опустилась ниже проходного балла. Прошу пересчитать рейтинг.'

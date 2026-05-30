@@ -1,5 +1,5 @@
 """
-Генерация 25 PDF-образцов: GigaChat генерирует текст, fpdf2 рисует PDF.
+Генерация 32 PDF-образцов: GigaChat генерирует текст, fpdf2 рисует PDF.
 Запуск: cd backend && source .venv/bin/activate && python3 ../scripts/gen_samples.py
 """
 import asyncio
@@ -248,6 +248,14 @@ _HYBRID_ENRICHERS = {
     "dtp_osago": _make_calc_enricher("dtp_osago"),
     "airline": _make_calc_enricher("airline"),
     "ddu_delay": _make_calc_enricher("ddu_delay"),
+    # Оставшиеся 7 ситуаций без образца
+    "mfo": _make_calc_enricher("mfo"),
+    "gibdd_camera": _make_calc_enricher("gibdd_camera"),
+    "ip_employer": _make_calc_enricher("ip_employer"),
+    "online_shop_delivery": _make_calc_enricher("online_shop_delivery"),
+    "repair_apartment": _make_calc_enricher("repair_apartment"),
+    "education_refund": _make_calc_enricher("education_refund"),
+    "university_admission": _make_calc_enricher("university_admission"),
 }
 
 
