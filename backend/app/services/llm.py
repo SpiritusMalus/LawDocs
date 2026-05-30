@@ -500,6 +500,11 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
 
     text = _pre_substitute_prompt(config.python_template, form_data)
     text = text.replace("{{llm_narrative}}", polished)
+    # Лёгкая подчистка детерминированного текста: тире и двойные точки
+    # (напр. «… руб..» из калькуляторов). Полный clean_llm_text НЕ применяем,
+    # чтобы не перетряхивать аккуратно собранную структуру шаблона.
+    text = fix_dashes(text)
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)
     return text
 
 

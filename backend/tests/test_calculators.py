@@ -257,8 +257,8 @@ def test_education_refund_proportional():
         "total_classes": "20",
         "attended_classes": "5",
     })
-    # 50000 / 20 × 15 = 37500
-    assert "37500" in result["calculated_amount_section"]
+    # 50000 / 20 × 15 = 37500 (формат с разделителем тысяч: «37 500»)
+    assert "37500" in result["calculated_amount_section"].replace(" ", "")
 
 
 def test_education_refund_zero_classes_full_refund():
@@ -270,7 +270,7 @@ def test_education_refund_zero_classes_full_refund():
         "attended_classes": "0",
     })
     # total_classes = 0 → full refund
-    assert "50000" in result["calculated_amount_section"]
+    assert "50000" in result["calculated_amount_section"].replace(" ", "")
 
 
 def test_university_admission_formats_correctly():

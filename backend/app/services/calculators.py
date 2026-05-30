@@ -52,7 +52,18 @@ def _parse_date(value: str | None) -> date | None:
 
 
 def _fmt(amount: Decimal) -> str:
-    return str(amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+    """Денежная сумма: разделитель тысяч (неразрывный пробел), копейки только если они есть.
+
+    39990 → «39 990», 1234.50 → «1 234,50». Разделитель — U+00A0, чтобы число
+    не разрывалось переносом строки в PDF.
+    """
+    q = amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    whole = int(q)
+    kopecks = int((q - whole) * 100)
+    int_str = f"{whole:,}".replace(",", " ")
+    if kopecks:
+        return f"{int_str},{kopecks:02d}"
+    return int_str
 
 
 def _fmt_date_ru(d: date) -> str:

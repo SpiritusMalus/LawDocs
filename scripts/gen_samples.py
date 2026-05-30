@@ -12,6 +12,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
 from app.core.config import settings
+from app.services.calculators import SITUATION_CALCULATORS
 from app.services.docgen import _render_right_block, _render_sig_block, _split_last_line
 from app.services.llm import fill_template
 
@@ -112,7 +113,11 @@ async def main() -> None:
         form_data = {k: v for k, v in sit.items() if not k.startswith("_")}
 
         async def _generate_one(fd: dict) -> tuple[str, str, str]:
-            # Прод-пайплайн: enrich + hybrid/full + YandexGPT review + post-substitute + cleanup
+            # Точная копия прод-пути из generation.py: сначала калькулятор-enricher
+            # (заполняет [calculated_*] для гибридных ситуаций), затем fill_template
+            # (GigaChat → YandexGPT review → подстановка ПДн + cleanup).
+            if sid in SITUATION_CALCULATORS:
+                fd = SITUATION_CALCULATORS[sid](fd)
             body, header, title = await fill_template(sid, fd)
             if "--debug" in sys.argv:
                 print(f"\n--- BODY ({sid}) ---\n{body[:400]}\n")

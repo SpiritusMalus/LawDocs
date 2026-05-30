@@ -172,6 +172,8 @@ def clean_llm_text(text: str) -> str:
 
     result = "\n".join(cleaned)
     result = re.sub(r'\n{3,}', '\n\n', result)
+    # Двойная точка (напр. «… руб..») → одна. Многоточие «...» не трогаем.
+    result = re.sub(r'(?<!\.)\.\.(?!\.)', '.', result)
     # Capitalize первой кириллической буквы строки
     result = re.sub(r'(?m)^([а-яё])', lambda m: m.group(1).upper(), result)
     # Восстанавливаем аббревиатуры
