@@ -850,7 +850,8 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     return data
 
 
-_CB_RATE = Decimal(str(settings.CB_RATE_PERCENT))
+def _get_cb_rate() -> Decimal:
+    return Decimal(str(settings.CB_RATE_PERCENT))
 
 
 _EMPLOYER_VIOLATION_SECTIONS = {
@@ -960,7 +961,7 @@ def calculate_employer(form_data: dict) -> dict:
 
     try:
         debt = Decimal(str(data["debt_amount"]))
-        compensation = debt * Decimal("1") / Decimal("150") * _CB_RATE / Decimal("100") * Decimal(delay_days)
+        compensation = debt * Decimal("1") / Decimal("150") * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
         compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except Exception as e:
         logger.error("calculate_employer: failed to compute compensation: %s", e)
@@ -971,14 +972,14 @@ def calculate_employer(form_data: dict) -> dict:
     total = debt + compensation
     data["calculated_compensation_section"] = (
         f"Компенсация за задержку {delay_days} дней: "
-        f"{_fmt(debt)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дней = "
+        f"{_fmt(debt)} руб. × 1/150 × {_get_cb_rate()}% × {delay_days} дней = "
         f"{_fmt(compensation)} руб. (ст. 236 ТК РФ). "
         f"Итого к выплате: {_fmt(debt)} + {_fmt(compensation)} = {_fmt(total)} руб."
     )
 
     data["calculated_amount_section"] = (
         f"Расчёт компенсации по ст. 236 ТК РФ: "
-        f"{_fmt(debt)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дн. = {_fmt(compensation)} руб. "
+        f"{_fmt(debt)} руб. × 1/150 × {_get_cb_rate()}% × {delay_days} дн. = {_fmt(compensation)} руб. "
         f"Итого к выплате: {_fmt(debt)} + {_fmt(compensation)} = {_fmt(total)} руб."
     )
 
@@ -3172,14 +3173,14 @@ def calculate_ip_employer(form_data: dict) -> dict:
     # Compensation (similar to employer)
     if last_payment_date and salary_owed > 0:
         delay_days = max((date.today() - last_payment_date).days, 0)
-        compensation = salary_owed * Decimal("1") / Decimal("150") * _CB_RATE / Decimal("100") * Decimal(delay_days)
+        compensation = salary_owed * Decimal("1") / Decimal("150") * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
         compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         data["calculated_compensation"] = _fmt(compensation)
         total = salary_owed + compensation
         data["calculated_compensation_section"] = (
             f"Компенсация за задержку {delay_days} дней: "
-            f"{_fmt(salary_owed)} руб. × 1/150 × {_CB_RATE}% × {delay_days} дней = "
+            f"{_fmt(salary_owed)} руб. × 1/150 × {_get_cb_rate()}% × {delay_days} дней = "
             f"{_fmt(compensation)} руб. (ТК РФ ст. 236). "
             f"Итого к выплате: {_fmt(total)} руб."
         )
