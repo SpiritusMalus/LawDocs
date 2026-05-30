@@ -7,21 +7,6 @@ import { Button } from "@/components/ui/button";
 
 type Step = "generating" | "show_phrase" | "saving" | "done" | "error";
 
-function generatePhrase(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(18));
-  const b64 = btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-  // Разбиваем 24 символа на 4 группы по 6: xxxx-xx xxxx-xx xxxx-xx xxxx-xx
-  return [
-    b64.slice(0, 6),
-    b64.slice(6, 12),
-    b64.slice(12, 18),
-    b64.slice(18, 24),
-  ].join(" — ");
-}
-
 export default function SetupE2EEPage() {
   const router = useRouter();
   const params = useSearchParams();
@@ -47,7 +32,7 @@ export default function SetupE2EEPage() {
 
     const kp = E2EEClient.generateKeyPair();
     keypairRef.current = kp;
-    const p = generatePhrase();
+    const p = E2EEClient.generateRecoveryPhrase();
     setPhrase(p);
     setStep("show_phrase");
   }, [nextUrl, router]);

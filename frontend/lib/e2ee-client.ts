@@ -64,6 +64,24 @@ export class E2EEClient {
     };
   }
 
+  /**
+   * Генерирует фразу восстановления: 18 случайных байт → url-safe base64,
+   * разбитые на 4 группы по 6 символов. Показывается пользователю один раз.
+   */
+  static generateRecoveryPhrase(): string {
+    const bytes = crypto.getRandomValues(new Uint8Array(18));
+    const b64 = btoa(String.fromCharCode(...bytes))
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=/g, "");
+    return [
+      b64.slice(0, 6),
+      b64.slice(6, 12),
+      b64.slice(12, 18),
+      b64.slice(18, 24),
+    ].join(" — ");
+  }
+
   static savePrivateKeyToLocalStorage(privateKeyB64: string): void {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(PRIVATE_KEY_STORAGE_KEY, privateKeyB64);
