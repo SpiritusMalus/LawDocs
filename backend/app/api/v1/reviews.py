@@ -3,13 +3,13 @@ import secrets
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from jose import JWTError, jwt
+from jose import jwt
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, require_admin
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.security import ALGORITHM
@@ -29,17 +29,6 @@ def create_admin_token() -> str:
         settings.SECRET_KEY,
         algorithm=ALGORITHM,
     )
-
-
-def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
-    if not x_admin_token:
-        raise HTTPException(status_code=403, detail="Forbidden")
-    try:
-        payload = jwt.decode(x_admin_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("role") != "admin":
-            raise HTTPException(status_code=403, detail="Forbidden")
-    except JWTError:
-        raise HTTPException(status_code=403, detail="Forbidden")
 
 
 class ReviewCreate(BaseModel):

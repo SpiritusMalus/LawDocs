@@ -108,3 +108,9 @@ async def user(db_session: AsyncSession) -> User:
 def auth_headers(user: User) -> dict[str, str]:
     token = create_access_token(str(user.id))
     return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def admin_token() -> str:
+    from app.api.v1.reviews import create_admin_token
+    return create_admin_token()
