@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useTransition, useCallback } from "react";
-import { LogIn, LogOut, ExternalLink } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { LogOut, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { adminLoginAction, adminLogoutAction } from "../actions";
+import { adminLogoutAction } from "../actions";
 
 type Period = "day" | "week" | "month" | "all";
 
@@ -44,8 +44,7 @@ function formatRub(kopecks: number): string {
 }
 
 export default function AdminDashboardPage() {
-  const [inputValue, setInputValue] = useState("");
-  const [authed, setAuthed] = useState(false);
+  const router = useRouter();
   const [period, setPeriod] = useState<Period>("week");
   const [stats, setStats] = useState<Stats | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +54,7 @@ export default function AdminDashboardPage() {
     setError(null);
     const res = await fetch(`/api/admin/stats?period=${p}`);
     if (res.status === 401) {
-      setAuthed(false);
+      router.push("/admin/login?next=/admin/dashboard");
       return;
     }
     if (!res.ok) {
@@ -64,57 +63,17 @@ export default function AdminDashboardPage() {
     }
     const data = (await res.json()) as Stats;
     setStats(data);
-    setAuthed(true);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     loadStats(period);
   }, [period, loadStats]);
 
-  function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const result = await adminLoginAction(inputValue);
-      if (result.success) {
-        setInputValue("");
-        await loadStats(period);
-      } else {
-        setError(result.error || "Неверный пароль");
-      }
-    });
-  }
-
   function handleLogout() {
     startTransition(async () => {
       await adminLogoutAction();
-      setAuthed(false);
-      setStats(null);
+      router.push("/admin/login");
     });
-  }
-
-  if (!authed) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 w-full max-w-sm">
-          <h1 className="text-xl font-bold text-gray-900 mb-6">Админ-дашборд</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Admin secret"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              autoFocus
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={isPending || !inputValue} className="w-full">
-              <LogIn className="h-4 w-4 mr-2" />
-              {isPending ? "Входим..." : "Войти"}
-            </Button>
-          </form>
-        </div>
-      </main>
-    );
   }
 
   return (

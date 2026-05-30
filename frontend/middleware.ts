@@ -6,6 +6,19 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Protect /admin/* pages (except /admin/login itself)
+  if (pathname.startsWith("/admin/") && pathname !== "/admin/login") {
+    const adminToken = request.cookies.get("admin_token")?.value;
+    if (!adminToken) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin/login";
+      loginUrl.searchParams.set("next", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+  }
+
   // Allow GET and HEAD requests
   if (request.method === "GET" || request.method === "HEAD") {
     return NextResponse.next();
@@ -40,5 +53,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/:path*",
+  matcher: ["/api/:path*", "/admin/:path*"],
 };
