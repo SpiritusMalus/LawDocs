@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { Eye, EyeOff, Star, LogIn, LogOut } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, Star, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { adminLoginAction, adminLogoutAction } from "../actions";
+import { adminLogoutAction } from "../actions";
 
 interface Review {
   id: string;
@@ -21,8 +21,7 @@ interface Review {
 }
 
 export default function AdminReviewsPage() {
-  const [inputValue, setInputValue] = useState("");
-  const [authed, setAuthed] = useState(false);
+  const router = useRouter();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -35,7 +34,7 @@ export default function AdminReviewsPage() {
     setError(null);
     const res = await fetch("/api/admin/reviews");
     if (res.status === 401) {
-      setError("Session expired");
+      router.push("/admin/login?next=/admin/reviews");
       return;
     }
     if (!res.ok) {
@@ -44,28 +43,12 @@ export default function AdminReviewsPage() {
     }
     const data = (await res.json()) as Review[];
     setReviews(data);
-    setAuthed(true);
-  }
-
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    startTransition(async () => {
-      const result = await adminLoginAction(inputValue);
-      if (result.success) {
-        setInputValue("");
-        await loadReviews();
-      } else {
-        setError(result.error || "Invalid password");
-      }
-    });
   }
 
   async function handleLogout() {
     startTransition(async () => {
       await adminLogoutAction();
-      setAuthed(false);
-      setReviews([]);
+      router.push("/admin/login");
     });
   }
 
@@ -80,29 +63,6 @@ export default function AdminReviewsPage() {
     });
   }
 
-  if (!authed) {
-    return (
-      <main className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-8 w-full max-w-sm">
-          <h1 className="text-xl font-bold text-gray-900 mb-6">Модерация отзывов</h1>
-          <form onSubmit={handleLogin} className="space-y-4">
-            <Input
-              type="password"
-              placeholder="Admin secret"
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              autoFocus
-            />
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" disabled={isPending || !inputValue} className="w-full">
-              <LogIn className="h-4 w-4 mr-2" />
-              {isPending ? "Входим..." : "Войти"}
-            </Button>
-          </form>
-        </div>
-      </main>
-    );
-  }
 
   const visible = reviews.filter((r) => !r.is_hidden).length;
   const hidden = reviews.filter((r) => r.is_hidden).length;
