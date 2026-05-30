@@ -252,6 +252,62 @@ async def _call_yandex_review(draft: str) -> tuple[str, bool]:
     return draft, False
 
 
+async def _call_yandex_primary(system_prompt: str, user_prompt: str) -> str:
+    """YandexGPT Pro как первичный генератор — fallback при отказе GigaChat."""
+    if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+        raise RuntimeError("YandexGPT not configured — set YANDEX_API_KEY and YANDEX_FOLDER_ID")
+
+    client = AsyncOpenAI(
+        api_key=settings.YANDEX_API_KEY,
+        base_url="https://ai.api.cloud.yandex.net/v1",
+    )
+
+    for attempt in range(1, 3):
+        try:
+            response = await client.chat.completions.create(
+                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.2,
+                max_tokens=4096,
+                extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+                timeout=60,
+            )
+            result = response.choices[0].message.content
+            if not result or not result.strip():
+                raise RuntimeError("YandexGPT returned empty response")
+            return result
+        except Exception as e:
+            logger.error("YandexGPT primary attempt %d: %s: %s", attempt, type(e).__name__, str(e))
+            if attempt == 2:
+                raise RuntimeError(f"YandexGPT primary failed: {e}") from e
+            await asyncio.sleep(2)
+
+    raise RuntimeError("unreachable")
+
+
+async def _call_llm(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
+    """Диспетчер LLM: GigaChat первый, YandexGPT Pro при отказе или отсутствии GigaChat."""
+    if not settings.GIGACHAT_AUTH_KEY:
+        logger.info("GigaChat not configured, using YandexGPT as primary")
+        return await _call_yandex_primary(system_prompt, user_prompt)
+
+    text = await _call_gigachat(system_prompt, user_prompt, validate=validate)
+
+    if _is_gigachat_refusal(text):
+        logger.warning("GigaChat refused, falling back to YandexGPT primary")
+        if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+            raise RuntimeError(
+                "GigaChat refused and YandexGPT not configured — "
+                "set YANDEX_API_KEY + YANDEX_FOLDER_ID to enable fallback."
+            )
+        return await _call_yandex_primary(system_prompt, user_prompt)
+
+    return text
+
+
 _REFUSAL_MARKERS = (
     "временно ограничены",
     "генеративные языковые модели",
@@ -412,15 +468,15 @@ def _post_substitute_output(text: str, form_data: dict) -> str:
 
 
 async def fill_instruction(situation_id: str, form_data: dict) -> str:
-    if not settings.GIGACHAT_AUTH_KEY:
-        raise RuntimeError("GigaChat not configured — set GIGACHAT_AUTH_KEY")
+    if not settings.GIGACHAT_AUTH_KEY and (not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID):
+        raise RuntimeError("No LLM configured — set GIGACHAT_AUTH_KEY or (YANDEX_API_KEY + YANDEX_FOLDER_ID)")
 
     situation_type = _SITUATION_TYPES.get(situation_id, situation_id)
     company = _get_company_name(situation_id, form_data)
     company_line = f"Компания: {company}" if company else "Компания: не указана"
 
     user_prompt = f"Тип ситуации: {situation_type}\n{company_line}"
-    return await _call_gigachat(_INSTRUCTION_SYSTEM_PROMPT, user_prompt)
+    return await _call_llm(_INSTRUCTION_SYSTEM_PROMPT, user_prompt)
 
 
 async def _fill_template_hybrid(config, form_data: dict) -> str:
@@ -435,15 +491,10 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
     )
 
     if raw_narrative and config.narrative_prompt:
-        polished = await _call_gigachat(
+        polished = await _call_llm(
             config.narrative_prompt,
             f"Исправь и перефразируй: {raw_narrative}",
         )
-        if _is_gigachat_refusal(polished):
-            logger.warning(
-                "GigaChat refused to polish narrative for hybrid template, using raw text"
-            )
-            polished = raw_narrative
     else:
         polished = raw_narrative
 
@@ -493,8 +544,8 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
     from app.services.docgen import _build_header
     from app.situations.registry import registry
 
-    if not settings.GIGACHAT_AUTH_KEY:
-        raise RuntimeError("GigaChat not configured — set GIGACHAT_AUTH_KEY")
+    if not settings.GIGACHAT_AUTH_KEY and (not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID):
+        raise RuntimeError("No LLM configured — set GIGACHAT_AUTH_KEY or (YANDEX_API_KEY + YANDEX_FOLDER_ID)")
 
     config = registry.get(situation_id)
 
@@ -520,15 +571,7 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
     system_prompt = _FORMAT_RULES + "\n" + base_prompt
     user_prompt = _build_user_prompt(situation_id, form_data)
 
-    raw = await _call_gigachat(system_prompt, user_prompt, validate=True)
-    if _is_gigachat_refusal(raw):
-        logger.error(
-            "GigaChat refused to generate document for situation=%s: %r",
-            situation_id, raw[:200],
-        )
-        raise RuntimeError(
-            f"GigaChat отказал в генерации документа для ситуации '{situation_id}'."
-        )
+    raw = await _call_llm(system_prompt, user_prompt, validate=True)
 
     body = _parse_body_json(raw)
     body = clean_llm_text(body)
