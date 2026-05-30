@@ -1,9 +1,11 @@
-from fastapi import Depends, HTTPException, Request, Response, status
+from fastapi import Depends, Header, HTTPException, Request, Response, status
+from jose import JWTError, jwt
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import get_db
-from app.core.security import create_access_token, decode_access_token, get_token_remaining_seconds
+from app.core.security import ALGORITHM, create_access_token, decode_access_token, get_token_remaining_seconds
 from app.models.user import User
 
 # Issue a refreshed token when less than 30 minutes remain, so active users
@@ -53,3 +55,15 @@ async def get_optional_user(
     if user and get_token_remaining_seconds(token) < _SLIDING_THRESHOLD_SECONDS:
         response.headers["X-Refresh-Token"] = create_access_token(str(user.id))
     return user
+
+
+def require_admin(x_admin_token: str | None = Header(default=None)) -> None:
+    """Защита админских эндпоинтов: JWT с role=admin (выдаётся по ADMIN_SECRET)."""
+    if not x_admin_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    try:
+        payload = jwt.decode(x_admin_token, settings.SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("role") != "admin":
+            raise HTTPException(status_code=403, detail="Forbidden")
+    except JWTError:
+        raise HTTPException(status_code=403, detail="Forbidden")

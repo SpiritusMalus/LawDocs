@@ -4,7 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { Eye, EyeOff, Star, LogIn, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { adminLoginAction, adminLogoutAction } from "./actions";
+import { adminLoginAction, adminLogoutAction } from "../actions";
 
 interface Review {
   id: string;

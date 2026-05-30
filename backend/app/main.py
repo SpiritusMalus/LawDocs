@@ -17,7 +17,7 @@ from sqlalchemy.orm import selectinload
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
 from app.core.limiter import limiter
-from app.api.v1 import auth, documents, orders, reviews, situations, stats, users, webhooks
+from app.api.v1 import admin_stats, auth, documents, orders, reviews, situations, stats, users, webhooks
 from app.models.order import Order
 from app.models.user import User
 from app.situations.registry import registry
@@ -346,6 +346,7 @@ app.include_router(situations.router, prefix="/api/v1/situations", tags=["situat
 app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["reviews"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(stats.router, prefix="/api/v1/stats", tags=["stats"])
+app.include_router(admin_stats.router, prefix="/api/v1/admin", tags=["admin"])
 
 
 @app.get("/health")
