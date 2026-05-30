@@ -174,16 +174,19 @@ async def retry_order(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not retryable")
 
     order.status = "generating"
+    situation_id = order.situation_id
+    form_data = order.form_data
+    user_email = str(order.user.email)
     await db.commit()
 
     logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id, "user_id": str(current_user.id)})
 
     background_tasks.add_task(
         run_document_generation,
-        order_id=str(order.id),
-        situation_id=order.situation_id,
-        form_data=order.form_data,
-        user_email=str(order.user.email),
+        order_id=order_id,
+        situation_id=situation_id,
+        form_data=form_data,
+        user_email=user_email,
     )
 
     return {"status": "generating"}
