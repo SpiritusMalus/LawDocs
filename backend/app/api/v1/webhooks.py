@@ -4,7 +4,7 @@ import logging
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -64,6 +64,7 @@ async def _verify_payment(payment_id: str) -> bool:
 @limiter.limit("60/minute")
 async def yookassa_webhook(
     request: Request,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     if settings.APP_ENV != "development" and not _is_yookassa_ip(request):
@@ -110,9 +111,11 @@ async def yookassa_webhook(
     order.paid_at = datetime.now(UTC)
     await db.commit()
 
-    # Единый пайплайн генерации (тот же, что у retry и авто-retry). Сам ловит
-    # ошибки, ставит status=failed и шлёт уведомления — поэтому всегда 200.
-    await run_document_generation(
+    # Генерация уходит в фон: YooKassa получает 200 сразу, без ожидания LLM/рендера/S3
+    # (иначе вебхук рискует словить таймаут и прийти повторно). Тот же пайплайн, что у
+    # retry и авто-retry; он сам ловит ошибки, ставит status=failed и шлёт уведомления.
+    background_tasks.add_task(
+        run_document_generation,
         order_id=order_id,
         situation_id=situation_id,
         form_data=form_data,

@@ -73,7 +73,7 @@ async def test_webhook_wrong_ip_rejected_in_production(
 
 
 @pytest.mark.asyncio
-async def test_webhook_happy_path_order_becomes_done(
+async def test_webhook_schedules_generation_and_sets_generating(
     client: AsyncClient,
     db_session: AsyncSession,
     user: User,
@@ -89,15 +89,12 @@ async def test_webhook_happy_path_order_becomes_done(
     await db_session.commit()
     await db_session.refresh(order)
 
-    # Генерация делегирована run_document_generation, который импортирует свои
-    # зависимости из source-модулей — патчим там.
-    with (
-        patch("app.services.llm.fill_template", new_callable=AsyncMock, return_value="Текст претензии"),
-        patch("app.services.docgen.generate_document", new_callable=AsyncMock, return_value=("doc.docx", "doc.pdf")),
-        patch("app.services.llm.fill_instruction", new_callable=AsyncMock, return_value="Инструкция"),
-        patch("app.services.docgen.generate_instruction", new_callable=AsyncMock, return_value="instr.pdf"),
-        patch("app.services.email.send_document_ready", new_callable=AsyncMock),
-    ):
+    # Генерация теперь уходит в BackgroundTasks — вебхук не ждёт её завершения.
+    # Зона ответственности вебхука: статус → generating и постановка задачи в фон
+    # с верными аргументами. Сам run_document_generation покрыт отдельно.
+    with patch(
+        "app.api.v1.webhooks.run_document_generation", new_callable=AsyncMock
+    ) as mock_gen:
         resp = await client.post(
             "/api/v1/webhooks/yookassa",
             content=_webhook_body("pay-happy-001"),
@@ -107,8 +104,14 @@ async def test_webhook_happy_path_order_becomes_done(
     assert resp.status_code == 200
     assert resp.json()["received"] is True
 
+    mock_gen.assert_awaited_once()
+    kwargs = mock_gen.await_args.kwargs
+    assert kwargs["order_id"] == str(order.id)
+    assert kwargs["situation_id"] == "shop"
+    assert kwargs["user_email"] == user.email
+
     await db_session.refresh(order)
-    assert order.status == "done"
+    assert order.status == "generating"
     assert order.payment_url is None
 
 
@@ -142,11 +145,14 @@ async def test_webhook_duplicate_event_skipped(
 
 
 @pytest.mark.asyncio
-async def test_webhook_generation_failure_sets_failed_status(
+async def test_webhook_responds_before_generation_completes(
     client: AsyncClient,
     db_session: AsyncSession,
     user: User,
 ):
+    """Вебхук обязан ответить 200, не дожидаясь завершения генерации (иначе YooKassa
+    шлёт повторы). Обработку ошибок и статус failed выполняет сам
+    run_document_generation в фоне — это покрыто его собственными тестами."""
     order = Order(
         user_id=user.id,
         situation_id="shop",
@@ -158,20 +164,15 @@ async def test_webhook_generation_failure_sets_failed_status(
     await db_session.commit()
     await db_session.refresh(order)
 
-    with (
-        patch("app.services.llm.fill_template", new_callable=AsyncMock, side_effect=RuntimeError("GigaChat down")),
-        patch("app.services.email.send_document_failed", new_callable=AsyncMock),
-        patch("app.services.notifications.send_telegram_alert", new_callable=AsyncMock),
-    ):
+    with patch(
+        "app.api.v1.webhooks.run_document_generation", new_callable=AsyncMock
+    ) as mock_gen:
         resp = await client.post(
             "/api/v1/webhooks/yookassa",
             content=_webhook_body("pay-fail-003"),
             headers={"Content-Type": "application/json", "x-real-ip": _YOOKASSA_IP},
         )
 
-    # run_document_generation сам ловит ошибку и ставит failed → webhook всегда 200.
     assert resp.status_code == 200
     assert resp.json()["received"] is True
-
-    await db_session.refresh(order)
-    assert order.status == "failed"
+    mock_gen.assert_awaited_once()
