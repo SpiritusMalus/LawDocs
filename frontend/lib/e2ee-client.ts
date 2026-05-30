@@ -92,6 +92,30 @@ export class E2EEClient {
   }
 
   /**
+   * Проверяет, что приватный ключ действительно соответствует публичному.
+   * Публичный ключ X25519 детерминированно выводится из приватного, поэтому
+   * сверяем выведенный публичный с переданным. Возвращает false на любом
+   * некорректном вводе (не base64, неверная длина и т.п.).
+   */
+  static keyPairMatches(privateKeyB64: string, publicKeyB64: string): boolean {
+    try {
+      const secret = decodeBase64(privateKeyB64);
+      const expectedPublic = decodeBase64(publicKeyB64);
+      const derived = nacl.box.keyPair.fromSecretKey(secret).publicKey;
+      if (derived.length !== expectedPublic.length) return false;
+      // Сравнение без раннего выхода — для крипто-ключей это не критично,
+      // но избегаем ложных срабатываний на разной длине (проверено выше).
+      let diff = 0;
+      for (let i = 0; i < derived.length; i++) {
+        diff |= derived[i] ^ expectedPublic[i];
+      }
+      return diff === 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
    * Шифрует данные формы публичным ключом получателя.
    * Использует одноразовую (ephemeral) пару отправителя — анонимный box.
    */

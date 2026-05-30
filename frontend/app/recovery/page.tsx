@@ -84,6 +84,24 @@ export default function RecoveryPage() {
         throw new Error("Файл не содержит публичный ключ");
       }
 
+      // Приватный ключ должен соответствовать публичному из того же файла.
+      if (!E2EEClient.keyPairMatches(keyData.privateKey, keyData.publicKey)) {
+        throw new Error("Ключ-файл повреждён: ключи не соответствуют друг другу");
+      }
+
+      // Ключ-файл должен принадлежать текущему аккаунту: сверяем публичный
+      // ключ с тем, что сервер хранит для вошедшего пользователя.
+      const meRes = await fetch("/api/user/me");
+      if (!meRes.ok) throw new Error("Не удалось проверить ключ. Войдите в аккаунт и попробуйте снова.");
+      const userData = await meRes.json() as { public_key?: string };
+
+      if (!userData.public_key) {
+        throw new Error("Для этого аккаунта не настроено шифрование");
+      }
+      if (userData.public_key !== keyData.publicKey) {
+        throw new Error("Этот ключ-файл от другого аккаунта");
+      }
+
       E2EEClient.savePrivateKeyToLocalStorage(keyData.privateKey);
       E2EEClient.savePublicKeyToLocalStorage(keyData.publicKey);
 
