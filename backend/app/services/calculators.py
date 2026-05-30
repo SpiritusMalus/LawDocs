@@ -122,8 +122,8 @@ def calculate_ddu_delay(form_data: dict) -> dict:
         return data
     delay_days = max((actual - planned).days, 0)
 
-    planned_str = str(data.get("planned_transfer_date") or "").strip()
-    actual_str = str(data.get("actual_transfer_date") or "").strip()
+    planned_str = _fmt_date_ru(planned)
+    actual_str = _ru_date(data.get("actual_transfer_date"))
     if actual_str:
         viol = (
             f"Согласно договору квартира должна была быть передана {planned_str}. "
@@ -285,7 +285,7 @@ def calculate_shop(form_data: dict) -> dict:
 
     store_name = str(data.get("store_name") or "").strip()
     product_name = str(data.get("product_name") or "").strip()
-    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    purchase_date = _ru_date(data.get("purchase_date"))
     problem_type = str(data.get("problem_type") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
@@ -300,8 +300,8 @@ def calculate_shop(form_data: dict) -> dict:
         intro = f"Мной приобретён товар: {product_name}"
     if store_name:
         intro += f" в магазине «{store_name}»"
-    if purchase_date_str:
-        intro += f" {purchase_date_str}"
+    if purchase_date:
+        intro += f" {purchase_date}"
     if price > 0:
         intro += f", стоимостью {_fmt(price)} руб."
     intro += "."
@@ -620,7 +620,7 @@ def calculate_gym_refund(form_data: dict) -> dict:
     data["calculated_demand_section"] = ""
 
     club_name = str(data.get("club_name") or "").strip()
-    purchase_date_str = str(data.get("purchase_date") or "").strip()
+    purchase_date = _ru_date(data.get("purchase_date"))
     subscription_period = str(data.get("subscription_period") or "").strip()
     reason = str(data.get("reason") or "").strip()
 
@@ -633,8 +633,8 @@ def calculate_gym_refund(form_data: dict) -> dict:
     intro = f"Мной приобретён абонемент"
     if club_name:
         intro += f" в фитнес-клубе «{club_name}»"
-    if purchase_date_str:
-        intro += f" {purchase_date_str}"
+    if purchase_date:
+        intro += f" {purchase_date}"
     if subscription_period:
         intro += f", сроком {subscription_period}"
     if sub_price > 0:
@@ -742,26 +742,30 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     incident_location = str(data.get("incident_location") or "").strip()
     car_model = str(data.get("car_model") or "").strip()
     car_plate = str(data.get("car_plate") or "").strip()
-    claim_date_str = str(data.get("claim_date") or "").strip()
+    claim_date_str = _ru_date(data.get("claim_date"))
     policy_number = str(data.get("policy_number") or "").strip()
 
     # Intro
-    intro_parts = []
+    # Первое предложение про ДТП собираем слитно (фрагменты одной фразы), не через «. »
+    dtp_sentence = ""
     if incident_date and incident_location:
-        intro_parts.append(f"{incident_date} по адресу: {incident_location} произошло ДТП")
+        dtp_sentence = f"{incident_date} по адресу: {incident_location} произошло ДТП"
     elif incident_date:
-        intro_parts.append(f"{incident_date} произошло ДТП")
-    if car_model:
-        s = f"с участием моего транспортного средства {car_model}"
+        dtp_sentence = f"{incident_date} произошло ДТП"
+    if dtp_sentence and car_model:
+        dtp_sentence += f" с участием моего транспортного средства {car_model}"
         if car_plate:
-            s += f" (г/н {car_plate})"
-        intro_parts.append(s)
+            dtp_sentence += f" (г/н {car_plate})"
+
+    intro_parts = []
+    if dtp_sentence:
+        intro_parts.append(dtp_sentence)
     if policy_number:
         intro_parts.append(f"виновник ДТП застрахован по полису ОСАГО {policy_number}")
     if claim_date_str:
+        ic = f" в страховую компанию {insurance_company}" if insurance_company else ""
         intro_parts.append(
-            f"Я обратился(-лась) в страховую компанию {insurance_company or ''} "
-            f"с заявлением о страховом возмещении {claim_date_str}".strip()
+            f"Мной подано заявление о страховом возмещении{ic} {claim_date_str}"
         )
     data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
@@ -1046,7 +1050,7 @@ def calculate_repair(form_data: dict) -> dict:
     contract_date = _ru_date(data.get("contract_date"))
     contract_number = str(data.get("contract_number") or "").strip()
     work_end_date = _ru_date(data.get("work_end_date"))
-    defect_discovery_date_str = str(data.get("defect_discovery_date") or "").strip()
+    defect_discovery_date_str = _ru_date(data.get("defect_discovery_date"))
     demand = str(data.get("demand") or "").strip()
 
     try:
@@ -1207,7 +1211,7 @@ def calculate_insurance(form_data: dict) -> dict:
     elif incident_date:
         intro_parts.append(f"{incident_date} наступил страховой случай")
     if insurance_company:
-        intro_parts.append(f"Я обратился(-лась) в страховую компанию {insurance_company} с заявлением о выплате страхового возмещения")
+        intro_parts.append(f"Мной подано в страховую компанию {insurance_company} заявление о выплате страхового возмещения")
     data["calculated_intro_section"] = _sentence_case(". ".join(intro_parts)) + "." if intro_parts else ""
 
     data["calculated_violation_section"] = _INSURANCE_VIOLATION_SECTIONS.get(
@@ -1359,7 +1363,7 @@ def calculate_telecom(form_data: dict) -> dict:
     contract_number = str(data.get("contract_number") or "").strip()
     service_type = str(data.get("service_type") or "").strip()
     problem_type = str(data.get("problem_type") or "").strip()
-    problem_start_date_str = str(data.get("problem_start_date") or "").strip()
+    problem_start_date_str = _ru_date(data.get("problem_start_date"))
     demand = str(data.get("demand") or "").strip()
 
     service_labels = {
@@ -1725,8 +1729,8 @@ def calculate_rental_deposit(form_data: dict) -> dict:
 
     landlord = str(data.get("landlord_name") or "").strip() or "арендодателю"
     apartment = str(data.get("apartment_address") or "").strip()
-    move_in = str(data.get("move_in_date") or "").strip()
-    move_out = str(data.get("move_out_date") or "").strip()
+    move_in = _ru_date(data.get("move_in_date"))
+    move_out = _ru_date(data.get("move_out_date"))
     contract_num = str(data.get("contract_number") or "").strip()
     deposit_reason = str(data.get("deposit_reason") or "").strip()
 

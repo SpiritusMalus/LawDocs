@@ -183,36 +183,30 @@ _FORMAT_RULES = """ПРАВИЛА ФОРМАТИРОВАНИЯ — строго 
 10. Дату и подпись не выводи — они добавляются автоматически.
 """
 
-_REVIEW_SYSTEM_PROMPT = """Ты — редактор юридических документов. Тебе дано тело претензии/жалобы/заявления (без шапки и заголовка). Исправь его, строго соблюдая правила:
+_REVIEW_SYSTEM_PROMPT = """Ты — корректор юридических документов. Тебе дано готовое тело претензии/жалобы/заявления. Документ уже составлен — твоя задача ТОЛЬКО вычитать и убрать дефекты форматирования. Это финальная вычитка, а не переписывание.
 
-ПРОВЕРЬ и ИСПРАВЬ:
-1. Никаких меток разделов: «Описание:», «Требование:», «Правовое обоснование:» и т.п. — только содержание
-2. Никаких markdown: **жирный**, *курсив*, # заголовки, --- линии
-3. Никакого ЗАГЛАВНОГО текста внутри предложений. Исправляй: «блокирован БАНКом» → «блокирован банком».
-4. Никаких условных конструкций («Если X = Y»)
-5. Никакой даты составления документа
-6. Только длинное тире (—), не двойное (--), не одинарный дефис (-) в роли паузы
-7. Аббревиатуры ООО, АО, ПАО, ГБУ, МБУ, ИП, ФГУП — всегда ЗАГЛАВНЫМИ.
+КАТЕГОРИЧЕСКИ ЗАПРЕЩЕНО:
+- Перефразировать, переписывать или сокращать предложения
+- Менять формулировки, факты, цифры, суммы, даты, названия, ссылки на статьи законов
+- Менять структуру, порядок абзацев, удалять или добавлять содержание
+- «Улучшать» стиль
 
-ВЕРНИ: только исправленный текст тела, без пояснений и комментариев."""
+УБЕРИ ТОЛЬКО эти дефекты, не трогая остальной текст дословно:
+1. Метки разделов в начале абзаца: «Описание:», «Требование:», «Правовое обоснование:» — удали саму метку, текст после неё оставь
+2. Markdown-разметку: **жирный**, *курсив*, # заголовки, --- линии — убери символы, текст сохрани
+3. ЗАГЛАВНЫЕ слова внутри предложений → обычный регистр: «БАНКом» → «банком» (аббревиатуры ООО, АО, ПАО, ГБУ, МБУ, ИП, ФГУП, МУП — оставь ЗАГЛАВНЫМИ)
+4. Двойное тире (--) и одинарный дефис в роли паузы → длинное тире (—)
 
-_YANDEX_RETRY_FEEDBACK = (
-    "\n\nЭТО КРИТИЧНО: черновик содержит ошибки форматирования. Переделай, "
-    "АБСОЛЮТНО строго соблюдая:\n"
-    "- Блок подписи должен быть ТОЧНО в таком формате на ОДНОЙ строке: "
-    "_________________ / _________________\n"
-    "- НИКАКИХ меток типа 'Шапка:', 'Заголовок:', 'Описание:', 'Требование:' — "
-    "только чистое содержание\n"
-    "- НИКАКОГО markdown, НИКАКОГО ЗАГЛАВНОГО ТЕКСТА внутри документа\n"
-    "- НИКАКИХ условных конструкций 'Если...' или 'если...'\n"
-    "- Выведи ТОЛЬКО ГОТОВЫЙ ТЕКСТ, без слова в слово повторений из промпта"
-)
-
+Если дефектов нет — верни текст ПОЛНОСТЬЮ без изменений, дословно.
+ВЕРНИ: только текст тела целиком, без пояснений, без обрезки."""
 
 async def _call_yandex_review(draft: str) -> tuple[str, bool]:
-    """Второй проход: YandexGPT исправляет форматирование черновика от GigaChat.
+    """Мягкая вычитка YandexGPT: убирает дефекты форматирования, НЕ переписывая текст.
 
-    Возвращает (текст, yandex_ok) — флаг True если Yandex отработал успешно.
+    Подстраховщик, а не второй автор. Возвращает (текст, yandex_ok). При любом
+    подозрении на порчу (обрезка по токенам, заметное укорачивание = выброшенное
+    содержание) возвращает исходный черновик GigaChat — yandex_ok=False, и вызывающий
+    оставляет версию GigaChat как есть.
     """
     if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
         logger.warning("YandexGPT not configured, skipping review pass")
@@ -231,14 +225,26 @@ async def _call_yandex_review(draft: str) -> tuple[str, bool]:
                     {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
                     {"role": "user", "content": draft},
                 ],
-                temperature=0.1,
-                max_tokens=4096,
+                temperature=0,
+                max_tokens=8192,
                 extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
-                timeout=60,
+                timeout=90,
             )
-            result = response.choices[0].message.content
+            choice = response.choices[0]
+            result = choice.message.content
             if not result or not result.strip():
                 logger.error("YandexGPT returned empty response (attempt %d)", attempt)
+                return draft, False
+            # Обрезка по лимиту токенов → вычитка неполная, документ сломан. Отбрасываем.
+            if getattr(choice, "finish_reason", None) == "length":
+                logger.warning("YandexGPT review truncated (finish_reason=length), keeping GigaChat draft")
+                return draft, False
+            # Защита от выброшенного содержания: вычитка не должна заметно укорачивать текст.
+            if len(result.strip()) < 0.85 * len(draft.strip()):
+                logger.warning(
+                    "YandexGPT review shrank text %d→%d chars, keeping GigaChat draft",
+                    len(draft.strip()), len(result.strip()),
+                )
                 return draft, False
             return result, True
         except Exception as e:
@@ -495,16 +501,25 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
             config.narrative_prompt,
             f"Исправь и перефразируй: {raw_narrative}",
         )
+        # Подстраховщик: YandexGPT мягко вычитывает ТОЛЬКО нарратив (творчество LLM).
+        # Python-секции (законы, расчёты, требования) детерминированы — их не трогаем.
+        # При обрезке/искажении остаётся версия GigaChat (см. _call_yandex_review).
+        reviewed, yandex_ok = await _call_yandex_review(polished)
+        if yandex_ok:
+            polished = reviewed
     else:
         polished = raw_narrative
 
     text = _pre_substitute_prompt(config.python_template, form_data)
     text = text.replace("{{llm_narrative}}", polished)
-    # Лёгкая подчистка детерминированного текста: тире и двойные точки
-    # (напр. «… руб..» из калькуляторов). Полный clean_llm_text НЕ применяем,
-    # чтобы не перетряхивать аккуратно собранную структуру шаблона.
+    # Лёгкая подчистка детерминированного текста (полный clean_llm_text НЕ применяем,
+    # чтобы не перетряхивать структуру шаблона):
     text = fix_dashes(text)
-    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)
+    text = re.sub(r'(?<!\.)\.\.(?!\.)', '.', text)          # двойная точка «руб..» → «.»
+    # Заглавная буква после точки (фрагменты склеены как «… ДТП. виновник …»)
+    text = re.sub(r'(?<=[.!?]\s)([а-яё])', lambda m: m.group(1).upper(), text)
+    # Схлопываем пустые строки от пустого {{llm_narrative}} (нет нарратива)
+    text = re.sub(r'\n{3,}', '\n\n', text).strip()
     return text
 
 
@@ -583,16 +598,14 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
     if len(body.strip()) < 20:
         raise RuntimeError("LLM body too short after cleanup — possible empty or artifact-only response.")
 
+    # YandexGPT — подстраховщик: мягкая вычитка форматирования. Если он отработал
+    # безопасно — берём его версию; если недоступен/обрезал/исказил — оставляем
+    # готовый текст GigaChat КАК ЕСТЬ (он уже корректен, прогнан через clean_llm_text).
     reviewed_body, yandex_ok = await _call_yandex_review(body)
     if yandex_ok:
-        body = reviewed_body
+        body = clean_llm_text(reviewed_body)
     else:
-        logger.info("YandexGPT review unavailable, retrying GigaChat with format feedback")
-        raw2 = await _call_gigachat(system_prompt, user_prompt + _YANDEX_RETRY_FEEDBACK, validate=True)
-        body = _parse_body_json(raw2)
-        body = clean_llm_text(body)
-        if len(body.strip()) < 20:
-            raise RuntimeError("LLM body too short after retry cleanup.")
+        logger.info("YandexGPT review unavailable/rejected, keeping GigaChat draft")
 
     body = _post_substitute_output(body, form_data)
     return body, header, title
