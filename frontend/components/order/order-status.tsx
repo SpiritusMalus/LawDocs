@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { CheckCircle, Clock, FileText, Loader2, XCircle } from "lucide-react";
+import Link from "next/link";
+import { E2EEClient } from "@/lib/e2ee-client";
 import { ymGoal } from "@/lib/analytics";
 import { downloadDocument } from "@/lib/e2ee-download";
 import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
