@@ -5,8 +5,8 @@ import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, RefreshCcw, P
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/reviews/review-form";
-import { E2EEClient } from "@/lib/e2ee-client";
 import { ymGoal } from "@/lib/analytics";
+import { downloadDocument } from "@/lib/e2ee-download";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
 interface Order {
@@ -92,47 +92,7 @@ export function OrderStatus({
     setDownloadingFmt(fmt);
     setDownloadError(null);
     try {
-      const res = await fetch(`/api/documents/${orderId}/download-info/${fmt}`);
-      if (!res.ok) throw new Error("Не удалось получить ссылку на файл");
-
-      const { url, is_encrypted, filename } = await res.json() as {
-        url: string;
-        is_encrypted: boolean;
-        filename: string;
-      };
-
-      ymGoal("document_downloaded", { format: fmt, situation: order.situation_id });
-
-      if (!is_encrypted) {
-        // Старые заказы без шифрования — открываем напрямую
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        return;
-      }
-
-      const privateKey = E2EEClient.getPrivateKeyFromLocalStorage();
-      if (!privateKey) {
-        throw new Error("Ключ не найден в браузере. Войдите заново и настройте доступ к документам.");
-      }
-
-      const encryptedRes = await fetch(url);
-      if (!encryptedRes.ok) throw new Error("Ошибка при скачивании файла");
-
-      const encryptedBytes = new Uint8Array(await encryptedRes.arrayBuffer());
-      const plaintext = await E2EEClient.decryptFile(encryptedBytes, privateKey);
-
-      const blob = new Blob([plaintext], {
-        type: fmt === "pdf" ? "application/pdf"
-          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+      await downloadDocument(orderId, fmt, order.situation_id);
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : "Ошибка скачивания");
     } finally {
