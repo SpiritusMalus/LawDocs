@@ -27,7 +27,7 @@ export function WhyNotChatGPT() {
         <ScrollReveal>
           <div className="mb-(--l-section-heading)">
             <div className="inline-flex items-center gap-2 text-xs font-semibold text-primary bg-primary/8 border border-primary/15 px-3 py-1.5 rounded-full mb-6">
-              Главный вопрос
+              Частый вопрос
             </div>
             <h2 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
               А чем это лучше ChatGPT?
