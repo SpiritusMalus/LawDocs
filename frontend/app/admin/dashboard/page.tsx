@@ -16,12 +16,20 @@ interface ProblemOrder {
   created_at: string;
 }
 
+interface Funnel {
+  created: number;
+  paid: number;
+  completed: number;
+}
+
 interface Stats {
   period: Period;
   orders_total: number;
   orders_paid: number;
   revenue_kopecks: number;
   conversion_pct: number;
+  funnel: Funnel;
+  avg_create_to_pay_seconds: number | null;
   by_status: Record<string, number>;
   by_situation: { situation_id: string; count: number }[];
   problem_orders: ProblemOrder[];
@@ -41,6 +49,13 @@ const ymUrl = ymCounterId
 
 function formatRub(kopecks: number): string {
   return (kopecks / 100).toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + " ₽";
+}
+
+function formatDuration(seconds: number | null): string {
+  if (seconds === null) return "—";
+  if (seconds < 60) return `${Math.round(seconds)} сек`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} мин`;
+  return `${(seconds / 3600).toFixed(1)} ч`;
 }
 
 export default function AdminDashboardPage() {
@@ -125,6 +140,20 @@ export default function AdminDashboardPage() {
               <MetricCard label="Оплачено" value={stats.orders_paid.toString()} />
               <MetricCard label="Выручка" value={formatRub(stats.revenue_kopecks)} />
               <MetricCard label="Конверсия" value={`${stats.conversion_pct}%`} />
+            </div>
+
+            {/* Воронка по заказам */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-6 mb-8">
+              <div className="flex items-baseline justify-between mb-4">
+                <h2 className="font-semibold text-gray-900">Воронка по заказам</h2>
+                <span className="text-sm text-gray-500">
+                  Среднее время до оплаты:{" "}
+                  <span className="font-medium text-gray-900">
+                    {formatDuration(stats.avg_create_to_pay_seconds)}
+                  </span>
+                </span>
+              </div>
+              <FunnelView funnel={stats.funnel} />
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -215,6 +244,43 @@ export default function AdminDashboardPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function FunnelView({ funnel }: { funnel: Funnel }) {
+  if (funnel.created === 0) {
+    return <p className="text-sm text-gray-400">Нет данных за период</p>;
+  }
+
+  const steps = [
+    { label: "Создан", count: funnel.created },
+    { label: "Оплачен", count: funnel.paid },
+    { label: "Документ готов", count: funnel.completed },
+  ];
+
+  return (
+    <div className="space-y-3">
+      {steps.map((step) => {
+        // % от первого шага (Создан). funnel.created > 0 здесь гарантирован.
+        const pct = Math.round((step.count / funnel.created) * 100);
+        return (
+          <div key={step.label}>
+            <div className="flex justify-between text-sm mb-1">
+              <span className="text-gray-600">{step.label}</span>
+              <span className="font-medium text-gray-900">
+                {step.count} <span className="text-gray-400">({pct}%)</span>
+              </span>
+            </div>
+            <div className="h-2.5 rounded-full bg-gray-100 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
