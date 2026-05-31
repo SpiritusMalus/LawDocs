@@ -46,7 +46,7 @@ async def request_magic_link(
     await auth_service.request_magic_link(body.email.lower(), ip, db)
 
 
-@router.get("/verify", response_model=VerifyOut)
+@router.post("/verify", response_model=VerifyOut)
 @limiter.limit("20/minute")
 async def verify_magic_link(
     request: Request,
@@ -57,6 +57,10 @@ async def verify_magic_link(
     """
     Verifies a magic link token. Returns JWT in body so Next.js Route Handler
     can set the httpOnly cookie for the correct frontend domain.
+
+    POST (не GET): почтовые сканеры и антивирусы делают предпросмотр ссылок
+    через GET и «съедали» одноразовый токен до клика юзера. POST они не шлют,
+    поэтому токен доживает до реального подтверждения на странице /auth/verify.
     """
     user, access_token = await auth_service.verify_magic_link(token, db)
     return VerifyOut(

@@ -25,7 +25,7 @@ async def test_verify_magic_link_success(
     await db_session.commit()
     await db_session.refresh(user)
 
-    resp = await client.get(f"/api/v1/auth/verify?token={token}")
+    resp = await client.post(f"/api/v1/auth/verify?token={token}")
     assert resp.status_code == 200
     data = resp.json()
     assert "access_token" in data
@@ -54,7 +54,7 @@ async def test_verify_magic_link_with_order_id(
     await db_session.commit()
     await db_session.refresh(order)
 
-    resp = await client.get(f"/api/v1/auth/verify?token={token}&order={order.id}")
+    resp = await client.post(f"/api/v1/auth/verify?token={token}&order={order.id}")
     assert resp.status_code == 200
     assert resp.json()["order_id"] == order.id
 
@@ -73,7 +73,7 @@ async def test_verify_magic_link_expired_returns_400(
     db_session.add(user)
     await db_session.commit()
 
-    resp = await client.get(f"/api/v1/auth/verify?token={token}")
+    resp = await client.post(f"/api/v1/auth/verify?token={token}")
     assert resp.status_code == 400
     assert "expired" in resp.json()["detail"].lower()
 
@@ -93,17 +93,17 @@ async def test_verify_magic_link_replay_rejected(
     await db_session.commit()
 
     # First use — succeeds, token is cleared
-    resp1 = await client.get(f"/api/v1/auth/verify?token={token}")
+    resp1 = await client.post(f"/api/v1/auth/verify?token={token}")
     assert resp1.status_code == 200
 
     # Second use — token is already cleared → invalid
-    resp2 = await client.get(f"/api/v1/auth/verify?token={token}")
+    resp2 = await client.post(f"/api/v1/auth/verify?token={token}")
     assert resp2.status_code == 400
 
 
 @pytest.mark.asyncio
 async def test_verify_magic_link_invalid_token_returns_400(client: AsyncClient):
-    resp = await client.get("/api/v1/auth/verify?token=totally_fake_token")
+    resp = await client.post("/api/v1/auth/verify?token=totally_fake_token")
     assert resp.status_code == 400
 
 
