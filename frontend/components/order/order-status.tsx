@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle, Clock, FileText, Loader2, XCircle } from "lucide-react";
 import { ymGoal } from "@/lib/analytics";
 import { downloadDocument } from "@/lib/e2ee-download";
+import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
@@ -104,7 +105,7 @@ export function OrderStatus({
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const res = await fetchOrder(orderId);
         if (res.ok) {
           const data: Order = await res.json();
           setOrder(data);
@@ -133,7 +134,7 @@ export function OrderStatus({
     setIsRetrying(true);
     setRetryError(null);
     try {
-      const res = await fetch(`/api/orders/${orderId}/retry`, { method: "POST" });
+      const res = await retryOrder(orderId);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setRetryError(data.error ?? "Не удалось запустить повторную генерацию.");
@@ -152,7 +153,7 @@ export function OrderStatus({
     setPayError(null);
     ymGoal("payment_initiated", { situation: order.situation_id });
     try {
-      const res = await fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
+      const res = await payOrder(orderId);
       const data = await res.json();
       if (!res.ok) {
         setPayError(data.error ?? "Ошибка при создании платежа. Попробуйте ещё раз.");
