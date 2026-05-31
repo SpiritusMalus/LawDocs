@@ -178,6 +178,18 @@ export function OrderStatus({
         <p className="text-gray-500 text-sm mt-1">{cfg.description}</p>
       </div>
 
+      {(order.status === "draft" || order.status === "pending_payment") && !E2EEClient.hasKeys() && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-left">
+          <p className="text-sm text-amber-800">
+            Доступ к документам не настроен в этом браузере. Готовый файл шифруется вашим ключом — без него вы не сможете его открыть здесь.{" "}
+            <Link href="/login" className="font-medium underline hover:no-underline">
+              Войдите на устройстве, где настраивали доступ
+            </Link>
+            , или восстановите доступ перед оплатой.
+          </p>
+        </div>
+      )}
+
       {(order.status === "draft" || order.status === "pending_payment") && (
         <PaySection order={order} isPaying={isPaying} payError={payError} onPay={handlePay} />
       )}
