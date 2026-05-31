@@ -39,6 +39,16 @@ async def _get_order_with_document(
     return order
 
 
+def validate_format(fmt: str) -> str:
+    """FastAPI-зависимость: допускает только docx/pdf."""
+    if fmt not in ("docx", "pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid format. Use 'docx' or 'pdf'.",
+        )
+    return fmt
+
+
 @router.get("/{order_id}/download/instruction")
 async def download_instruction(
     order_id: str,
@@ -57,13 +67,10 @@ async def download_instruction(
 @router.get("/{order_id}/download/{fmt}")
 async def download_document(
     order_id: str,
-    fmt: str,
+    fmt: str = Depends(validate_format),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> RedirectResponse:
-    if fmt not in ("docx", "pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
-
     order = await _get_order_with_document(order_id, current_user, db)
     key = order.document.docx_key if fmt == "docx" else order.document.pdf_key
 
@@ -74,15 +81,12 @@ async def download_document(
 @router.get("/{order_id}/download-info/{fmt}", response_model=DocumentDownloadInfo)
 async def download_info(
     order_id: str,
-    fmt: str,
+    fmt: str = Depends(validate_format),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DocumentDownloadInfo:
     """Возвращает presigned URL и флаг шифрования. Для зашифрованных файлов
     фронт скачивает байты сам и расшифровывает приватным ключом юзера."""
-    if fmt not in ("docx", "pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
-
     order = await _get_order_with_document(order_id, current_user, db)
     key = order.document.docx_key if fmt == "docx" else order.document.pdf_key
     url = await get_presigned_url(key, expires=900)
