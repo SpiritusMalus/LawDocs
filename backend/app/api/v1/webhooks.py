@@ -21,10 +21,14 @@ router = APIRouter()
 
 YOOKASSA_API = "https://api.yookassa.ru/v3"
 
+# Актуальный список IP ЮKassa для webhook-уведомлений (док-ция yookassa.ru).
+# 77.75.154.128/25 добавлен: реальные уведомления приходили с 77.75.154.206,
+# не покрытого старым списком, и отвергались как 403 → оплата не подтверждалась.
 _YOOKASSA_CIDRS = [
     ipaddress.ip_network("185.71.76.0/27"),
     ipaddress.ip_network("185.71.77.0/27"),
     ipaddress.ip_network("77.75.153.0/25"),
+    ipaddress.ip_network("77.75.154.128/25"),
     ipaddress.ip_network("77.75.156.11/32"),
     ipaddress.ip_network("77.75.156.35/32"),
     ipaddress.ip_network("2a02:5180::/32"),
