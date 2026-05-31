@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle, ArrowRight } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { ScrollReveal } from "@/components/ui/scroll-reveal";
+import { DOCUMENT_PRICE_RUB } from "@/lib/pricing";
 
 const INCLUDED = [
   "Претензия в форматах .docx и .pdf",
@@ -43,7 +44,7 @@ export function Pricing() {
                 </div>
                 <div className="text-right">
                   <div className="text-sm text-gray-500 line-through mb-1 tabular-nums">Юрист — от 5&nbsp;000&nbsp;₽</div>
-                  <div className="text-5xl font-bold text-gray-900 tabular-nums">199&nbsp;<span className="text-primary">₽</span></div>
+                  <div className="text-5xl font-bold text-gray-900 tabular-nums">{DOCUMENT_PRICE_RUB}&nbsp;<span className="text-primary">₽</span></div>
                   <div className="text-xs text-gray-400 mt-1">разовая оплата, без подписок</div>
                 </div>
               </div>

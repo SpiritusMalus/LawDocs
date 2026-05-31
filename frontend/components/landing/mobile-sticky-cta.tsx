@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { FileText, ArrowRight } from "lucide-react";
+import { DOCUMENT_PRICE_RUB } from "@/lib/pricing";
 
 export function MobileStickyCTA() {
   const [visible, setVisible] = useState(false);
@@ -27,7 +28,7 @@ export function MobileStickyCTA() {
           className="flex items-center justify-center gap-2 w-full h-12 rounded-xl bg-primary text-white text-sm font-semibold"
         >
           <FileText className="h-4 w-4" aria-hidden="true" />
-          Получить документ — 199&nbsp;₽
+          Получить документ — {DOCUMENT_PRICE_RUB}&nbsp;₽
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>

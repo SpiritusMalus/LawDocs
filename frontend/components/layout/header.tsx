@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Scale, Menu, X, LayoutDashboard, FolderOpen } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { DOCUMENT_PRICE_LABEL } from "@/lib/pricing";
 
 const NAV_LINKS = [
   { href: "/situations", label: "Ситуации" },
@@ -62,7 +63,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                 href="/situations"
                 className={cn(buttonVariants({}), "h-11 px-4 hidden md:inline-flex")}
               >
-                Получить за 199 ₽
+                Получить за {DOCUMENT_PRICE_LABEL}
               </Link>
             </>
           )}
@@ -122,7 +123,7 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
                   onClick={() => setOpen(false)}
                   className={cn(buttonVariants({}), "h-11 mt-2")}
                 >
-                  Получить за 199 ₽
+                  Получить за {DOCUMENT_PRICE_LABEL}
                 </Link>
               </>
             )}
