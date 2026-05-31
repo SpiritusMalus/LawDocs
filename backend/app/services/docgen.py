@@ -19,6 +19,7 @@ from pathlib import Path
 
 from docx import Document as DocxDocument
 
+from app.core.constants import MONTHS_RU
 from app.services.storage import upload_bytes
 
 logger = logging.getLogger(__name__)
@@ -334,7 +335,7 @@ async def generate_document(
         context = {
             **fd,
             "ai_narrative": body,
-            "today": f"{now.day} {['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'][now.month - 1]} {now.year} года",
+            "today": f"{now.day} {MONTHS_RU[now.month - 1]} {now.year} года",
         }
         docx_bytes = await loop.run_in_executor(None, _render_template, template_path, context)
         logger.info("Rendered template %s for order %s", template_path.name, safe_oid)

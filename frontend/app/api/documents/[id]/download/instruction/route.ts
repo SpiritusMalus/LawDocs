@@ -1,4 +1,4 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authFetch } from "@/lib/proxy-fetch";
 import { isValidUuid } from "@/lib/validators";
 
@@ -7,14 +7,14 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  if (!isValidUuid(id)) return new Response(JSON.stringify({ error: "invalid_id" }), { status: 400 });
+  if (!isValidUuid(id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
 
   try {
     const result = await authFetch(`/api/v1/documents/${id}/download/instruction`);
     if (!result.ok) return result.error;
 
     if (!result.res.ok) {
-      return new Response(JSON.stringify({ error: "not_ready" }), { status: result.res.status });
+      return NextResponse.json({ error: "not_ready" }, { status: result.res.status });
     }
 
     const contentType = result.res.headers.get("content-type") ?? "application/pdf";
@@ -29,6 +29,6 @@ export async function GET(
       },
     });
   } catch {
-    return new Response(JSON.stringify({ error: "upstream_error" }), { status: 502 });
+    return NextResponse.json({ error: "upstream_error" }, { status: 502 });
   }
 }

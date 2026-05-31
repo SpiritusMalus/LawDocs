@@ -23,7 +23,7 @@ async def _get_order_with_document(
     order_id: str,
     current_user: User,
     db: AsyncSession,
-):
+) -> Order:
     if not _UUID_RE.match(order_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order_id format")
     result = await db.execute(
