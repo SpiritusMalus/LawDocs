@@ -13,6 +13,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, require_admin
+from app.core.enums import OrderStatus
 from app.models.order import Order
 
 router = APIRouter()
@@ -62,7 +63,7 @@ async def admin_stats(
 
     def _scoped(stmt):
         """Фильтр по периоду + исключаем черновики (не дошли до оплаты)."""
-        stmt = stmt.where(Order.status != "draft")
+        stmt = stmt.where(Order.status != OrderStatus.DRAFT.value)
         if cutoff is not None:
             stmt = stmt.where(Order.created_at >= cutoff)
         return stmt
@@ -99,7 +100,7 @@ async def admin_stats(
         _scoped(
             select(Order.id, Order.situation_id, Order.status, Order.amount, Order.created_at)
         )
-        .where(Order.status.in_(["failed", "refunded"]))
+        .where(Order.status.in_([OrderStatus.FAILED.value, OrderStatus.REFUNDED.value]))
         .order_by(Order.created_at.desc())
         .limit(50)
     )

@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.models.order import Order
 from app.services.generation import run_document_generation
@@ -92,7 +93,7 @@ async def yookassa_webhook(
     # SELECT FOR UPDATE SKIP LOCKED — атомарный захват строки, второй retry не получит её
     result = await db.execute(
         select(Order)
-        .where(Order.yookassa_payment_id == payment_id, Order.status == "pending_payment")
+        .where(Order.yookassa_payment_id == payment_id, Order.status == OrderStatus.PENDING_PAYMENT.value)
         .with_for_update(skip_locked=True)
         .options(selectinload(Order.user))
     )
@@ -107,7 +108,7 @@ async def yookassa_webhook(
     form_data = order.form_data
     user_email = order.user.email
 
-    order.status = "generating"
+    order.status = OrderStatus.GENERATING.value
     order.paid_at = datetime.now(UTC)
     await db.commit()
 

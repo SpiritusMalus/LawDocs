@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.enums import OrderStatus
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.document import DocumentDownloadInfo
@@ -33,7 +34,7 @@ async def _get_order_with_document(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    if order.status != "done" or not order.document:
+    if order.status != OrderStatus.DONE.value or not order.document:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Document not ready yet")
     return order
 

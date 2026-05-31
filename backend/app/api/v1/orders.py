@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
@@ -63,7 +64,7 @@ async def init_order(
             user_id=optional_user.id,
             situation_id=body.situation_id,
             form_data=body.form_data,
-            status="draft",
+            status=OrderStatus.DRAFT.value,
         )
         db.add(order)
         await db.commit()
@@ -93,7 +94,7 @@ async def init_order(
         user_id=user.id,
         situation_id=body.situation_id,
         form_data=body.form_data,
-        status="draft",
+        status=OrderStatus.DRAFT.value,
     )
     db.add(order)
     await db.flush()
@@ -135,7 +136,7 @@ async def pay_order(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    if order.status not in ("draft", "pending_payment"):
+    if order.status not in (OrderStatus.DRAFT.value, OrderStatus.PENDING_PAYMENT.value):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
     try:
@@ -146,7 +147,7 @@ async def pay_order(
 
     order.yookassa_payment_id = payment_data["payment_id"]
     order.payment_url = payment_data["confirmation_url"]
-    order.status = "pending_payment"
+    order.status = OrderStatus.PENDING_PAYMENT.value
     await db.commit()
 
     logger.info("payment_initiated", extra={"action": "payment_initiated", "order_id": str(order.id), "payment_id": payment_data["payment_id"], "user_id": str(current_user.id)})
@@ -165,7 +166,7 @@ async def retry_order(
 ) -> dict:
     result = await db.execute(
         select(Order)
-        .where(Order.id == order_id, Order.user_id == current_user.id, Order.status == "failed")
+        .where(Order.id == order_id, Order.user_id == current_user.id, Order.status == OrderStatus.FAILED.value)
         .with_for_update(skip_locked=True)
         .options(selectinload(Order.user))
     )
@@ -173,7 +174,7 @@ async def retry_order(
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not retryable")
 
-    order.status = "generating"
+    order.status = OrderStatus.GENERATING.value
     situation_id = order.situation_id
     form_data = order.form_data
     user_email = str(order.user.email)
@@ -189,7 +190,7 @@ async def retry_order(
         user_email=user_email,
     )
 
-    return {"status": "generating"}
+    return {"status": OrderStatus.GENERATING.value}
 
 
 @router.get("/{order_id}", response_model=OrderOut)

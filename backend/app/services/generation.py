@@ -10,6 +10,7 @@ import logging
 from sqlalchemy import select
 
 from app.core.database import AsyncSessionLocal
+from app.core.enums import OrderStatus
 from app.models.order import Order
 from app.models.user import User
 
@@ -102,7 +103,7 @@ async def run_document_generation(
                 user_encrypted=user_encrypted,
             )
             db.add(doc)
-            order.status = "done"
+            order.status = OrderStatus.DONE.value
             order.payment_url = None
 
             if user_obj:
@@ -133,14 +134,14 @@ async def run_document_generation(
                 except Exception:
                     logger.exception("Refund request failed for order %s", order_id)
                     refunded = False
-                order.status = "refunded"
+                order.status = OrderStatus.REFUNDED.value
                 order.form_data = {}
             else:
-                order.status = "failed"
+                order.status = OrderStatus.FAILED.value
             await db.commit()
             if notify_on_failure:
                 try:
-                    if order.status == "refunded":
+                    if order.status == OrderStatus.REFUNDED.value:
                         await send_refund_notification(email=user_email, order_id=order_id)
                     else:
                         await send_document_failed(email=user_email, order_id=order_id)
@@ -148,7 +149,7 @@ async def run_document_generation(
                     logger.exception("Failed to send failure notification for order %s", order_id)
                 try:
                     from app.services.notifications import send_telegram_alert
-                    if order.status == "refunded":
+                    if order.status == OrderStatus.REFUNDED.value:
                         await send_telegram_alert(
                             f"💸 <b>Auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
                             f"order_id: <code>{order_id}</code>\n"

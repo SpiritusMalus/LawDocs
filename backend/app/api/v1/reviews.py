@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, require_admin
 from app.core.config import settings
+from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.core.security import ALGORITHM
 from app.core.validators import strip_whitespace
@@ -96,7 +97,7 @@ async def create_review(
     order = result.scalar_one_or_none()
     if not order or order.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Заказ не найден или не принадлежит вам.")
-    if order.status != "done":
+    if order.status != OrderStatus.DONE.value:
         raise HTTPException(status_code=400, detail="Отзыв можно оставить только после успешного завершения заказа.")
 
     review = OrderReview(
