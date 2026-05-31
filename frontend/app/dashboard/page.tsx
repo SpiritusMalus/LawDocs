@@ -6,6 +6,7 @@ import { Scale, FileText, PlusCircle, User } from "lucide-react";
 import { OrderCard } from "@/components/order/order-card";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { DashboardPoller } from "@/components/dashboard/dashboard-poller";
+import type { OrderStatus } from "@/lib/api-schemas";
 
 export const metadata: Metadata = {
   title: "Мои заказы — LawDocs",
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
 interface OrderItem {
   id: string;
   situation_id: string;
-  status: string;
+  status: OrderStatus;
   amount: number;
   created_at: string;
   has_document: boolean;

@@ -14,7 +14,7 @@ export type VerifyMagicLinkResponse = {
   order_id?: string;
 };
 
-export type OrderStatus = "draft" | "pending_payment" | "paid" | "generating" | "done" | "failed";
+export type OrderStatus = "draft" | "pending_payment" | "paid" | "generating" | "done" | "failed" | "refunded";
 
 export type OrdersList = Array<{
   id: string;

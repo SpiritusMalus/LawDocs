@@ -6,11 +6,12 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { E2EEClient } from "@/lib/e2ee-client";
+import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
 interface Order {
   id: string;
   situation_id: string;
-  status: string;
+  status: OrderStatusValue;
   amount: number;
   created_at: string;
   paid_at: string | null;
@@ -24,7 +25,7 @@ type StatusConfig = {
   terminal: boolean;
 };
 
-const STATUS_CONFIG: Record<string, StatusConfig> = {
+const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
   draft: {
     icon: <Clock className="h-8 w-8 text-gray-400" />,
     label: "Ожидание оплаты",
