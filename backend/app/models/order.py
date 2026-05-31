@@ -5,6 +5,7 @@ from sqlalchemy import DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
+from app.core.enums import OrderStatus
 from app.core.fernet import EncryptedJSON
 
 
@@ -16,8 +17,9 @@ class Order(Base):
 
     situation_id: Mapped[str] = mapped_column(String, nullable=False)
 
-    # Статус: draft → pending_payment → paid → generating → done | failed
-    status: Mapped[str] = mapped_column(String, nullable=False, default="draft")
+    # Статус: см. OrderStatus (app/core/enums.py). Колонка остаётся String —
+    # OrderStatus(str, Enum) сериализуется как строка, миграция не нужна.
+    status: Mapped[str] = mapped_column(String, nullable=False, default=OrderStatus.DRAFT.value)
 
     # Сумма в копейках (199 ₽ = 19900)
     amount: Mapped[int] = mapped_column(Integer, nullable=False, default=19900)

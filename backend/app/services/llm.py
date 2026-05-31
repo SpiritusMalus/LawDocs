@@ -22,6 +22,11 @@ logger = logging.getLogger(__name__)
 
 _MAX_FIELD_VALUE_LEN = 1000
 
+# YandexGPT-вычитка законно укорачивает текст на проценты (чистка разметки).
+# Если итог короче этой доли черновика — считаем, что выброшено содержание,
+# и оставляем черновик GigaChat.
+_YANDEX_MIN_CONTENT_RATIO = 0.6
+
 
 def _get_verify() -> str | bool:
     """Возвращает параметр verify для httpx.
@@ -154,9 +159,6 @@ async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool
     return text
 
 
-_MONTHS_RU = ["января", "февраля", "марта", "апреля", "мая", "июня",
-               "июля", "августа", "сентября", "октября", "ноября", "декабря"]
-
 _FORMAT_RULES = """ПРАВИЛА ФОРМАТИРОВАНИЯ — строго обязательны:
 
 1. Верни ТОЛЬКО JSON строго в таком формате, без пояснений, предисловий и комментариев:
@@ -243,7 +245,7 @@ async def _call_yandex_review(draft: str) -> tuple[str, bool]:
             # Чистка форматирования (markdown, метки, ЗАГЛАВНЫЕ) законно укорачивает
             # текст на единицы процентов. Отбрасываем только при ЗАМЕТНОЙ потере (>40%) —
             # это уже не вычитка, а выброшенное содержание.
-            if len(result.strip()) < 0.6 * len(draft.strip()):
+            if len(result.strip()) < _YANDEX_MIN_CONTENT_RATIO * len(draft.strip()):
                 logger.warning(
                     "YandexGPT review shrank text %d→%d chars, keeping GigaChat draft",
                     len(draft.strip()), len(result.strip()),

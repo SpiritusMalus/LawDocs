@@ -1,16 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock, Download, FileText, Loader2, XCircle, RefreshCcw, PlusCircle } from "lucide-react";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { ReviewForm } from "@/components/reviews/review-form";
-import { E2EEClient } from "@/lib/e2ee-client";
+import { CheckCircle, Clock, FileText, Loader2, XCircle } from "lucide-react";
+import { ymGoal } from "@/lib/analytics";
+import { downloadDocument } from "@/lib/e2ee-download";
+import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
+import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
+import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
 interface Order {
   id: string;
   situation_id: string;
-  status: string;
+  status: OrderStatusValue;
   amount: number;
   created_at: string;
   paid_at: string | null;
@@ -24,7 +25,7 @@ type StatusConfig = {
   terminal: boolean;
 };
 
-const STATUS_CONFIG: Record<string, StatusConfig> = {
+const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
   draft: {
     icon: <Clock className="h-8 w-8 text-gray-400" />,
     label: "Ожидание оплаты",
@@ -71,13 +72,6 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
 
 const POLL_STATUSES = new Set(["paid", "generating"]);
 
-function ymGoal(goal: string, params?: Record<string, unknown>) {
-  const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
-  if (id && typeof window !== "undefined" && window.ym) {
-    window.ym(id, "reachGoal", goal, params);
-  }
-}
-
 export function OrderStatus({
   orderId,
   initialOrder,
@@ -97,47 +91,7 @@ export function OrderStatus({
     setDownloadingFmt(fmt);
     setDownloadError(null);
     try {
-      const res = await fetch(`/api/documents/${orderId}/download-info/${fmt}`);
-      if (!res.ok) throw new Error("Не удалось получить ссылку на файл");
-
-      const { url, is_encrypted, filename } = await res.json() as {
-        url: string;
-        is_encrypted: boolean;
-        filename: string;
-      };
-
-      ymGoal("document_downloaded", { format: fmt, situation: order.situation_id });
-
-      if (!is_encrypted) {
-        // Старые заказы без шифрования — открываем напрямую
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        a.click();
-        return;
-      }
-
-      const privateKey = E2EEClient.getPrivateKeyFromLocalStorage();
-      if (!privateKey) {
-        throw new Error("Ключ не найден в браузере. Войдите заново и настройте доступ к документам.");
-      }
-
-      const encryptedRes = await fetch(url);
-      if (!encryptedRes.ok) throw new Error("Ошибка при скачивании файла");
-
-      const encryptedBytes = new Uint8Array(await encryptedRes.arrayBuffer());
-      const plaintext = await E2EEClient.decryptFile(encryptedBytes, privateKey);
-
-      const blob = new Blob([plaintext], {
-        type: fmt === "pdf" ? "application/pdf"
-          : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      });
-      const blobUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = blobUrl;
-      a.download = filename;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 10_000);
+      await downloadDocument(orderId, fmt, order.situation_id);
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : "Ошибка скачивания");
     } finally {
@@ -151,7 +105,7 @@ export function OrderStatus({
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
+        const res = await fetchOrder(orderId);
         if (res.ok) {
           const data: Order = await res.json();
           setOrder(data);
@@ -180,7 +134,7 @@ export function OrderStatus({
     setIsRetrying(true);
     setRetryError(null);
     try {
-      const res = await fetch(`/api/orders/${orderId}/retry`, { method: "POST" });
+      const res = await retryOrder(orderId);
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setRetryError(data.error ?? "Не удалось запустить повторную генерацию.");
@@ -199,7 +153,7 @@ export function OrderStatus({
     setPayError(null);
     ymGoal("payment_initiated", { situation: order.situation_id });
     try {
-      const res = await fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
+      const res = await payOrder(orderId);
       const data = await res.json();
       if (!res.ok) {
         setPayError(data.error ?? "Ошибка при создании платежа. Попробуйте ещё раз.");
@@ -225,168 +179,24 @@ export function OrderStatus({
       </div>
 
       {(order.status === "draft" || order.status === "pending_payment") && (
-        <div className="space-y-3">
-          {order.status === "pending_payment" && order.payment_url ? (
-            <a
-              href={order.payment_url}
-              className="w-full h-12 text-base inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground hover:bg-primary/80 font-medium transition-colors"
-            >
-              Перейти к оплате →
-            </a>
-          ) : (
-            <Button
-              onClick={handlePay}
-              disabled={isPaying}
-              className="w-full h-12 text-base"
-            >
-              {isPaying ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Перенаправляем…
-                </>
-              ) : (
-                `Оплатить ${(order.amount / 100).toFixed(0)} ₽`
-              )}
-            </Button>
-          )}
-          {order.status === "pending_payment" && (
-            <button
-              onClick={handlePay}
-              disabled={isPaying}
-              className="text-xs text-gray-400 hover:text-gray-600 underline w-full text-center"
-            >
-              {isPaying ? "Создаём новый платёж…" : "Ссылка устарела? Создать новый платёж"}
-            </button>
-          )}
-          {payError && <p className="text-sm text-red-600">{payError}</p>}
-        </div>
+        <PaySection order={order} isPaying={isPaying} payError={payError} onPay={handlePay} />
       )}
 
       {order.status === "done" && (
-        <div className="flex flex-col sm:flex-row gap-3">
-          <button
-            onClick={() => handleDownload("docx")}
-            disabled={downloadingFmt !== null}
-            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors disabled:opacity-60"
-          >
-            {downloadingFmt === "docx" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Скачать Word
-          </button>
-          <button
-            onClick={() => handleDownload("pdf")}
-            disabled={downloadingFmt !== null}
-            className="flex-1 flex items-center justify-center gap-2 h-11 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors disabled:opacity-60"
-          >
-            {downloadingFmt === "pdf" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4" />
-            )}
-            Скачать PDF
-          </button>
-        </div>
-      )}
-      {downloadError && (
-        <p className="text-sm text-red-600">{downloadError}</p>
-      )}
-
-      {order.status === "done" && (
-        <a
-          href={`/api/documents/${orderId}/download/instruction`}
-          download
-          className="flex items-center justify-center gap-2 h-11 rounded-lg border border-primary/20 bg-primary/5 hover:bg-primary/10 text-sm font-medium text-primary transition-colors w-full"
-        >
-          <FileText className="h-4 w-4" />
-          Скачать инструкцию (куда подать и что делать дальше)
-        </a>
-      )}
-
-
-      {order.status === "done" && (
-        <>
-          <p className="text-xs text-gray-400">
-            Письмо с ссылкой на заказ отправлено на вашу почту.{" "}
-            <a href="mailto:lawdocsru@gmail.com" className="text-primary hover:underline">
-              Нужна помощь?
-            </a>
-          </p>
-          <Link
-            href="/situations"
-            className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            <PlusCircle className="h-4 w-4" />
-            Создать ещё один документ
-          </Link>
-          <div className="border-t border-gray-100 pt-2">
-            <ReviewForm orderId={orderId} situationId={order.situation_id} />
-          </div>
-        </>
+        <DoneSection
+          orderId={orderId}
+          order={order}
+          downloadingFmt={downloadingFmt}
+          downloadError={downloadError}
+          onDownload={handleDownload}
+        />
       )}
 
       {order.status === "failed" && (
-        <div className="flex flex-col gap-3">
-          <Button
-            onClick={handleRetry}
-            disabled={isRetrying}
-            className="w-full h-11 text-base"
-          >
-            {isRetrying ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Запускаем…
-              </>
-            ) : (
-              <>
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                Попробовать ещё раз
-              </>
-            )}
-          </Button>
-          {retryError && <p className="text-sm text-red-600">{retryError}</p>}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href={`/wizard/${order.situation_id}`}
-              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Заполнить заново
-            </Link>
-            <a
-              href="mailto:lawdocsru@gmail.com"
-              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
-            >
-              Написать в поддержку
-            </a>
-          </div>
-        </div>
+        <FailedSection order={order} isRetrying={isRetrying} retryError={retryError} onRetry={handleRetry} />
       )}
 
-      {order.status === "refunded" && (
-        <div className="flex flex-col gap-3">
-          <p className="text-sm text-gray-500">
-            Возврат {(order.amount / 100).toFixed(0)} ₽. Если хотите попробовать ещё раз — заполните форму заново, оплата спишется только при успешной генерации.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Link
-              href={`/wizard/${order.situation_id}`}
-              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Заполнить заново
-            </Link>
-            <a
-              href="mailto:lawdocsru@gmail.com"
-              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
-            >
-              Написать в поддержку
-            </a>
-          </div>
-        </div>
-      )}
+      {order.status === "refunded" && <RefundedSection order={order} />}
 
       <p className="text-xs text-gray-300">
         Заказ № {orderId.slice(0, 8).toUpperCase()}

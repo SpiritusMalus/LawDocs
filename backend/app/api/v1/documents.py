@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
+from app.core.enums import OrderStatus
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.document import DocumentDownloadInfo
@@ -22,7 +23,7 @@ async def _get_order_with_document(
     order_id: str,
     current_user: User,
     db: AsyncSession,
-):
+) -> Order:
     if not _UUID_RE.match(order_id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid order_id format")
     result = await db.execute(
@@ -33,9 +34,19 @@ async def _get_order_with_document(
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
-    if order.status != "done" or not order.document:
+    if order.status != OrderStatus.DONE.value or not order.document:
         raise HTTPException(status_code=status.HTTP_402_PAYMENT_REQUIRED, detail="Document not ready yet")
     return order
+
+
+def validate_format(fmt: str) -> str:
+    """FastAPI-зависимость: допускает только docx/pdf."""
+    if fmt not in ("docx", "pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid format. Use 'docx' or 'pdf'.",
+        )
+    return fmt
 
 
 @router.get("/{order_id}/download/instruction")
@@ -56,13 +67,10 @@ async def download_instruction(
 @router.get("/{order_id}/download/{fmt}")
 async def download_document(
     order_id: str,
-    fmt: str,
+    fmt: str = Depends(validate_format),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> RedirectResponse:
-    if fmt not in ("docx", "pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
-
     order = await _get_order_with_document(order_id, current_user, db)
     key = order.document.docx_key if fmt == "docx" else order.document.pdf_key
 
@@ -73,15 +81,12 @@ async def download_document(
 @router.get("/{order_id}/download-info/{fmt}", response_model=DocumentDownloadInfo)
 async def download_info(
     order_id: str,
-    fmt: str,
+    fmt: str = Depends(validate_format),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> DocumentDownloadInfo:
     """Возвращает presigned URL и флаг шифрования. Для зашифрованных файлов
     фронт скачивает байты сам и расшифровывает приватным ключом юзера."""
-    if fmt not in ("docx", "pdf"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid format. Use 'docx' or 'pdf'.")
-
     order = await _get_order_with_document(order_id, current_user, db)
     key = order.document.docx_key if fmt == "docx" else order.document.pdf_key
     url = await get_presigned_url(key, expires=900)

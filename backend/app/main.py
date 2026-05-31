@@ -16,6 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import AsyncSessionLocal
+from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.api.v1 import admin_stats, auth, documents, orders, reviews, situations, stats, users, webhooks
 from app.models.order import Order
@@ -68,7 +69,7 @@ async def _cleanup_draft_orders() -> None:
                 # 1. Удаляем старые черновики
                 result = await db.execute(
                     delete(Order)
-                    .where(Order.status == "draft", Order.created_at < cutoff)
+                    .where(Order.status == OrderStatus.DRAFT.value, Order.created_at < cutoff)
                     .returning(Order.id)
                 )
                 deleted_orders = result.rowcount
@@ -92,7 +93,7 @@ async def _cleanup_draft_orders() -> None:
                 result = await db.execute(
                     update(Order)
                     .where(
-                        Order.status.in_(["done", "failed"]),
+                        Order.status.in_([OrderStatus.DONE.value, OrderStatus.FAILED.value]),
                         func.coalesce(Order.paid_at, Order.created_at) < pii_cutoff,
                     )
                     .values(form_data={})
@@ -118,7 +119,7 @@ async def _cleanup_draft_orders() -> None:
 
 async def _watchdog_refund(order_id: str, situation_id: str, user_email: str) -> None:
     """Рефанд для заказов stuck в generating на последней retry (сервер упал)."""
-    from app.services.notifications import send_telegram_alert
+    from app.services.notifications import format_order_alert, send_telegram_alert
     from app.services.payment import refund_payment
     from app.services.email import send_refund_notification
     async with AsyncSessionLocal() as db:
@@ -137,11 +138,14 @@ async def _watchdog_refund(order_id: str, situation_id: str, user_email: str) ->
             _auto_retry_logger.exception("watchdog_refund_email_failed for order %s", order_id)
         try:
             await send_telegram_alert(
-                f"💸 <b>Watchdog auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
-                f"order_id: <code>{order_id}</code>\n"
-                f"payment_id: <code>{order.yookassa_payment_id}</code>\n"
-                f"situation: {situation_id}\n"
-                f"email: {user_email}"
+                format_order_alert(
+                    "watchdog_refund",
+                    order_id=order_id,
+                    situation_id=situation_id,
+                    user_email=user_email,
+                    payment_id=order.yookassa_payment_id,
+                    refunded=refunded,
+                )
             )
         except Exception:
             _auto_retry_logger.exception("watchdog_refund_alert_failed for order %s", order_id)
@@ -154,14 +158,14 @@ async def _auto_retry_loop() -> None:
         try:
             from app.services.generation import run_document_generation
             async with AsyncSessionLocal() as db:
-                # Watchdog: заказы stuck в "generating" >30 мин → failed
+                # Watchdog: заказы stuck в GENERATING >30 мин → FAILED/REFUNDED
                 # (сервер упал во время генерации; используем paid_at как proxy,
                 # т.к. generating всегда наступает после оплаты)
                 watchdog_cutoff = datetime.now(UTC) - timedelta(minutes=30)
                 stuck_result = await db.execute(
                     select(Order)
                     .where(
-                        Order.status == "generating",
+                        Order.status == OrderStatus.GENERATING.value,
                         Order.paid_at < watchdog_cutoff,
                     )
                     .with_for_update(skip_locked=True)
@@ -175,16 +179,16 @@ async def _auto_retry_loop() -> None:
                         watchdog_refund_tasks.append((
                             str(o.id), o.situation_id, str(o.user.email),
                         ))
-                        o.status = "refunded"
+                        o.status = OrderStatus.REFUNDED.value
                         o.form_data = {}
                     else:
-                        o.status = "failed"
+                        o.status = OrderStatus.FAILED.value
                 await db.commit()
 
                 result = await db.execute(
                     select(Order)
                     .where(
-                        Order.status == "failed",
+                        Order.status == OrderStatus.FAILED.value,
                         Order.paid_at.is_not(None),
                         Order.auto_retry_count < _MAX_AUTO_RETRIES,
                     )
@@ -194,7 +198,7 @@ async def _auto_retry_loop() -> None:
                 orders_to_retry = result.scalars().all()
                 for order in orders_to_retry:
                     order.auto_retry_count += 1
-                    order.status = "generating"
+                    order.status = OrderStatus.GENERATING.value
                 retry_tasks = [
                     (
                         str(o.id),
@@ -263,7 +267,7 @@ async def _data_retention_loop() -> None:
             async with AsyncSessionLocal() as db:
                 old_order_ids_result = await db.execute(
                     select(Order.id).where(
-                        Order.status.in_(["done", "failed"]),
+                        Order.status.in_([OrderStatus.DONE.value, OrderStatus.FAILED.value]),
                         func.coalesce(Order.paid_at, Order.created_at) < cutoff,
                     )
                 )

@@ -1,7 +1,6 @@
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { authFetch } from "@/lib/proxy-fetch";
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isValidUuid } from "@/lib/validators";
 
 export async function GET(
   _request: NextRequest,
@@ -9,9 +8,9 @@ export async function GET(
 ) {
   const { id, format } = await params;
 
-  if (!UUID_RE.test(id)) return new Response(JSON.stringify({ error: "invalid_id" }), { status: 400 });
+  if (!isValidUuid(id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
   if (format !== "docx" && format !== "pdf") {
-    return new Response(JSON.stringify({ error: "invalid_format" }), { status: 400 });
+    return NextResponse.json({ error: "invalid_format" }, { status: 400 });
   }
 
   try {
@@ -19,7 +18,7 @@ export async function GET(
     if (!result.ok) return result.error;
 
     if (!result.res.ok) {
-      return new Response(JSON.stringify({ error: "not_ready" }), { status: result.res.status });
+      return NextResponse.json({ error: "not_ready" }, { status: result.res.status });
     }
 
     const contentType =
@@ -36,6 +35,6 @@ export async function GET(
       },
     });
   } catch {
-    return new Response(JSON.stringify({ error: "upstream_error" }), { status: 502 });
+    return NextResponse.json({ error: "upstream_error" }, { status: 502 });
   }
 }

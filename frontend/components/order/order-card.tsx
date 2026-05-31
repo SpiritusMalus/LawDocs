@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { Download, FileText, Clock, Loader2, XCircle, CheckCircle } from "lucide-react";
+import type { OrderStatus } from "@/lib/api-schemas";
 
 interface OrderItem {
   id: string;
   situation_id: string;
-  status: string;
+  status: OrderStatus;
   amount: number;
   created_at: string;
   has_document: boolean;
