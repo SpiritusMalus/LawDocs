@@ -61,6 +61,12 @@ const STATUS_CONFIG: Record<string, StatusConfig> = {
     description: "Что-то пошло не так. Мы уже получили уведомление — проверьте почту или напишите нам.",
     terminal: true,
   },
+  refunded: {
+    icon: <CheckCircle className="h-8 w-8 text-gray-500" />,
+    label: "Деньги возвращены",
+    description: "Документ создать не удалось, поэтому мы автоматически вернули оплату. Возврат придёт на карту в течение нескольких дней.",
+    terminal: true,
+  },
 };
 
 const POLL_STATUSES = new Set(["paid", "generating"]);
@@ -341,6 +347,29 @@ export function OrderStatus({
             )}
           </Button>
           {retryError && <p className="text-sm text-red-600">{retryError}</p>}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href={`/wizard/${order.situation_id}`}
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 text-sm font-medium text-gray-700 transition-colors"
+            >
+              <RefreshCcw className="h-4 w-4" />
+              Заполнить заново
+            </Link>
+            <a
+              href="mailto:lawdocsru@gmail.com"
+              className="flex-1 flex items-center justify-center gap-2 h-10 rounded-lg bg-primary hover:bg-primary/90 text-sm font-medium text-primary-foreground transition-colors"
+            >
+              Написать в поддержку
+            </a>
+          </div>
+        </div>
+      )}
+
+      {order.status === "refunded" && (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm text-gray-500">
+            Возврат {(order.amount / 100).toFixed(0)} ₽. Если хотите попробовать ещё раз — заполните форму заново, оплата спишется только при успешной генерации.
+          </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href={`/wizard/${order.situation_id}`}
