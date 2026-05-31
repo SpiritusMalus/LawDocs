@@ -40,9 +40,9 @@ export function TrustBlock() {
                 className="rounded-2xl border border-gray-200 p-6 hover:border-blue-200 hover:shadow-sm transition-colors"
               >
                 <Icon className="h-8 w-8 text-blue-600 mb-3" aria-hidden="true" />
-                <p className="text-lg font-semibold text-gray-900 mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   {item.title}
-                </p>
+                </h3>
                 <p className="text-sm text-gray-600 leading-relaxed">
                   {item.description}
                 </p>

@@ -55,3 +55,4 @@ Thumbs.db
 
 # ── gstack (security reports, local artifacts) ──
 .gstack/
+.design-review/

@@ -42,8 +42,8 @@ export function Pricing() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <div className="text-sm text-gray-500 line-through mb-1">Юрист — от 5&nbsp;000&nbsp;₽</div>
-                  <div className="text-5xl font-bold text-gray-900">199&nbsp;<span className="text-primary">₽</span></div>
+                  <div className="text-sm text-gray-500 line-through mb-1 tabular-nums">Юрист — от 5&nbsp;000&nbsp;₽</div>
+                  <div className="text-5xl font-bold text-gray-900 tabular-nums">199&nbsp;<span className="text-primary">₽</span></div>
                   <div className="text-xs text-gray-400 mt-1">разовая оплата, без подписок</div>
                 </div>
               </div>
