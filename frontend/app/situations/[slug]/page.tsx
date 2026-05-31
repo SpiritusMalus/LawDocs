@@ -7,6 +7,7 @@ import { SITUATION_PAGES, getSituationPage } from "@/lib/situation-pages";
 import type { SituationId } from "@/lib/situations";
 import { SituationReviews } from "@/components/situation-reviews";
 import { PdfPreview } from "@/components/pdf-preview";
+import { DOCUMENT_PRICE_RUB } from "@/lib/pricing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
@@ -96,7 +97,7 @@ export default async function SituationPage({
     },
     offers: {
       "@type": "Offer",
-      price: "199",
+      price: String(DOCUMENT_PRICE_RUB),
       priceCurrency: "RUB",
       url: `${SITE_URL}/situations/${page.slug}`,
     },
@@ -146,7 +147,7 @@ export default async function SituationPage({
               href={`/wizard/${page.slug}`}
               className={buttonVariants({ size: "lg" }) + " h-12 px-8 text-base"}
             >
-              Получить документ — 199&nbsp;₽
+              Получить документ — {DOCUMENT_PRICE_RUB}&nbsp;₽
               <ArrowRight className="h-4 w-4 ml-2" />
             </Link>
             <Link

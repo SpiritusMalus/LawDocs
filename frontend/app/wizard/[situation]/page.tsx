@@ -6,6 +6,7 @@ import { ChevronRight } from "lucide-react";
 import type { WizardStep } from "@/lib/wizard-types";
 import { getSituationPage } from "@/lib/situation-pages";
 import { WizardShell } from "@/components/wizard/wizard-shell";
+import { DOCUMENT_PRICE_RUB } from "@/lib/pricing";
 
 export async function generateMetadata({
   params,
@@ -88,7 +89,7 @@ export default async function WizardPage({
                 {page?.h1 ?? "Оформить документ"}
               </h1>
               <span className="shrink-0 inline-flex items-center px-3 py-1 rounded-full bg-primary/8 border border-primary/20 text-primary text-sm font-semibold">
-                199&nbsp;₽
+                {DOCUMENT_PRICE_RUB}&nbsp;₽
               </span>
             </div>
             <p className="text-gray-500 text-sm">

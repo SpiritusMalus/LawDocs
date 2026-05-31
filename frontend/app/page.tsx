@@ -9,6 +9,7 @@ import { Faq } from "@/components/landing/faq";
 import { FaqJsonLd } from "@/components/landing/faq-jsonld";
 import { MobileStickyCTA } from "@/components/landing/mobile-sticky-cta";
 import { ReviewsCarousel } from "@/components/reviews/reviews-carousel";
+import { DOCUMENT_PRICE_RUB } from "@/lib/pricing";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://law-docs.ru";
 
@@ -23,7 +24,7 @@ const organizationJsonLd = {
   availableLanguage: "Russian",
   offers: {
     "@type": "Offer",
-    price: "199",
+    price: String(DOCUMENT_PRICE_RUB),
     priceCurrency: "RUB",
     description: "Составление претензии или жалобы с расчётом неустойки и инструкцией по отправке",
   },
