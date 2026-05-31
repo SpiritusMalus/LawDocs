@@ -81,6 +81,47 @@ async def test_admin_stats_week_aggregates(
 
 
 @pytest.mark.asyncio
+async def test_admin_stats_funnel(
+    client: AsyncClient, db_session: AsyncSession, user: User, admin_token: str
+):
+    await _seed_orders(db_session, user)
+
+    resp = await client.get(
+        "/api/v1/admin/stats?period=week",
+        headers={"X-Admin-Token": admin_token},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    funnel = data["funnel"]
+    assert funnel["created"] == data["orders_total"]   # 5
+    assert funnel["paid"] == data["orders_paid"]        # 4
+    assert funnel["completed"] == 2                      # два done за неделю
+
+    # В сиде paid_at == created_at → среднее время ≈ 0, но НЕ None (оплаты есть).
+    assert data["avg_create_to_pay_seconds"] is not None
+    assert data["avg_create_to_pay_seconds"] == pytest.approx(0, abs=1)
+
+
+@pytest.mark.asyncio
+async def test_admin_stats_empty_funnel_no_division_by_zero(
+    client: AsyncClient, db_session: AsyncSession, user: User, admin_token: str
+):
+    """Заказов нет (как на проде сейчас): 200 OK, пустая воронка, время None."""
+    resp = await client.get(
+        "/api/v1/admin/stats?period=week",
+        headers={"X-Admin-Token": admin_token},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+
+    assert data["orders_total"] == 0
+    assert data["conversion_pct"] == 0.0
+    assert data["funnel"] == {"created": 0, "paid": 0, "completed": 0}
+    assert data["avg_create_to_pay_seconds"] is None
+
+
+@pytest.mark.asyncio
 async def test_admin_stats_all_includes_old(
     client: AsyncClient, db_session: AsyncSession, user: User, admin_token: str
 ):
