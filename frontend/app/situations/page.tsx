@@ -6,7 +6,7 @@ import { SituationsGrid } from "./situations-grid";
 export const metadata: Metadata = {
   title: "Все ситуации — юридические документы за 199 ₽ | LawDocs",
   description:
-    "Все ситуации — 25 готовых юридических документов: претензии в магазин, банк, маркетплейс, страховую, УК и другие. 199 ₽.",
+    "Все ситуации — 32 готовых юридических документа: претензии в магазин, банк, маркетплейс, страховую, УК и другие. 199 ₽.",
 };
 
 export default function SituationsPage() {
@@ -30,7 +30,7 @@ export default function SituationsPage() {
             Все ситуации
           </h1>
           <p className="text-lg text-gray-400 max-w-xl mx-auto">
-            25 готовых шаблонов. Каждая претензия — со ссылками на конкретные статьи закона.{" "}
+            32 готовых шаблона. Каждая претензия — со ссылками на конкретные статьи закона.{" "}
             <span className="font-medium text-gray-200">199&nbsp;₽ за документ.</span>
           </p>
         </div>

@@ -32,7 +32,7 @@ export function Situations() {
             href="/situations"
             className="inline-flex items-center gap-2 px-6 py-3 text-base font-medium text-gray-900 hover:text-blue-600 transition-colors"
           >
-            Все ситуации (25)
+            Все ситуации ({SITUATIONS.length})
             <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
