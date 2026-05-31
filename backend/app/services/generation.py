@@ -148,21 +148,23 @@ async def run_document_generation(
                 except Exception:
                     logger.exception("Failed to send failure notification for order %s", order_id)
                 try:
-                    from app.services.notifications import send_telegram_alert
+                    from app.services.notifications import format_order_alert, send_telegram_alert
                     if order.status == OrderStatus.REFUNDED.value:
-                        await send_telegram_alert(
-                            f"💸 <b>Auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
-                            f"order_id: <code>{order_id}</code>\n"
-                            f"payment_id: <code>{order.yookassa_payment_id}</code>\n"
-                            f"situation: {situation_id}\n"
-                            f"email: {user_email}"
+                        alert = format_order_alert(
+                            "refund",
+                            order_id=order_id,
+                            situation_id=situation_id,
+                            user_email=user_email,
+                            payment_id=order.yookassa_payment_id,
+                            refunded=refunded,
                         )
                     else:
-                        await send_telegram_alert(
-                            f"❌ <b>Order failed</b>\n"
-                            f"order_id: <code>{order_id}</code>\n"
-                            f"situation: {situation_id}\n"
-                            f"email: {user_email}"
+                        alert = format_order_alert(
+                            "failed",
+                            order_id=order_id,
+                            situation_id=situation_id,
+                            user_email=user_email,
                         )
+                    await send_telegram_alert(alert)
                 except Exception:
                     logger.exception("Failed to send Telegram alert for order %s", order_id)

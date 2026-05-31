@@ -119,7 +119,7 @@ async def _cleanup_draft_orders() -> None:
 
 async def _watchdog_refund(order_id: str, situation_id: str, user_email: str) -> None:
     """Рефанд для заказов stuck в generating на последней retry (сервер упал)."""
-    from app.services.notifications import send_telegram_alert
+    from app.services.notifications import format_order_alert, send_telegram_alert
     from app.services.payment import refund_payment
     from app.services.email import send_refund_notification
     async with AsyncSessionLocal() as db:
@@ -138,11 +138,14 @@ async def _watchdog_refund(order_id: str, situation_id: str, user_email: str) ->
             _auto_retry_logger.exception("watchdog_refund_email_failed for order %s", order_id)
         try:
             await send_telegram_alert(
-                f"💸 <b>Watchdog auto-refund {'OK' if refunded else 'FAILED'}</b>\n"
-                f"order_id: <code>{order_id}</code>\n"
-                f"payment_id: <code>{order.yookassa_payment_id}</code>\n"
-                f"situation: {situation_id}\n"
-                f"email: {user_email}"
+                format_order_alert(
+                    "watchdog_refund",
+                    order_id=order_id,
+                    situation_id=situation_id,
+                    user_email=user_email,
+                    payment_id=order.yookassa_payment_id,
+                    refunded=refunded,
+                )
             )
         except Exception:
             _auto_retry_logger.exception("watchdog_refund_alert_failed for order %s", order_id)
