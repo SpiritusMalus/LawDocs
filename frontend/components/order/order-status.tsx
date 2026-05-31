@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/reviews/review-form";
 import { E2EEClient } from "@/lib/e2ee-client";
+import { ymGoal } from "@/lib/analytics";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
 interface Order {
@@ -71,13 +72,6 @@ const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
 };
 
 const POLL_STATUSES = new Set(["paid", "generating"]);
-
-function ymGoal(goal: string, params?: Record<string, unknown>) {
-  const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
-  if (id && typeof window !== "undefined" && window.ym) {
-    window.ym(id, "reachGoal", goal, params);
-  }
-}
 
 export function OrderStatus({
   orderId,

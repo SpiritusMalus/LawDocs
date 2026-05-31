@@ -9,16 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { ChevronLeft, ChevronRight, Loader2, AlertCircle, ServerCrash } from "lucide-react";
 import type { WizardStep, WizardField } from "@/lib/wizard-types";
 import { submitWizard } from "@/lib/actions/submit-wizard";
+import { ymGoal } from "@/lib/analytics";
 
 const LS_EMAIL_KEY = "lawdocs_email";
 const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as const;
-
-function ymGoal(goal: string, params?: Record<string, unknown>) {
-  const id = Number(process.env.NEXT_PUBLIC_YM_COUNTER_ID);
-  if (id && typeof window !== "undefined" && window.ym) {
-    window.ym(id, "reachGoal", goal, params);
-  }
-}
 
 interface WizardShellProps {
   steps: WizardStep[];
