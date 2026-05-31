@@ -38,7 +38,7 @@ export function Pricing() {
                     Один готовый документ
                   </h3>
                   <p className="text-sm text-gray-500">
-                    Любая из 25 типовых ситуаций
+                    Любая из 32 типовых ситуаций
                   </p>
                 </div>
                 <div className="text-right">
