@@ -72,7 +72,10 @@ const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
   },
 };
 
-const POLL_STATUSES = new Set(["paid", "generating"]);
+// pending_payment включён: заказ уже создан и ждёт вебхук ЮKassa — после возврата
+// с оплаты статус сменится на generating, фронт должен подхватить это сам.
+// draft НЕ опрашиваем — там ещё не платили, опрос был бы лишней нагрузкой.
+const POLL_STATUSES = new Set(["pending_payment", "paid", "generating"]);
 
 export function OrderStatus({
   orderId,
@@ -119,6 +122,30 @@ export function OrderStatus({
     }, 4000);
 
     return () => clearInterval(interval);
+  }, [orderId, order.status]);
+
+  // Refetch при возврате на вкладку (например, после оплаты на ЮKassa).
+  // Закрывает гонку: юзер вернулся раньше, чем пришёл вебхук, и статус
+  // на странице остался pending_payment, пока polling ещё не подхватил.
+  useEffect(() => {
+    if (!POLL_STATUSES.has(order.status)) return;
+
+    async function refresh() {
+      if (document.visibilityState !== "visible") return;
+      try {
+        const res = await fetchOrder(orderId);
+        if (res.ok) setOrder(await res.json());
+      } catch {
+        // network blip — polling всё равно повторит
+      }
+    }
+
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, [orderId, order.status]);
 
   useEffect(() => {

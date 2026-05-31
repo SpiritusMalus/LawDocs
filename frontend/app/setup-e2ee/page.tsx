@@ -110,7 +110,7 @@ export default function SetupE2EEPage() {
         <div className="bg-white rounded-2xl border border-gray-100 p-8 space-y-6">
 
           {step === "generating" && (
-            <div className="text-center py-8 text-gray-500">Генерируем ключи…</div>
+            <div className="text-center py-8 text-gray-500">Загрузка…</div>
           )}
 
           {step === "show_phrase" && (
