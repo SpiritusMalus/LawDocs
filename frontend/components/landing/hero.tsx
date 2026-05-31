@@ -68,7 +68,7 @@ export function Hero() {
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-x-6 gap-y-2 text-sm text-gray-400 mb-8">
               <span className="flex items-center gap-1.5"><span className="text-blue-400" aria-hidden="true">✓</span> Word + PDF</span>{" "}
               <span className="flex items-center gap-1.5"><span className="text-blue-400" aria-hidden="true">✓</span> Инструкция куда отправить</span>{" "}
-              <span className="flex items-center gap-1.5"><span className="text-blue-400" aria-hidden="true">✓</span> Шаблоны проверены юристом</span>
+              <span className="flex items-center gap-1.5"><span className="text-blue-400" aria-hidden="true">✓</span> Вернём деньги, если не подойдёт</span>
             </div>
 
             <div className="flex flex-col items-center lg:items-start gap-2">
