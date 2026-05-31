@@ -1,10 +1,13 @@
-from datetime import datetime
+import logging
+from datetime import UTC, datetime
 from typing import Any, Optional
 
 from sqlalchemy import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.audit_log import AuditLog
+
+logger = logging.getLogger(__name__)
 
 
 class AuditLogger:
@@ -35,13 +38,12 @@ class AuditLogger:
                 user_id=user_id,
                 action=action,
                 data_type=data_type,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
                 ip_address=ip_address,
                 details=details or {},
             )
             session.add(log_entry)
             await session.flush()
-        except Exception as e:
+        except Exception:
             # Логирование ошибок не должно ломать основной поток
-            print(f"AuditLog error: {str(e)}")
-            pass
+            logger.error("AuditLog error", exc_info=True)

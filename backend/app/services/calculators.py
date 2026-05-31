@@ -15,6 +15,19 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
+# ── Законные коэффициенты неустоек/компенсаций ────────────────────────────────
+# Именованы, чтобы расчёт реальных сумм в платных документах не зависел от
+# «магических» Decimal'ов в теле функций. Округление .quantize(Decimal("0.01"))
+# и перевод процентов /Decimal("100") — это арифметические примитивы, НЕ ставки,
+# и сюда не выносятся.
+_PENALTY_RATE_1PCT_PER_DAY = Decimal("0.01")   # 1%/день — ЗоЗПП (ст. 23, 23.1)
+_PENALTY_RATE_0_5PCT_PER_DAY = Decimal("0.005")  # 0.5%/день — ЗоЗПП ст. 23.1 (не доставлено)
+_PENALTY_RATE_3PCT_PER_DAY = Decimal("0.03")   # 3%/день — ЗоЗПП ст. 28 п. 5 / ст. 31
+_CBR_COMPENSATION_DIVISOR = Decimal("150")     # 1/150 ставки ЦБ — ТК ст. 236 / ФЗ-214 ст. 6
+_AIRLINE_DELAY_MROT_FRACTION = Decimal("0.25")  # 25% МРОТ/час — Воздушный кодекс ст. 120
+_AIRLINE_DELAY_TICKET_CAP = Decimal("0.5")     # потолок 50% стоимости билета
+
+
 _MONTHS_GENITIVE = [
     "января", "февраля", "марта", "апреля", "мая", "июня",
     "июля", "августа", "сентября", "октября", "ноября", "декабря",
@@ -84,7 +97,7 @@ def _sentence_case(s: str) -> str:
 
 def _ddu_neustoyka(price: Decimal, rate: Decimal, days: int) -> Decimal:
     """ФЗ-214 ст. 6 ч. 2: 1/150 ставки ЦБ × цена × дни (для граждан)."""
-    return price * rate / Decimal("100") / Decimal("150") * Decimal(days)
+    return price * rate / Decimal("100") / _CBR_COMPENSATION_DIVISOR * Decimal(days)
 
 
 def calculate_ddu_delay(form_data: dict) -> dict:
@@ -321,7 +334,7 @@ def calculate_shop(form_data: dict) -> dict:
     penalty = Decimal("0")
     if start and price > 0:
         delay_days = max((date.today() - start).days, 0)
-        penalty = min(price * Decimal("0.01") * Decimal(delay_days), price)
+        penalty = min(price * _PENALTY_RATE_1PCT_PER_DAY * Decimal(delay_days), price)
         data["calculated_penalty_days"] = str(delay_days)
         data["calculated_penalty"] = _fmt(penalty)
         data["calculated_penalty_section"] = (
@@ -472,7 +485,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
         planned = _parse_date(data.get("planned_date"))
         if planned and price > 0:
             delay_days = max((date.today() - planned).days, 0)
-            penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+            penalty = min(price * _PENALTY_RATE_3PCT_PER_DAY * Decimal(delay_days), price)
             data["calculated_delay_days"] = str(delay_days)
             data["calculated_penalty"] = _fmt(penalty)
             data["calculated_penalty_section"] = (
@@ -827,7 +840,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
         overdue_days = max((date.today() - due_date).days, 0)
         data["calculated_overdue_days"] = str(overdue_days)
         if overdue_days > 0:
-            penalty = claim_base * Decimal("0.01") * Decimal(overdue_days)
+            penalty = claim_base * _PENALTY_RATE_1PCT_PER_DAY * Decimal(overdue_days)
             data["calculated_penalty"] = _fmt(penalty)
             data["calculated_penalty_section"] = (
                 f"Пеня по ст. 16.1 ч. 21 ФЗ-40: {_fmt(claim_base)} руб. × 1% × "
@@ -977,7 +990,7 @@ def calculate_employer(form_data: dict) -> dict:
 
     try:
         debt = Decimal(str(data["debt_amount"]))
-        compensation = debt * Decimal("1") / Decimal("150") * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
+        compensation = debt * Decimal("1") / _CBR_COMPENSATION_DIVISOR * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
         compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
     except Exception as e:
         logger.error("calculate_employer: failed to compute compensation: %s", e)
@@ -1102,7 +1115,7 @@ def calculate_repair(form_data: dict) -> dict:
     penalty = Decimal("0")
     if discovery and price > 0:
         delay_days = max((date.today() - discovery).days, 0)
-        penalty = min(price * Decimal("0.03") * Decimal(delay_days), price)
+        penalty = min(price * _PENALTY_RATE_3PCT_PER_DAY * Decimal(delay_days), price)
         data["calculated_penalty_days"] = str(delay_days)
         data["calculated_penalty"] = _fmt(penalty)
         data["calculated_penalty_section"] = (
@@ -1258,7 +1271,7 @@ def calculate_insurance(form_data: dict) -> dict:
 
     penalty = Decimal("0")
     if overdue_days > 0 and underpayment > 0:
-        penalty = underpayment * Decimal("0.01") * Decimal(overdue_days)
+        penalty = underpayment * _PENALTY_RATE_1PCT_PER_DAY * Decimal(overdue_days)
         total = underpayment + penalty
         data["calculated_penalty"] = _fmt(penalty)
         data["calculated_total"] = _fmt(total)
@@ -1575,9 +1588,9 @@ def calculate_airline(form_data: dict) -> dict:
     total = Decimal("0")
     if violation == "delay" and delay_hours > 0 and ticket > 0:
         mrot = Decimal(settings.MROT)
-        per_hour = (mrot * Decimal("0.25")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        per_hour = (mrot * _AIRLINE_DELAY_MROT_FRACTION).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         delay_comp_raw = per_hour * Decimal(delay_hours)
-        cap = (ticket * Decimal("0.5")).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        cap = (ticket * _AIRLINE_DELAY_TICKET_CAP).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         delay_comp = min(delay_comp_raw, cap).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         fine = cap
         total += delay_comp + fine
@@ -2961,7 +2974,7 @@ def calculate_repair_apartment(form_data: dict) -> dict:
     # Penalty
     if defect_discovery_date and contract_amount > 0:
         delay_days = max((date.today() - defect_discovery_date).days, 0)
-        penalty = min(contract_amount * Decimal("0.03") * Decimal(delay_days), contract_amount)
+        penalty = min(contract_amount * _PENALTY_RATE_3PCT_PER_DAY * Decimal(delay_days), contract_amount)
         penalty = penalty.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         data["calculated_penalty"] = _fmt(penalty)
@@ -3013,10 +3026,10 @@ def calculate_online_shop_delivery(form_data: dict) -> dict:
     data["calculated_intro_section"] = intro
 
     # Penalty rate depends on problem type
-    rate = Decimal("0.01")  # 1% по умолчанию
+    rate = _PENALTY_RATE_1PCT_PER_DAY  # 1% по умолчанию
     rate_desc = "1%"
     if problem_type == "not_delivered":
-        rate = Decimal("0.005")  # 0.5% (ст. 23.1)
+        rate = _PENALTY_RATE_0_5PCT_PER_DAY  # 0.5% (ст. 23.1)
         rate_desc = "0.5%"
 
     order_date_obj = _parse_date(data.get("order_date"))
@@ -3202,7 +3215,7 @@ def calculate_ip_employer(form_data: dict) -> dict:
     # Compensation (similar to employer)
     if last_payment_date and salary_owed > 0:
         delay_days = max((date.today() - last_payment_date).days, 0)
-        compensation = salary_owed * Decimal("1") / Decimal("150") * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
+        compensation = salary_owed * Decimal("1") / _CBR_COMPENSATION_DIVISOR * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
         compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
 
         data["calculated_compensation"] = _fmt(compensation)
