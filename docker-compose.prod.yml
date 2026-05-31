@@ -26,6 +26,9 @@ services:
         condition: service_healthy
     volumes:
       - lawdocs_documents:/var/lawdocs/documents
+      # CA-сертификат Минцифры для TLS-верификации GigaChat (read-only).
+      # Путь внутри = путь на хосте, чтобы GIGACHAT_CA_CERT в .env не менять.
+      - /opt/lawdocs/certs:/opt/lawdocs/certs:ro
     command: >
       sh -c "alembic upgrade head &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 2"
