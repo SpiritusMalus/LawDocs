@@ -46,7 +46,7 @@ export function Faq() {
             <Accordion.Item key={item.q} className="group">
               <Accordion.Header>
                 <Accordion.Trigger className="flex w-full items-center justify-between text-left px-6 py-5 hover:bg-gray-50 transition-colors">
-                  <span className="font-medium text-gray-900 pr-6">{item.q}</span>
+                  <span className="font-semibold text-gray-900 pr-6">{item.q}</span>
                   <ChevronDown className="h-4 w-4 text-gray-400 shrink-0 transition-transform group-data-[open]:rotate-180" />
                 </Accordion.Trigger>
               </Accordion.Header>
