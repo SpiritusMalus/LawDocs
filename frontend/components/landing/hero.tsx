@@ -31,7 +31,7 @@ export function Hero() {
             <h1 className="animate-hero animate-hero-2 text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-white mb-5 leading-[1.1]">
               Готовая <span className="text-blue-400">претензия</span>{" "}
               за <span className="text-blue-400">5&nbsp;минут</span>
-              <br />— вместо 5&nbsp;000&nbsp;₽ у юриста
+              <br />— вместо <span className="tabular-nums">5&nbsp;000&nbsp;₽</span> у юриста
             </h1>
 
             <p className="animate-hero animate-hero-3 text-lg text-gray-400 mb-8 max-w-lg mx-auto lg:mx-0 leading-relaxed">
