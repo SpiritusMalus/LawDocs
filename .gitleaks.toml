@@ -1,0 +1,16 @@
+# gitleaks config for LawDocs
+# Extends the default ruleset; adds project-specific allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "LawDocs allowlist — placeholders and non-secret docs"
+paths = [
+  '''\.env\.example$''',
+  '''.*\.md$''',
+  '''frontend/public/.*''',
+]
+regexes = [
+  # placeholder values used in docs and .env.example
+  '''(?i)(your_|changeme|example|placeholder|test_only)''',
+]
