@@ -18,7 +18,7 @@ const getSecurityHeaders = () => {
         `script-src ${scriptSrc.join(" ")}`,
         "style-src 'self' 'unsafe-inline'",
         "img-src 'self' data: mc.yandex.ru mc.yandex.com yandex.ru",
-        "connect-src 'self' mc.yandex.ru mc.yandex.com api.telegram.org wss://mc.yandex.com",
+        "connect-src 'self' mc.yandex.ru mc.yandex.com api.telegram.org wss://mc.yandex.com storage.yandexcloud.net",
         "font-src 'self'",
         "frame-src 'self'",
         "object-src 'none'",
