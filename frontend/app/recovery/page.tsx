@@ -2,7 +2,10 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { E2EEClient } from "@/lib/e2ee-client";
+import {
+  recoverViaKeyFile as recoverKeyFile,
+  recoverViaPhrase as recoverPhrase,
+} from "@/lib/e2ee-recovery";
 import { Button } from "@/components/ui/button";
 
 type Step = "form" | "recovering" | "done" | "error";
@@ -20,43 +23,8 @@ export default function RecoveryPage() {
   async function recoverViaPhrase() {
     setStep("recovering");
     setError(null);
-
     try {
-      const res = await fetch("/api/auth/recover-access", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
-      });
-
-      if (res.status === 404) {
-        throw new Error("Пользователь с таким email не найден");
-      }
-      if (res.status === 400) {
-        throw new Error("Для этого аккаунта нет сохранённого backup ключа");
-      }
-      if (!res.ok) {
-        throw new Error("Ошибка сервера. Попробуйте позже.");
-      }
-
-      const { backup_encrypted } = await res.json() as { backup_encrypted: string };
-
-      const privateKey = await E2EEClient.decryptPasswordProtectedBackup(
-        backup_encrypted,
-        phrase
-      );
-
-      E2EEClient.savePrivateKeyToLocalStorage(privateKey);
-
-      const meRes = await fetch("/api/user/me");
-      if (!meRes.ok) throw new Error("Не удалось получить публичный ключ");
-      const userData = await meRes.json() as { public_key?: string };
-
-      if (!userData.public_key) {
-        throw new Error("Recovery failed: public_key not available from server. Please contact support.");
-      }
-
-      E2EEClient.savePublicKeyToLocalStorage(userData.public_key);
-
+      await recoverPhrase(email, phrase);
       setStep("done");
       setTimeout(() => router.replace("/"), 2000);
     } catch (e) {
@@ -68,51 +36,12 @@ export default function RecoveryPage() {
   async function recoverViaKeyFile(file: File) {
     setStep("recovering");
     setError(null);
-
     try {
-      const text = await file.text();
-      const keyData = JSON.parse(text) as {
-        privateKey?: string;
-        publicKey?: string;
-      };
-
-      if (!keyData.privateKey) {
-        throw new Error("Файл не содержит приватный ключ");
-      }
-
-      if (!keyData.publicKey) {
-        throw new Error("Файл не содержит публичный ключ");
-      }
-
-      // Приватный ключ должен соответствовать публичному из того же файла.
-      if (!E2EEClient.keyPairMatches(keyData.privateKey, keyData.publicKey)) {
-        throw new Error("Ключ-файл повреждён: ключи не соответствуют друг другу");
-      }
-
-      // Ключ-файл должен принадлежать текущему аккаунту: сверяем публичный
-      // ключ с тем, что сервер хранит для вошедшего пользователя.
-      const meRes = await fetch("/api/user/me");
-      if (!meRes.ok) throw new Error("Не удалось проверить ключ. Войдите в аккаунт и попробуйте снова.");
-      const userData = await meRes.json() as { public_key?: string };
-
-      if (!userData.public_key) {
-        throw new Error("Для этого аккаунта не настроено шифрование");
-      }
-      if (userData.public_key !== keyData.publicKey) {
-        throw new Error("Этот ключ-файл от другого аккаунта");
-      }
-
-      E2EEClient.savePrivateKeyToLocalStorage(keyData.privateKey);
-      E2EEClient.savePublicKeyToLocalStorage(keyData.publicKey);
-
+      await recoverKeyFile(file);
       setStep("done");
       setTimeout(() => router.replace("/"), 2000);
     } catch (e) {
-      if (e instanceof SyntaxError) {
-        setError("Неверный формат файла. Это должен быть lawdocs-key.json");
-      } else {
-        setError(e instanceof Error ? e.message : "Неизвестная ошибка");
-      }
+      setError(e instanceof Error ? e.message : "Неизвестная ошибка");
       setStep("error");
     }
   }

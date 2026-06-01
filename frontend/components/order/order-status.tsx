@@ -5,7 +5,8 @@ import { CheckCircle, Clock, FileText, Loader2, XCircle } from "lucide-react";
 import Link from "next/link";
 import { E2EEClient } from "@/lib/e2ee-client";
 import { ymGoal } from "@/lib/analytics";
-import { downloadDocument } from "@/lib/e2ee-download";
+import { downloadDocument, MissingKeyError } from "@/lib/e2ee-download";
+import { RecoverAccessInline } from "@/components/order/recover-access-inline";
 import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
@@ -91,6 +92,8 @@ export function OrderStatus({
   const [retryError, setRetryError] = useState<string | null>(null);
   const [downloadingFmt, setDownloadingFmt] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  // Формат, который юзер пытался скачать без ключа — повторим после восстановления.
+  const [pendingFmt, setPendingFmt] = useState<"docx" | "pdf" | null>(null);
 
   async function handleDownload(fmt: "docx" | "pdf") {
     setDownloadingFmt(fmt);
@@ -98,7 +101,11 @@ export function OrderStatus({
     try {
       await downloadDocument(orderId, fmt, order.situation_id);
     } catch (e) {
-      setDownloadError(e instanceof Error ? e.message : "Ошибка скачивания");
+      if (e instanceof MissingKeyError) {
+        setPendingFmt(fmt); // покажем форму восстановления, повторим скачивание после
+      } else {
+        setDownloadError(e instanceof Error ? e.message : "Ошибка скачивания");
+      }
     } finally {
       setDownloadingFmt(null);
     }
@@ -230,6 +237,12 @@ export function OrderStatus({
           downloadingFmt={downloadingFmt}
           downloadError={downloadError}
           onDownload={handleDownload}
+          needsKeyFor={pendingFmt}
+          onRecovered={() => {
+            const fmt = pendingFmt;
+            setPendingFmt(null);
+            if (fmt) handleDownload(fmt);
+          }}
         />
       )}
 
