@@ -15,6 +15,7 @@ import httpx
 from openai import AsyncOpenAI
 
 from app.core.config import settings
+from app.services.field_resolve import is_known_field, resolve_field_value
 from app.services.pii_classifier import split_for_llm
 from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
 
@@ -445,16 +446,6 @@ def _get_company_name(situation_id: str, form_data: dict) -> str:
     return ""
 
 
-_FIELD_ALIASES: dict[str, list[str]] = {
-    "full_name":       ["user_full_name", "full_name"],
-    "contact_address": ["user_address", "contact_address"],
-    "phone":           ["user_phone", "phone"],
-    "email":           ["user_email", "email"],
-    "name":            ["user_full_name", "full_name", "name"],
-    "address":         ["user_address", "contact_address", "address"],
-}
-
-
 def _substitute_field_placeholders(text: str, form_data: dict) -> str:
     """Подставляет реальные значения вместо [field_name] в тексте.
 
@@ -462,19 +453,20 @@ def _substitute_field_placeholders(text: str, form_data: dict) -> str:
     - локально в python_template гибридного режима (текст в LLM не уходит);
     - в ВЫХОДЕ GigaChat (полный режим) — так ПДн подставляются после генерации,
       а сам промпт их не содержит.
+
+    Резолв имени поля (с учётом алиасов) — общий с шапкой документа,
+    см. app/services/field_resolve.py.
     """
     def replacer(m: re.Match) -> str:
         key = m.group(1)
-        if key in form_data:
-            value = form_data[key]
-            if value:
-                return _sanitize_value(str(value))
+        # Известное поле (прямое или по алиасу) → подставляем санитизированное
+        # значение; пустое значение → пустая строка. Неизвестный плейсхолдер
+        # оставляем как есть.
+        value = resolve_field_value(key, form_data)
+        if value:
+            return _sanitize_value(value)
+        if is_known_field(key, form_data):
             return ""
-        for alias_key, candidates in _FIELD_ALIASES.items():
-            if key == alias_key:
-                for candidate in candidates:
-                    if candidate in form_data and form_data[candidate]:
-                        return _sanitize_value(str(form_data[candidate]))
         return m.group(0)
     return re.sub(r"\[([a-z_]+)\]", replacer, text)
 
