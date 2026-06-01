@@ -299,17 +299,30 @@ async def _call_yandex_primary(system_prompt: str, user_prompt: str) -> str:
     raise RuntimeError("unreachable")
 
 
+def _yandex_configured() -> bool:
+    return bool(settings.YANDEX_API_KEY and settings.YANDEX_FOLDER_ID)
+
+
 async def _call_llm(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
-    """Диспетчер LLM: GigaChat первый, YandexGPT Pro при отказе или отсутствии GigaChat."""
+    """Диспетчер LLM: GigaChat первый, YandexGPT Pro при отказе, СБОЕ или отсутствии GigaChat."""
     if not settings.GIGACHAT_AUTH_KEY:
         logger.info("GigaChat not configured, using YandexGPT as primary")
         return await _call_yandex_primary(system_prompt, user_prompt)
 
-    text = await _call_gigachat(system_prompt, user_prompt, validate=validate)
+    # Сбой GigaChat (сеть, TLS/сертификат, 5xx) — это исключение, а не «отказ».
+    # Раньше оно летело наверх и валило генерацию; теперь фоллбэчим на Yandex.
+    try:
+        text = await _call_gigachat(system_prompt, user_prompt, validate=validate)
+    except Exception:
+        if _yandex_configured():
+            logger.warning("GigaChat failed, falling back to YandexGPT primary", exc_info=True)
+            return await _call_yandex_primary(system_prompt, user_prompt)
+        logger.error("GigaChat failed and YandexGPT not configured", exc_info=True)
+        raise
 
     if _is_gigachat_refusal(text):
         logger.warning("GigaChat refused, falling back to YandexGPT primary")
-        if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+        if not _yandex_configured():
             raise RuntimeError(
                 "GigaChat refused and YandexGPT not configured — "
                 "set YANDEX_API_KEY + YANDEX_FOLDER_ID to enable fallback."
