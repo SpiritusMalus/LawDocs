@@ -37,7 +37,10 @@ export default function VerifyPage() {
         router.replace(`/auth/error?reason=${data.error ?? "invalid_link"}`);
         return;
       }
+      // refresh() перечитывает серверный layout с новой access_token-cookie —
+      // иначе Header остаётся в «незалогиненном» состоянии до ручной перезагрузки.
       router.replace(data.redirectTo as string);
+      router.refresh();
     } catch {
       router.replace("/auth/error?reason=unavailable");
     }
