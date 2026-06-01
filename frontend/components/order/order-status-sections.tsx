@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Download, FileText, Loader2, RefreshCcw, PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ReviewForm } from "@/components/reviews/review-form";
+import { RecoverAccessInline } from "@/components/order/recover-access-inline";
 
 interface OrderLike {
   situation_id: string;
@@ -69,12 +70,16 @@ export function DoneSection({
   downloadingFmt,
   downloadError,
   onDownload,
+  needsKeyFor,
+  onRecovered,
 }: {
   orderId: string;
   order: OrderLike;
   downloadingFmt: string | null;
   downloadError: string | null;
   onDownload: (fmt: "docx" | "pdf") => void;
+  needsKeyFor: "docx" | "pdf" | null;
+  onRecovered: () => void;
 }) {
   return (
     <>
@@ -107,6 +112,8 @@ export function DoneSection({
       {downloadError && (
         <p className="text-sm text-red-600">{downloadError}</p>
       )}
+
+      {needsKeyFor && <RecoverAccessInline onRecovered={onRecovered} />}
 
       <a
         href={`/api/documents/${orderId}/download/instruction`}

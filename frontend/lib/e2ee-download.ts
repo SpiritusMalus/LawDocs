@@ -4,6 +4,15 @@
 import { E2EEClient } from "@/lib/e2ee-client";
 import { ymGoal } from "@/lib/analytics";
 
+/** Приватного ключа нет в этом браузере — нужно восстановить доступ.
+ * Отдельный тип, чтобы UI показал форму восстановления, а не просто текст. */
+export class MissingKeyError extends Error {
+  constructor() {
+    super("Ключ доступа не найден в этом браузере.");
+    this.name = "MissingKeyError";
+  }
+}
+
 export async function downloadDocument(
   orderId: string,
   fmt: "docx" | "pdf",
@@ -31,7 +40,7 @@ export async function downloadDocument(
 
   const privateKey = E2EEClient.getPrivateKeyFromLocalStorage();
   if (!privateKey) {
-    throw new Error("Ключ не найден в браузере. Войдите заново и настройте доступ к документам.");
+    throw new MissingKeyError();
   }
 
   const encryptedRes = await fetch(url);
