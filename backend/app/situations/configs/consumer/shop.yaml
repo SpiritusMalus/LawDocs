@@ -17,8 +17,9 @@ header_fields:
     field: user_phone
   - field: user_email
 
-# Гибридный режим: структура документа рендерится через python_template,
-# все секции рендерит calculate_shop (нет narrative_fields — 0 LLM-вызовов).
+# Гибридный режим: юр-секции (нарушение/нормы/неустойка/требования) рендерит
+# calculate_shop детерминированно, а описание клиента (problem_desc + store_response)
+# перефразирует LLM в {{llm_narrative}} — официально-деловым стилем, без мата/эмоций.
 # system_prompt сохранён для совместимости с обязательным полем модели,
 # но в гибридном режиме не используется.
 system_prompt: |
@@ -30,13 +31,25 @@ python_template: |
 
   [calculated_violation_section]
 
+  {{llm_narrative}}
+
   [calculated_legal_section]
 
   [calculated_penalty_section]
 
   [calculated_demand_section]
 
-narrative_fields: []
+narrative_fields:
+  - problem_desc
+  - store_response
+
+narrative_prompt: |
+  Ты — помощник юриста. Кратко (3–6 предложений) изложи фактические обстоятельства
+  официально-деловым стилем на основе описания клиента и ответа магазина.
+  Убери мат, эмоции, просторечия и оскорбления — оставь только сухие факты.
+  Исправь орфографию и грамматику. Не упоминай суммы компенсации и расчёт
+  неустойки — они указываются отдельно. Не выдумывай факты, используй только
+  данные клиента.
 
 wizard_steps:
   - title: "Магазин и покупка"
