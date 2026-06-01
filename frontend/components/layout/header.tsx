@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Scale, Menu, X, LayoutDashboard, FolderOpen } from "lucide-react";
+import { Scale, Menu, X, LayoutDashboard, FolderOpen, User } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { DOCUMENT_PRICE_LABEL } from "@/lib/pricing";
@@ -41,15 +41,24 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
 
         <div className="flex items-center gap-2">
           {isAuthenticated ? (
-            <Link
-              href="/dashboard"
-              className={cn(
-                "h-11 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-sm font-medium text-gray-300 transition-colors"
-              )}
-            >
-              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-              Мои заказы
-            </Link>
+            <>
+              <Link
+                href="/dashboard"
+                className={cn(
+                  "h-11 px-4 hidden md:inline-flex items-center gap-2 rounded-lg border border-gray-700 bg-gray-800 hover:bg-gray-700 text-sm font-medium text-gray-300 transition-colors"
+                )}
+              >
+                <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                Мои заказы
+              </Link>
+              <Link
+                href="/profile"
+                className="h-11 px-4 hidden md:inline-flex items-center gap-2 text-sm font-medium text-gray-400 hover:text-white transition-colors"
+              >
+                <User className="h-4 w-4" aria-hidden="true" />
+                Профиль
+              </Link>
+            </>
           ) : (
             <>
               <Link
@@ -100,14 +109,24 @@ export function Header({ isAuthenticated = false }: { isAuthenticated?: boolean 
               </Link>
             ))}
             {isAuthenticated ? (
-              <Link
-                href="/dashboard"
-                onClick={() => setOpen(false)}
-                className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
-              >
-                <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
-                Мои заказы
-              </Link>
+              <>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors mt-1"
+                >
+                  <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+                  Мои заказы
+                </Link>
+                <Link
+                  href="/profile"
+                  onClick={() => setOpen(false)}
+                  className="flex items-center gap-2 min-h-11 px-3 py-2.5 text-sm text-gray-300 hover:bg-gray-800 rounded-lg transition-colors"
+                >
+                  <User className="h-4 w-4" aria-hidden="true" />
+                  Профиль
+                </Link>
+              </>
             ) : (
               <>
                 <Link
