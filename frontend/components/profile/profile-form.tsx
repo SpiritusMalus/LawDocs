@@ -59,14 +59,16 @@ export function ProfileForm({ initialName, email, processingRestricted }: Profil
   }
 
   function handleRevokeConsent() {
-    if (!window.confirm("Отозвать согласие на обработку персональных данных? Аккаунт и все заказы будут удалены безвозвратно.")) return;
-    startDeleteTransition(async () => {
-      const res = await fetch("/api/user/me", { method: "DELETE" });
+    if (restricted) return; // согласие уже отозвано (обработка ограничена)
+    if (!window.confirm("Отозвать согласие на обработку персональных данных? Обработка ваших данных будет ограничена (ст. 21 152-ФЗ), новые заказы станут недоступны. Аккаунт сохранится — удалить его можно отдельно.")) return;
+    startRestrictTransition(async () => {
+      const res = await fetch("/api/user/restrict-processing", { method: "POST" });
       if (!res.ok) {
         setError("Не удалось отозвать согласие. Попробуйте ещё раз.");
         return;
       }
-      router.push("/");
+      setRestricted(true);
+      router.refresh();
     });
   }
 
@@ -84,6 +86,7 @@ export function ProfileForm({ initialName, email, processingRestricted }: Profil
         return;
       }
       setRestricted(!restricted);
+      router.refresh();
     });
   }
 
@@ -199,15 +202,17 @@ export function ProfileForm({ initialName, email, processingRestricted }: Profil
           >
             {isDeleting ? "Удаляем..." : "Удалить аккаунт"}
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isDeleting}
-            onClick={handleRevokeConsent}
-            className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
-          >
-            {isDeleting ? "Отзываем..." : "Отозвать согласие на обработку данных"}
-          </Button>
+          {!restricted && (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isRestricting}
+              onClick={handleRevokeConsent}
+              className="text-red-600 border-red-200 hover:bg-red-50 hover:border-red-300"
+            >
+              {isRestricting ? "Отзываем..." : "Отозвать согласие на обработку данных"}
+            </Button>
+          )}
         </div>
       </div>
       <div className="pt-6 border-t border-gray-100">
