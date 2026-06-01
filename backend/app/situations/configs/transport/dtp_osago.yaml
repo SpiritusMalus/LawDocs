@@ -16,8 +16,10 @@ header_fields:
     field: user_phone
   - field: user_email
 
-# Гибридный режим: структура документа рендерится через python_template,
-# все секции рендерит calculate_dtp_osago (нет narrative_fields — 0 LLM-вызовов).
+# Гибридный режим: юр-секции рендерит calculate_dtp_osago детерминированно,
+# а пояснение клиента (refusal_reason, опционально — при отказе страховой)
+# перефразирует LLM в {{llm_narrative}} официально-деловым стилем. Если поле
+# пустое — нарратив пуст (движок это учитывает).
 # system_prompt сохранён для совместимости с обязательным полем модели,
 # но в гибридном режиме не используется.
 system_prompt: |
@@ -29,13 +31,23 @@ python_template: |
 
   [calculated_violation_section]
 
+  {{llm_narrative}}
+
   [calculated_legal_section]
 
   [calculated_amount_section]
 
   [calculated_demand_section]
 
-narrative_fields: []
+narrative_fields:
+  - refusal_reason
+
+narrative_prompt: |
+  Ты — помощник юриста. Кратко (2–4 предложения) изложи обстоятельства ДТП и
+  позицию страховой компании официально-деловым стилем на основе пояснения клиента.
+  Убери мат, эмоции, просторечия и оскорбления — оставь только сухие факты.
+  Исправь орфографию и грамматику. Не упоминай суммы и расчёт — они указываются
+  отдельно. Не выдумывай факты, используй только данные клиента.
 
 wizard_steps:
   - title: "Страховая компания"
