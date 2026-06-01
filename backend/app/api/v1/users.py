@@ -25,6 +25,8 @@ class UserMeOut(BaseModel):
     name: str | None
     completed_orders_count: int
     public_key: str | None = None
+    processing_restricted: bool = False
+    processing_restricted_at: datetime | None = None
 
 
 class UserUpdate(BaseModel):
