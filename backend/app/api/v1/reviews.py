@@ -35,7 +35,7 @@ def create_admin_token() -> str:
 class ReviewCreate(BaseModel):
     order_id: str
     rating: int = Field(ge=1, le=5)
-    text: str = Field(min_length=50, max_length=1000)
+    text: str = Field(min_length=1, max_length=1000)
     name: str | None = Field(default=None, max_length=100)
     city: str | None = Field(default=None, max_length=50)
 

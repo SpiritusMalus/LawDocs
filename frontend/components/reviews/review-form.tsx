@@ -94,8 +94,8 @@ export function ReviewForm({ orderId, situationId }: ReviewFormProps) {
       setError("Пожалуйста, выберите оценку.");
       return;
     }
-    if (text.trim().length < 50) {
-      setError("Отзыв должен быть не менее 50 символов.");
+    if (text.trim().length === 0) {
+      setError("Напишите текст отзыва.");
       return;
     }
     setSubmitting(true);
@@ -169,7 +169,7 @@ export function ReviewForm({ orderId, situationId }: ReviewFormProps) {
       {/* Text */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-gray-500">
-          Ваш отзыв <span className="text-gray-400">(50–1000 символов)</span>
+          Ваш отзыв <span className="text-gray-400">(до 1000 символов)</span>
         </label>
         <textarea
           value={text}
