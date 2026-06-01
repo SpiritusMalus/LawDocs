@@ -125,17 +125,34 @@ async def init_order(
 
 
 @router.post("/{order_id}/pay", response_model=PaymentOut)
+@limiter.limit("10/minute")
 async def pay_order(
+    request: Request,
     order_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> PaymentOut:
+    # Лочим строку заказа на время оплаты: двойной клик «Оплатить» не должен
+    # создать два платежа в ЮKassa. skip_locked=True — параллельный запрос не
+    # ждёт, а сразу получает None и отдаёт 409 (см. ниже). Паттерн как в retry_order.
     result = await db.execute(
-        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+        select(Order)
+        .where(Order.id == order_id, Order.user_id == current_user.id)
+        .with_for_update(skip_locked=True)
     )
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+        # Либо чужой/несуществующий заказ, либо строка уже залочена параллельной
+        # оплатой. Различаем: есть ли заказ вообще (без лока).
+        exists = await db.execute(
+            select(Order.id).where(Order.id == order_id, Order.user_id == current_user.id)
+        )
+        if exists.scalar_one_or_none() is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Платёж уже создаётся. Подождите немного.",
+        )
     if order.status not in (OrderStatus.DRAFT.value, OrderStatus.PENDING_PAYMENT.value):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
