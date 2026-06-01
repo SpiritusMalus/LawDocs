@@ -73,6 +73,26 @@ async def test_webhook_wrong_ip_rejected_in_production(
 
 
 @pytest.mark.asyncio
+async def test_webhook_ip_77_75_154_accepted_in_production(
+    client: AsyncClient, monkeypatch
+):
+    """77.75.154.128/25 — диапазон, с которого реально приходили уведомления
+    (77.75.154.206) и отвергались как 403. Должен проходить IP-фильтр."""
+    import app.api.v1.webhooks as wh_mod
+    monkeypatch.setattr(wh_mod.settings, "APP_ENV", "production")
+
+    # Не payment.succeeded → дойдём только до IP-фильтра, не до verify/БД.
+    # Если IP принят — фильтр пропустит и вернётся 200 (received), а не 403.
+    body = json.dumps({"event": "payment.canceled", "object": {"id": "pay-154"}})
+    resp = await client.post(
+        "/api/v1/webhooks/yookassa",
+        content=body,
+        headers={"Content-Type": "application/json", "x-real-ip": "77.75.154.206"},
+    )
+    assert resp.status_code == 200
+
+
+@pytest.mark.asyncio
 async def test_webhook_schedules_generation_and_sets_generating(
     client: AsyncClient,
     db_session: AsyncSession,
