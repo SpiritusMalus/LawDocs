@@ -116,6 +116,35 @@ async def test_pay_order_draft_creates_payment(
 
 
 @pytest.mark.asyncio
+async def test_pay_order_pending_can_be_paid_again(
+    client: AsyncClient,
+    auth_headers: dict,
+    user: User,
+    db_session: AsyncSession,
+):
+    """Заказ уже в pending_payment (юзер вернулся на страницу) — оплата
+    должна работать, row-lock не ломает легитимный повтор."""
+    order = Order(
+        user_id=user.id,
+        situation_id="shop",
+        form_data=FORM_DATA,
+        status="pending_payment",
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    fake_payment = {"payment_id": "yoo-pay-002", "confirmation_url": "https://yookassa.ru/pay/002"}
+    with patch("app.api.v1.orders.create_payment", new_callable=AsyncMock, return_value=fake_payment) as mock_pay:
+        resp = await client.post(f"/api/v1/orders/{order.id}/pay", headers=auth_headers)
+
+    assert resp.status_code == 200
+    assert mock_pay.await_count == 1  # ровно один платёж на запрос
+    await db_session.refresh(order)
+    assert order.yookassa_payment_id == "yoo-pay-002"
+
+
+@pytest.mark.asyncio
 async def test_pay_order_wrong_owner_returns_404(
     client: AsyncClient,
     auth_headers: dict,
