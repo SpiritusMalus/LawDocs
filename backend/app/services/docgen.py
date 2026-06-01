@@ -267,19 +267,28 @@ def _instruction_to_pdf(content: str, legal_refs: list[dict]) -> bytes:
         pdf.ln(3)
 
         pdf.set_font("FreeSans", size=10)
+        bullet_w = 6  # ширина колонки под маркер «•»
+        text_x = pdf.l_margin + bullet_w
+        text_w = pdf.epw - bullet_w  # ширина под название закона
         for ref in legal_refs:
             law = ref.get("law", "")
             url = ref.get("url", "")
             if not law:
                 continue
-            pdf.write(6, "• ")
+            # Маркер в узкой ячейке слева, текст закона — в multi_cell справа с
+            # висячим отступом: длинные названия переносятся ровно под текстом,
+            # а не под маркером. multi_cell делает всю ячейку кликабельной ссылкой.
+            row_y = pdf.get_y()
+            pdf.set_xy(pdf.l_margin, row_y)
+            pdf.cell(bullet_w, 6, "•")
+            pdf.set_xy(text_x, row_y)
             if url:
                 pdf.set_text_color(0, 80, 200)
-                pdf.write(6, law, link=url)
+                pdf.multi_cell(text_w, 6, law, link=url, align="L", new_x="LMARGIN", new_y="NEXT")
                 pdf.set_text_color(0, 0, 0)
             else:
-                pdf.write(6, law)
-            pdf.ln(7)
+                pdf.multi_cell(text_w, 6, law, align="L", new_x="LMARGIN", new_y="NEXT")
+            pdf.ln(2)
 
     return bytes(pdf.output())
 
