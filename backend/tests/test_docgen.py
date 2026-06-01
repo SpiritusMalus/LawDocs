@@ -10,6 +10,7 @@ from app.services.docgen import (
     _find_template,
     _split_last_line,
     _render_pdf,
+    _build_header,
 )
 from app.services.calculators import _ru_date, _sentence_case
 
@@ -169,3 +170,49 @@ def test_dtp_calculator_keeps_city_capitalized():
     intro = result["calculated_intro_section"]
     assert "г. Москва" in intro
     assert "г. москва" not in intro
+
+
+# Шапка «От:» — поля заявителя должны попадать в шапку, даже если конфиг
+# ссылается на них под историческими именами (user_*), а form_data приходит
+# из CONTACT_STEP под каноническими (full_name, contact_address, phone, email).
+# Регрессия: раньше блок «От:» был пустым во всех ситуациях.
+
+_SHOP_HEADER_FIELDS = [
+    {"label": "Руководителю", "field": "store_name"},
+    {"field": "store_address"},
+    {"label": "От:", "field": "user_full_name"},
+    {"field": "user_address"},
+    {"prefix": "тел. ", "field": "user_phone"},
+    {"field": "user_email"},
+]
+
+_CONTACT_FORM_DATA = {
+    "store_name": "DNS",
+    "store_address": "г. Москва, ул. Тверская, д. 1",
+    "full_name": "Иванов Иван Иванович",
+    "contact_address": "г. Москва, ул. Пушкина, д. 5, кв. 10",
+    "phone": "+7 999 123-45-67",
+    "email": "ivan@example.com",
+}
+
+
+def test_build_header_includes_applicant_via_aliases():
+    lines = _build_header(_SHOP_HEADER_FIELDS, _CONTACT_FORM_DATA)
+    # Заявитель в шапке
+    assert "От:" in lines
+    assert "Иванов Иван Иванович" in lines
+    assert "г. Москва, ул. Пушкина, д. 5, кв. 10" in lines
+    assert "тел. +7 999 123-45-67" in lines
+    assert "ivan@example.com" in lines
+    # Получатель тоже на месте
+    assert "Руководителю" in lines
+    assert "DNS" in lines
+
+
+def test_build_header_skips_missing_applicant_fields():
+    # Нет контактных данных — блок «От:» (label) тоже не должен появиться,
+    # т.к. label рендерится только при непустом значении следующего поля.
+    lines = _build_header(_SHOP_HEADER_FIELDS, {"store_name": "DNS"})
+    assert "DNS" in lines
+    assert "От:" not in lines
+    assert "Иванов Иван Иванович" not in lines

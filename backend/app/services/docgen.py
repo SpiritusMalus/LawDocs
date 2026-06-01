@@ -20,6 +20,7 @@ from pathlib import Path
 from docx import Document as DocxDocument
 
 from app.core.constants import MONTHS_RU
+from app.services.field_resolve import resolve_field_value
 from app.services.storage import upload_bytes
 
 logger = logging.getLogger(__name__)
@@ -91,7 +92,7 @@ def _build_header(header_fields: list, form_data: dict) -> list[str]:
         label = hf.label if hasattr(hf, "label") else hf.get("label")
         prefix = hf.prefix if hasattr(hf, "prefix") else hf.get("prefix")
 
-        value = str(form_data.get(field, "")).strip()
+        value = resolve_field_value(field, form_data).strip()
         if not value:
             continue
 
