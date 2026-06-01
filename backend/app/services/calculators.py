@@ -51,8 +51,11 @@ _DDU_TERMINATION_REASON_TEXTS = {
         "передан участнику долевого строительства (п. 3 ч. 1 ст. 9 Федерального "
         "закона № 214-ФЗ)"
     ),
-    "other": "",
+    # Творительный падеж — нейтральная формулировка для «other»/неизвестного кода,
+    # чтобы не получить повисший предлог «в связи с » или сырой код в тексте.
+    "other": "существенным нарушением застройщиком условий договора участия в долевом строительстве",
 }
+_DDU_TERMINATION_REASON_FALLBACK = _DDU_TERMINATION_REASON_TEXTS["other"]
 
 
 def _parse_date(value: str | None) -> date | None:
@@ -202,7 +205,9 @@ def calculate_ddu_termination(form_data: dict) -> dict:
 
     # Текст основания расторжения для python_template
     reason_code = str(data.get("termination_reason", ""))
-    data["termination_reason_text"] = _DDU_TERMINATION_REASON_TEXTS.get(reason_code, reason_code)
+    data["termination_reason_text"] = _DDU_TERMINATION_REASON_TEXTS.get(
+        reason_code, _DDU_TERMINATION_REASON_FALLBACK
+    )
 
     # Форматированные даты для подстановки в python_template
     contract_d = _parse_date(data.get("contract_date"))
@@ -285,6 +290,14 @@ _SHOP_DEMAND_SECTIONS = {
     "repair": "провести гарантийный ремонт товара в установленный законом срок",
 }
 
+# Нейтральный fallback: при problem_type вне набора (напр. «other») НЕ навязываем
+# конкретную статью (раньше подставлялась ст.18 о дефектах — вводило в заблуждение).
+_SHOP_LEGAL_FALLBACK = (
+    "В соответствии с Законом РФ от 07.02.1992 № 2300-1 «О защите прав "
+    "потребителей» потребитель вправе требовать восстановления нарушенных прав "
+    "и удовлетворения предъявленного требования в установленный законом срок."
+)
+
 
 def calculate_shop(form_data: dict) -> dict:
     """Претензия в магазин: неустойка 1%/день по ст. 23 ЗоЗПП."""
@@ -326,7 +339,7 @@ def calculate_shop(form_data: dict) -> dict:
     )
 
     data["calculated_legal_section"] = _SHOP_LEGAL_SECTIONS.get(
-        problem_type, _SHOP_LEGAL_SECTIONS["defect"]
+        problem_type, _SHOP_LEGAL_FALLBACK
     )
 
     # Penalty
@@ -922,12 +935,14 @@ _EMPLOYER_LEGAL_SECTIONS = {
     ),
 }
 
+# Нейтральный fallback: применяется к violation_type вне набора salary_delay/
+# underpayment/vacation (напр. «dismissal», «other»). Раньше всем подставлялся
+# текст про задержку зарплаты (ст.136/236) — для увольнения это вводило в
+# заблуждение. Конкретные статьи для dismissal — отдельной задачей (юр-ревью).
 _EMPLOYER_LEGAL_DEFAULT = (
-    "В соответствии со статьями 136, 140 и 236 Трудового кодекса Российской "
-    "Федерации работодатель обязан выплачивать заработную плату в установленные "
-    "сроки и несёт ответственность за задержку выплат в виде уплаты денежной "
-    "компенсации в размере не ниже 1/150 действующей ключевой ставки Банка "
-    "России от задержанной суммы за каждый день просрочки."
+    "В соответствии с Трудовым кодексом Российской Федерации работодатель обязан "
+    "соблюдать трудовое законодательство и условия трудового договора, а работник "
+    "вправе требовать восстановления нарушенных трудовых прав."
 )
 
 
@@ -1356,6 +1371,15 @@ _TELECOM_LEGAL_SECTIONS = {
     ),
 }
 
+# Нейтральный fallback: при problem_type вне набора (напр. «other») НЕ навязываем
+# статью конкретной ветки (раньше подставлялась ветка no_service).
+_TELECOM_LEGAL_FALLBACK = (
+    "В соответствии со статьёй 29 Закона РФ от 07.02.1992 № 2300-1 «О защите прав "
+    "потребителей» и Федеральным законом от 07.07.2003 № 126-ФЗ «О связи» "
+    "потребитель вправе требовать устранения нарушений при оказании услуг связи "
+    "и возмещения причинённых убытков."
+)
+
 _TELECOM_DEMAND_SECTIONS = {
     "fix": "устранить неисправность и восстановить оказание услуги связи надлежащего качества",
     "refund": "произвести перерасчёт и возвратить денежные средства за период отсутствия услуги",
@@ -1407,7 +1431,7 @@ def calculate_telecom(form_data: dict) -> dict:
     )
 
     data["calculated_legal_section"] = _TELECOM_LEGAL_SECTIONS.get(
-        problem_type, _TELECOM_LEGAL_SECTIONS["no_service"]
+        problem_type, _TELECOM_LEGAL_FALLBACK
     )
 
     # Refund calc (только для no_service / slow_speed)
