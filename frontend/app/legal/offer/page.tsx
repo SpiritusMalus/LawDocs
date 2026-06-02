@@ -9,7 +9,7 @@ export default function OfferPage() {
   return (
     <article className="max-w-3xl mx-auto px-4 py-16 prose prose-gray">
       <h1 className="text-3xl font-bold mb-2">Договор-оферта</h1>
-      <p className="text-sm text-gray-400 mb-8">Редакция от 18 мая 2026 г.</p>
+      <p className="text-sm text-gray-400 mb-8">Редакция от 2 июня 2026 г.</p>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
         <p className="font-semibold text-gray-800 mb-3">Главное для вас</p>
@@ -73,6 +73,14 @@ export default function OfferPage() {
         Исполнитель не несёт ответственности за последствия использования документа,
         составленного на основе недостоверных данных.
       </p>
+      <p className="text-gray-700 leading-relaxed">
+        Документ формируется по типовому шаблону и до подачи требует проверки
+        Заказчиком на соответствие его конкретной ситуации. Заказчик обязуется перед
+        использованием документа проверить корректность приведённых в нём сведений,
+        сумм и ссылок на нормы права, а при необходимости — обратиться за очной
+        юридической консультацией. Заказчик самостоятельно принимает решение о подаче
+        документа и несёт ответственность за такое решение.
+      </p>
 
       <h2 className="text-xl font-semibold mt-8 mb-3">4. Возврат денежных средств</h2>
       <p className="text-gray-700 leading-relaxed">
@@ -98,7 +106,7 @@ export default function OfferPage() {
       </p>
 
       <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-500 not-prose">
-        <p>Редакция от 18 мая 2026 г.</p>
+        <p>Редакция от 2 июня 2026 г.</p>
         <p>Статус: Опубликована и действует</p>
         <p>Соответствие: ГК РФ · ФЗ «О защите прав потребителей»</p>
       </div>
