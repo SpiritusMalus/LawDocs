@@ -454,6 +454,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
     service_name = str(data.get("service_name") or "").strip()
     car_model = str(data.get("car_model") or "").strip()
     car_plate = str(data.get("car_plate") or "").strip()
+    work_desc = str(data.get("work_desc") or "").strip()
     service_date = _ru_date(data.get("service_date"))
 
     try:
@@ -469,8 +470,10 @@ def calculate_auto_repair(form_data: dict) -> dict:
         intro += f" в автосервис «{service_name}»"
     if service_date:
         intro += f" {service_date}"
+    if work_desc:
+        intro += f" для выполнения работ: {work_desc}"
     if price > 0:
-        intro += f" для выполнения работ на сумму {_fmt(price)} руб."
+        intro += f" на сумму {_fmt(price)} руб." if work_desc else f" для выполнения работ на сумму {_fmt(price)} руб."
     intro += "."
     data["calculated_intro_section"] = intro
 
@@ -1080,6 +1083,7 @@ def calculate_repair(form_data: dict) -> dict:
     contract_number = str(data.get("contract_number") or "").strip()
     work_end_date = _ru_date(data.get("work_end_date"))
     defect_discovery_date_str = _ru_date(data.get("defect_discovery_date"))
+    contractor_response = str(data.get("contractor_response") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
     try:
@@ -1109,6 +1113,7 @@ def calculate_repair(form_data: dict) -> dict:
     data["calculated_violation_section"] = (
         f"В выполненной работе выявлены недостатки."
         + (f" Дата обнаружения: {defect_discovery_date_str}." if defect_discovery_date_str else "")
+        + (f" На обращение об устранении недостатков подрядчик отреагировал следующим образом: {contractor_response}." if contractor_response else "")
     )
 
     data["calculated_legal_section"] = (
@@ -1402,6 +1407,7 @@ def calculate_telecom(form_data: dict) -> dict:
     service_type = str(data.get("service_type") or "").strip()
     problem_type = str(data.get("problem_type") or "").strip()
     problem_start_date_str = _ru_date(data.get("problem_start_date"))
+    complaint_date_str = _ru_date(data.get("complaint_date"))
     demand = str(data.get("demand") or "").strip()
 
     service_labels = {
@@ -1422,6 +1428,8 @@ def calculate_telecom(form_data: dict) -> dict:
         intro += f" заключён договор об оказании {service_label}"
     if problem_start_date_str:
         intro += f". С {problem_start_date_str} оператор нарушает условия договора"
+    if complaint_date_str:
+        intro += f". {complaint_date_str} я обращался в службу поддержки оператора, нарушение не устранено"
     intro += "."
     data["calculated_intro_section"] = intro
 
@@ -1947,11 +1955,14 @@ def calculate_marketplace(form_data: dict) -> dict:
     product = str(data.get("product_name") or "").strip()
     order_number = str(data.get("order_number") or "").strip()
     order_date_raw = str(data.get("order_date") or "").strip()
+    incident_date_raw = str(data.get("incident_date") or "").strip()
     problem_type = str(data.get("problem_type") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
     order_d = _parse_date(order_date_raw)
     order_str = _fmt_date_ru(order_d) if order_d else order_date_raw
+    incident_d = _parse_date(incident_date_raw)
+    incident_str = _fmt_date_ru(incident_d) if incident_d else incident_date_raw
 
     try:
         order_amount = Decimal(str(data.get("order_amount") or "0"))
@@ -1971,6 +1982,8 @@ def calculate_marketplace(form_data: dict) -> dict:
         intro_parts.append(f"заказ № {order_number}")
     if order_str:
         intro_parts.append(f"дата заказа: {order_str}")
+    if incident_str:
+        intro_parts.append(f"дата возникновения проблемы: {incident_str}")
     intro_parts.append(f"сумма заказа: {_fmt(order_amount)} руб.")
     data["calculated_intro_section"] = ", ".join(intro_parts) + "."
 
@@ -2301,6 +2314,7 @@ def calculate_tour_operator(form_data: dict) -> dict:
     data.setdefault("calculated_demand_section", "")
 
     operator = str(data.get("tour_operator") or "").strip() or "туроператору"
+    agency_name = str(data.get("agency_name") or "").strip()
     destination = str(data.get("trip_destination") or "").strip()
     departure_date_raw = str(data.get("departure_date") or "").strip()
     contract_num = str(data.get("contract_number") or "").strip()
@@ -2321,6 +2335,8 @@ def calculate_tour_operator(form_data: dict) -> dict:
     refund_due = tour_price - refunded_amount if refunded_amount > 0 else tour_price
 
     intro_parts = [f"Туроператор: {operator}"]
+    if agency_name:
+        intro_parts.append(f"тур приобретён через турагентство «{agency_name}»")
     if destination:
         intro_parts.append(f"направление: {destination}")
     if departure_str:
