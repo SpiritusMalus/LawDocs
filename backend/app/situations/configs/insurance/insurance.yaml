@@ -110,17 +110,6 @@ wizard_steps:
         type: number
         label: "Дней просрочки (если есть)"
         placeholder: "45"
-      - id: demand
-        type: radio
-        label: "Ваше требование"
-        required: true
-        options:
-          - value: pay_difference
-            label: "Доплатить разницу и неустойку"
-          - value: full_payment
-            label: "Выплатить полную сумму (при отказе)"
-          - value: other
-            label: "Другое"
 
 legal_refs:
   - law: "ГК РФ ст. 929 — договор имущественного страхования, обязанность выплаты"

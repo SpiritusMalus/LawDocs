@@ -100,17 +100,6 @@ wizard_steps:
         type: textarea
         label: "Дополнительные подробности"
         placeholder: "Клуб перенёс занятия йогой в неудобное время, убрали бассейн…"
-      - id: club_response
-        type: radio
-        label: "Что ответил клуб"
-        required: true
-        options:
-          - value: refused
-            label: "Отказали в возврате"
-          - value: ignored
-            label: "Игнорируют обращение"
-          - value: not_contacted
-            label: "Ещё не обращался(ась)"
       - id: refund_amount
         type: number
         label: "Ваша оценка суммы к возврату, ₽"

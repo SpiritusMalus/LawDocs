@@ -2987,6 +2987,7 @@ def calculate_repair_apartment(form_data: dict) -> dict:
 
     contractor_name = str(data.get("contractor_name") or "").strip()
     contract_date = _ru_date(data.get("contract_date"))
+    contract_number = str(data.get("contract_number") or "").strip()
     contract_amount_str = str(data.get("contract_amount") or "0")
     defect_discovery_date = _parse_date(data.get("defect_discovery_date"))
 
@@ -2999,10 +3000,14 @@ def calculate_repair_apartment(form_data: dict) -> dict:
     intro = "Между мной и"
     if contractor_name:
         intro += f" {contractor_name}"
-    if contract_date:
+    if contract_number:
+        intro += f" заключен договор подряда № {contract_number}"
+    elif contract_date:
         intro += f" заключен договор подряда от {contract_date}"
     else:
         intro += " заключен договор подряда"
+    if contract_number and contract_date:
+        intro += f" от {contract_date}"
     if contract_amount > 0:
         intro += f" на сумму {_fmt(contract_amount)} руб."
     intro += "."
@@ -3167,6 +3172,7 @@ def calculate_university_admission(form_data: dict) -> dict:
     specialty = str(data.get("specialty") or "").strip()
     violation_type = str(data.get("violation_type") or "").strip()
     application_date = _ru_date(data.get("application_date"))
+    exam_score = str(data.get("exam_score") or "").strip()
 
     # Intro
     intro = "Мной поданы документы на поступление"
@@ -3176,6 +3182,8 @@ def calculate_university_admission(form_data: dict) -> dict:
         intro += f" в {university_name}"
     if application_date:
         intro += f" {application_date}"
+    if exam_score:
+        intro += f". Мой конкурсный балл — {exam_score}"
     intro += "."
     data["calculated_intro_section"] = intro
 
