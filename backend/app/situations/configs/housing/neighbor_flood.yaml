@@ -82,10 +82,6 @@ wizard_steps:
         label: "ФИО виновника (или название УК)"
         placeholder: "Сидоров Пётр Иванович"
         required: true
-      - id: neighbor_apartment
-        type: text
-        label: "Квартира виновника"
-        placeholder: "кв. 24 (этажом выше)"
       - id: neighbor_address_full
         type: text
         label: "Адрес для направления претензии"
@@ -100,18 +96,6 @@ wizard_steps:
             label: "Да, УК составила акт"
           - value: "no"
             label: "Нет, только фотографии"
-      - id: neighbor_reaction
-        type: radio
-        label: "Позиция виновника"
-        options:
-          - value: denies
-            label: "Отрицает вину"
-          - value: ignores
-            label: "Игнорирует"
-          - value: admits_no_pay
-            label: "Признаёт, но платить отказывается"
-          - value: unknown
-            label: "Ещё не обращался(ась)"
   - title: "Ущерб"
     fields:
       - id: damage_desc

@@ -9,6 +9,8 @@ template_file: null
 header_fields:
   - label: "Руководителю"
     field: company_name
+  - prefix: "ИНН "
+    field: company_inn
   - field: director_name
   - field: company_address
   - label: "От:"

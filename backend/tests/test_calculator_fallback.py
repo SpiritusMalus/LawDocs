@@ -10,12 +10,15 @@ fallback = конкретная ветка (чужая статья закона
 ни с одной из конкретных веток словаря (т.е. fallback обязан быть нейтральным),
 и сырой код опции не должен утекать в текст документа.
 """
+import inspect
+import re
 from pathlib import Path
 
 import pytest
 
 import app.services.calculators as C
-from app.situations.registry import registry
+from app.situations.registry import CONTACT_STEP, registry
+from app.services.field_resolve import _FIELD_ALIASES
 
 CONFIGS_DIR = Path(__file__).parent.parent / "app" / "situations" / "configs"
 
@@ -23,6 +26,13 @@ CONFIGS_DIR = Path(__file__).parent.parent / "app" / "situations" / "configs"
 @pytest.fixture(scope="module", autouse=True)
 def _load():
     registry.load(CONFIGS_DIR)
+
+
+def _all_situation_ids() -> list[str]:
+    """ID всех ситуаций для parametrize (registry грузится на этапе коллекции)."""
+    if not len(registry):
+        registry.load(CONFIGS_DIR)
+    return sorted(registry.ids())
 
 
 def _options(situation_id: str, field_id: str) -> list[str]:
@@ -77,6 +87,81 @@ def test_every_option_has_branch_or_neutral_fallback(sid, field_id, legal_dict, 
                 f"{sid}.{field_id}={value}: нет своей ветки, fallback взял ветку "
                 f"'{key}' — нужен нейтральный текст или своя ветка"
             )
+
+
+# ── Архитектурный инвариант: нет «мёртвых» полей ──────────────────────────
+# Первопричина мёртвых полей (handoff: рассинхрон копипасты) — поле объявлено в
+# wizard, но никто его не читает. Поле «используется», если встречается в одном
+# из 5 мест: header_fields, narrative_fields, плейсхолдер [поле] в python_template
+# или system_prompt, либо data.get("поле")/data["поле"] в калькуляторе ситуации.
+
+# Контактные поля добавляются ко всем ситуациям через CONTACT_STEP и читаются
+# в шапке через алиасы (field_resolve) — их не считаем «объявленными в ситуации».
+_CONTACT_FIELD_IDS = {f.id for f in CONTACT_STEP.fields}
+
+# Все имена-алиасы контактов (full_name↔user_full_name и т.п.) — header_fields
+# могут ссылаться на любой вариант.
+_ALIAS_NAMES = {name for variants in _FIELD_ALIASES.values() for name in variants}
+
+_PLACEHOLDER_RE = re.compile(r"\[([a-z_][a-z0-9_]*)\]")
+_CALC_READ_RE = re.compile(r"""\bdata(?:\.get\(|\[)["']([a-z_][a-z0-9_]*)["']""")
+_FORM_READ_RE = re.compile(r"""\bform_data(?:\.get\(|\[)["']([a-z_][a-z0-9_]*)["']""")
+
+
+def _used_field_ids(config) -> set[str]:
+    """Поля, которые ситуация реально потребляет (5 путей)."""
+    used: set[str] = set()
+
+    # 1. header_fields (+ алиасы контактов)
+    for hf in config.header_fields:
+        used.add(hf.field)
+        for canonical, variants in _FIELD_ALIASES.items():
+            if hf.field in variants or hf.field == canonical:
+                used.update(variants)
+                used.add(canonical)
+
+    # 2. narrative_fields
+    used.update(config.narrative_fields)
+
+    # 2b. legal_refs_by_branch: ключи формата "field:value" выбирают нормы по полю
+    for branch_key in config.legal_refs_by_branch:
+        used.add(branch_key.split(":", 1)[0])
+
+    # 3-4. плейсхолдеры [поле] в python_template и system_prompt
+    for text in (config.python_template, config.system_prompt):
+        if text:
+            used.update(_PLACEHOLDER_RE.findall(text))
+
+    # 5. data.get("x")/data["x"]/form_data... в калькуляторе ситуации
+    calc = C.SITUATION_CALCULATORS.get(config.id)
+    if calc is not None:
+        src = inspect.getsource(calc)
+        used.update(_CALC_READ_RE.findall(src))
+        used.update(_FORM_READ_RE.findall(src))
+
+    return used
+
+
+@pytest.mark.parametrize("sid", _all_situation_ids())
+def test_no_dead_wizard_fields(sid):
+    """Каждое объявленное в wizard поле где-то потребляется (нет мёртвых полей).
+
+    Ловит рассинхрон копипасты: поле перенесли в YAML, но не подключили к
+    калькулятору/шапке/нарративу/шаблону этой ситуации. Юзер вводит данные впустую.
+    """
+    config = registry.get(sid)
+    declared = {
+        f.id
+        for step in config.wizard_steps
+        for f in step.fields
+        if f.id not in _CONTACT_FIELD_IDS
+    }
+    used = _used_field_ids(config) | _ALIAS_NAMES  # контакты-алиасы всегда «используются» в шапке
+    dead = declared - used
+    assert not dead, (
+        f"{sid}: объявлены, но нигде не используются (мёртвые поля): {sorted(dead)}. "
+        f"Подключите к калькулятору/header_fields/narrative_fields/шаблону — или удалите из wizard."
+    )
 
 
 def test_ddu_termination_other_no_raw_code_or_dangling():
