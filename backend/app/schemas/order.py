@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, field_validator, model_validator
 
 _MAX_FIELD_VALUE_LEN = 5_000
 
@@ -45,6 +45,22 @@ class OrderInitRequest(BaseModel):
                 raise ValueError(f"Поле {key!r} превышает {_MAX_FIELD_VALUE_LEN} символов")
 
         return v
+
+    @model_validator(mode="after")
+    def check_dates(self) -> "OrderInitRequest":
+        """Проверка формата и логики дат по правилам ситуации (см. validate_dates).
+
+        Нужны оба поля сразу (situation_id + form_data), поэтому это model-валидатор,
+        а не field-валидатор. Если ситуация не найдена (например, registry ещё не
+        загружен в тестах) — пропускаем: тип/наличие ситуации проверяется отдельно.
+        """
+        from app.situations.registry import registry
+        from app.situations.validate import validate_dates
+
+        config = registry.get(self.situation_id)
+        if config:
+            validate_dates(config, self.form_data)
+        return self
 
 
 class OrderInitOut(BaseModel):

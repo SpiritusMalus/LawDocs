@@ -354,6 +354,37 @@ def test_no_gendered_suffix_in_calculators():
         assert "(-а)" not in _all_text(r), f"gendered form leaked: {_all_text(r)!r}"
 
 
+def test_shop_penalty_with_ru_date_format():
+    # Регресс: фронт шлёт дату в формате «дд.мм.гггг». Раньше _parse_date умел
+    # только ISO → дата молча не парсилась и неустойка не считалась.
+    from datetime import date, timedelta
+
+    ten_days_ago = (date.today() - timedelta(days=10)).strftime("%d.%m.%Y")
+    result = calculate_shop({
+        "product_name": "Товар",
+        "product_price": "10000",
+        "problem_type": "defect",
+        "purchase_date": "01.01.2026",
+        "appeal_date": ten_days_ago,
+        "demand": "refund",
+    })
+    assert result.get("calculated_penalty_days") == "10"
+    assert result.get("calculated_penalty")  # сумма посчитана, а не пропущена
+    assert "10 дней" in result["calculated_penalty_section"]
+
+
+def test_parse_date_accepts_both_formats():
+    from datetime import date
+
+    from app.services.calculators import _parse_date
+
+    assert _parse_date("15.03.2026") == date(2026, 3, 15)
+    assert _parse_date("2026-03-15") == date(2026, 3, 15)
+    assert _parse_date("не дата") is None
+    assert _parse_date("") is None
+    assert _parse_date(None) is None
+
+
 def test_fix_dashes_collapses_adjacent_em():
     assert fix_dashes("текст — — текст") == "текст — текст"
     assert fix_dashes("№ — от — —") == "№ — от —"

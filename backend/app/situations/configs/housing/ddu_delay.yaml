@@ -76,6 +76,7 @@ wizard_steps:
         type: date
         label: "Дата заключения ДДУ"
         required: true
+        not_future: true
       - id: contract_price
         type: number
         label: "Цена договора (ДДУ), ₽"
@@ -88,10 +89,13 @@ wizard_steps:
         label: "Плановая дата передачи по ДДУ"
         required: true
         hint: "Указана в договоре долевого участия"
+        min_field: contract_date
       - id: actual_transfer_date
         type: date
         label: "Фактическая дата передачи квартиры"
         hint: "Оставьте пустым, если квартира ещё не передана"
+        not_future: true
+        min_field: planned_transfer_date
       - id: cb_rate
         type: number
         label: "Ключевая ставка ЦБ РФ на дату начала просрочки, %"
