@@ -1,5 +1,5 @@
 """
-LLM-сервис: GigaChat.
+LLM-сервис: провайдеры (GigaChat, YandexGPT) и диспетчер.
 
 GigaChat API совместим с OpenAI-форматом (chat completions).
 Авторизация: OAuth2 через RqUID + Base64(client_id:client_secret).
@@ -9,6 +9,7 @@ import asyncio
 import logging
 import re
 import uuid
+from abc import ABC, abstractmethod
 from datetime import UTC, date, datetime
 
 import httpx
@@ -20,6 +21,38 @@ from app.services.pii_classifier import split_for_llm
 from app.services.text_cleanup import clean_llm_text, fix_dashes, has_quality_artifacts
 
 logger = logging.getLogger(__name__)
+
+
+class LLMProvider(ABC):
+    """Абстрактный провайдер LLM для текстовой генерации."""
+
+    @abstractmethod
+    async def generate(
+        self, system_prompt: str, user_prompt: str, *, validate: bool = False
+    ) -> str:
+        """Генерирует текст на основе промптов.
+
+        Args:
+            system_prompt: Системный промпт.
+            user_prompt: Пользовательский промпт.
+            validate: Если True, применяет валидацию качества и retry при артефактах.
+
+        Returns:
+            Сгенерированный текст.
+
+        Raises:
+            RuntimeError: При критических ошибках, когда fallback невозможен.
+        """
+        pass
+
+    async def review(self, text: str) -> tuple[str, bool]:
+        """Опциональная вычитка текста. По умолчанию не применяется.
+
+        Returns:
+            (reviewed_text, ok) где ok=True если вычитка безопасна, False если нужно отбросить.
+        """
+        return text, False
+
 
 _MAX_FIELD_VALUE_LEN = 1000
 
@@ -108,56 +141,61 @@ _RETRY_FEEDBACK = (
 )
 
 
-async def _call_gigachat(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
-    """Вызывает GigaChat. При validate=True делает до 2 retry при артефактах в ответе."""
+class GigaChatProvider(LLMProvider):
+    """Провайдер GigaChat (Сбер) — основной генератор."""
 
-    async def _once(extra_feedback: str = "") -> str:
-        # Токен перезапрашивается каждый раз — защита от истечения между retry
-        fresh_token = await _get_gigachat_token()
-        for net_attempt in range(1, 3):
-            try:
-                async with httpx.AsyncClient(verify=_get_verify()) as client:
-                    resp = await client.post(
-                        f"{GIGACHAT_API_URL}/chat/completions",
-                        headers={"Authorization": f"Bearer {fresh_token}"},
-                        json={
-                            "model": "GigaChat",
-                            "messages": [
-                                {"role": "system", "content": system_prompt},
-                                {"role": "user", "content": user_prompt + extra_feedback},
-                            ],
-                            "temperature": 0.2,
-                            "max_tokens": 4096,
-                        },
-                        timeout=60,
-                    )
-                    resp.raise_for_status()
-                    return resp.json()["choices"][0]["message"]["content"]
-            except (httpx.TimeoutException, httpx.NetworkError) as e:
-                if net_attempt == 2:
-                    raise
-                logger.warning("GigaChat network error (attempt %d): %s, retrying", net_attempt, e)
-                await asyncio.sleep(2)
-            except httpx.HTTPStatusError as e:
-                if e.response.status_code in (500, 502, 503) and net_attempt < 2:
-                    logger.warning("GigaChat %d (attempt %d), retrying", e.response.status_code, net_attempt)
+    async def generate(
+        self, system_prompt: str, user_prompt: str, *, validate: bool = False
+    ) -> str:
+        """Вызывает GigaChat. При validate=True делает до 2 retry при артефактах в ответе."""
+
+        async def _once(extra_feedback: str = "") -> str:
+            # Токен перезапрашивается каждый раз — защита от истечения между retry
+            fresh_token = await _get_gigachat_token()
+            for net_attempt in range(1, 3):
+                try:
+                    async with httpx.AsyncClient(verify=_get_verify()) as client:
+                        resp = await client.post(
+                            f"{GIGACHAT_API_URL}/chat/completions",
+                            headers={"Authorization": f"Bearer {fresh_token}"},
+                            json={
+                                "model": "GigaChat",
+                                "messages": [
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt + extra_feedback},
+                                ],
+                                "temperature": 0.2,
+                                "max_tokens": 4096,
+                            },
+                            timeout=60,
+                        )
+                        resp.raise_for_status()
+                        return resp.json()["choices"][0]["message"]["content"]
+                except (httpx.TimeoutException, httpx.NetworkError) as e:
+                    if net_attempt == 2:
+                        raise
+                    logger.warning("GigaChat network error (attempt %d): %s, retrying", net_attempt, e)
                     await asyncio.sleep(2)
-                    continue
-                raise
-        raise RuntimeError("unreachable")
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code in (500, 502, 503) and net_attempt < 2:
+                        logger.warning("GigaChat %d (attempt %d), retrying", e.response.status_code, net_attempt)
+                        await asyncio.sleep(2)
+                        continue
+                    raise
+            raise RuntimeError("unreachable")
 
-    text = await _once()
+        text = await _once()
 
-    if validate:
-        for attempt in range(1, 3):
-            if not has_quality_artifacts(text):
-                break
-            logger.warning(
-                "GigaChat response has quality artifacts (attempt %d), retrying", attempt
-            )
-            text = await _once(_RETRY_FEEDBACK)
+        if validate:
+            for attempt in range(1, 3):
+                if not has_quality_artifacts(text):
+                    break
+                logger.warning(
+                    "GigaChat response has quality artifacts (attempt %d), retrying", attempt
+                )
+                text = await _once(_RETRY_FEEDBACK)
 
-    return text
+        return text
 
 
 _FORMAT_RULES = """ПРАВИЛА ФОРМАТИРОВАНИЯ — строго обязательны:
@@ -203,121 +241,140 @@ _REVIEW_SYSTEM_PROMPT = """Ты — корректор юридических д
 Если дефектов нет — верни текст ПОЛНОСТЬЮ без изменений, дословно.
 ВЕРНИ: только текст тела целиком, без пояснений, без обрезки."""
 
-async def _call_yandex_review(draft: str) -> tuple[str, bool]:
-    """Мягкая вычитка YandexGPT: убирает дефекты форматирования, НЕ переписывая текст.
+class YandexGPTProvider(LLMProvider):
+    """Провайдер YandexGPT (Яндекс) — fallback генератор и рецензент."""
 
-    Подстраховщик, а не второй автор. Возвращает (текст, yandex_ok). При любом
-    подозрении на порчу (обрезка по токенам, заметное укорачивание = выброшенное
-    содержание) возвращает исходный черновик GigaChat — yandex_ok=False, и вызывающий
-    оставляет версию GigaChat как есть.
-    """
-    if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
-        logger.warning("YandexGPT not configured, skipping review pass")
-        return draft, False
+    async def generate(
+        self, system_prompt: str, user_prompt: str, *, validate: bool = False
+    ) -> str:
+        """YandexGPT Pro как первичный генератор — fallback при отказе GigaChat."""
+        if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+            raise RuntimeError("YandexGPT not configured — set YANDEX_API_KEY and YANDEX_FOLDER_ID")
 
-    client = AsyncOpenAI(
-        api_key=settings.YANDEX_API_KEY,
-        base_url="https://ai.api.cloud.yandex.net/v1",
-    )
+        client = AsyncOpenAI(
+            api_key=settings.YANDEX_API_KEY,
+            base_url="https://ai.api.cloud.yandex.net/v1",
+        )
 
-    for attempt in range(1, 3):
-        try:
-            response = await client.chat.completions.create(
-                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
-                messages=[
-                    {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
-                    {"role": "user", "content": draft},
-                ],
-                temperature=0,
-                max_tokens=8192,
-                extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
-                timeout=90,
-            )
-            choice = response.choices[0]
-            result = choice.message.content
-            if not result or not result.strip():
-                logger.error("YandexGPT returned empty response (attempt %d)", attempt)
-                return draft, False
-            # Обрезка по лимиту токенов → вычитка неполная, документ сломан. Отбрасываем.
-            if getattr(choice, "finish_reason", None) == "length":
-                logger.warning("YandexGPT review truncated (finish_reason=length), keeping GigaChat draft")
-                return draft, False
-            # Защита от выброшенного содержания: вычитка не должна заметно укорачивать текст.
-            # Чистка форматирования (markdown, метки, ЗАГЛАВНЫЕ) законно укорачивает
-            # текст на единицы процентов. Отбрасываем только при ЗАМЕТНОЙ потере (>40%) —
-            # это уже не вычитка, а выброшенное содержание.
-            if len(result.strip()) < _YANDEX_MIN_CONTENT_RATIO * len(draft.strip()):
-                logger.warning(
-                    "YandexGPT review shrank text %d→%d chars, keeping GigaChat draft",
-                    len(draft.strip()), len(result.strip()),
+        for attempt in range(1, 3):
+            try:
+                response = await client.chat.completions.create(
+                    model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                    temperature=0.2,
+                    max_tokens=4096,
+                    extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+                    timeout=60,
                 )
-                return draft, False
-            return result, True
-        except Exception as e:
-            logger.error("YandexGPT review failed attempt %d (%s: %s)", attempt, type(e).__name__, str(e))
-            if attempt == 2:
-                from app.services.notifications import send_telegram_alert
-                await send_telegram_alert(f"⚠️ YandexGPT review failed: {type(e).__name__}: {str(e)[:100]}")
-                return draft, False
-            await asyncio.sleep(2)
+                result = response.choices[0].message.content
+                if not result or not result.strip():
+                    raise RuntimeError("YandexGPT returned empty response")
+                return result
+            except Exception as e:
+                logger.error("YandexGPT primary attempt %d: %s: %s", attempt, type(e).__name__, str(e))
+                if attempt == 2:
+                    raise RuntimeError(f"YandexGPT primary failed: {e}") from e
+                await asyncio.sleep(2)
 
-    return draft, False
+        raise RuntimeError("unreachable")
 
+    async def review(self, draft: str) -> tuple[str, bool]:
+        """Мягкая вычитка YandexGPT: убирает дефекты форматирования, НЕ переписывая текст.
 
-async def _call_yandex_primary(system_prompt: str, user_prompt: str) -> str:
-    """YandexGPT Pro как первичный генератор — fallback при отказе GigaChat."""
-    if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
-        raise RuntimeError("YandexGPT not configured — set YANDEX_API_KEY and YANDEX_FOLDER_ID")
+        Подстраховщик, а не второй автор. Возвращает (текст, ok). При любом
+        подозрении на порчу (обрезка по токенам, заметное укорачивание = выброшенное
+        содержание) возвращает исходный черновик — ok=False.
+        """
+        if not settings.YANDEX_API_KEY or not settings.YANDEX_FOLDER_ID:
+            logger.warning("YandexGPT not configured, skipping review pass")
+            return draft, False
 
-    client = AsyncOpenAI(
-        api_key=settings.YANDEX_API_KEY,
-        base_url="https://ai.api.cloud.yandex.net/v1",
-    )
+        client = AsyncOpenAI(
+            api_key=settings.YANDEX_API_KEY,
+            base_url="https://ai.api.cloud.yandex.net/v1",
+        )
 
-    for attempt in range(1, 3):
-        try:
-            response = await client.chat.completions.create(
-                model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.2,
-                max_tokens=4096,
-                extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
-                timeout=60,
-            )
-            result = response.choices[0].message.content
-            if not result or not result.strip():
-                raise RuntimeError("YandexGPT returned empty response")
-            return result
-        except Exception as e:
-            logger.error("YandexGPT primary attempt %d: %s: %s", attempt, type(e).__name__, str(e))
-            if attempt == 2:
-                raise RuntimeError(f"YandexGPT primary failed: {e}") from e
-            await asyncio.sleep(2)
+        for attempt in range(1, 3):
+            try:
+                response = await client.chat.completions.create(
+                    model=f"gpt://{settings.YANDEX_FOLDER_ID}/yandexgpt-5-pro/latest",
+                    messages=[
+                        {"role": "system", "content": _REVIEW_SYSTEM_PROMPT},
+                        {"role": "user", "content": draft},
+                    ],
+                    temperature=0,
+                    max_tokens=8192,
+                    extra_body={"folder_id": settings.YANDEX_FOLDER_ID},
+                    timeout=90,
+                )
+                choice = response.choices[0]
+                result = choice.message.content
+                if not result or not result.strip():
+                    logger.error("YandexGPT returned empty response (attempt %d)", attempt)
+                    return draft, False
+                # Обрезка по лимиту токенов → вычитка неполная, документ сломан. Отбрасываем.
+                if getattr(choice, "finish_reason", None) == "length":
+                    logger.warning("YandexGPT review truncated (finish_reason=length), keeping draft")
+                    return draft, False
+                # Защита от выброшенного содержания: вычитка не должна заметно укорачивать текст.
+                if len(result.strip()) < _YANDEX_MIN_CONTENT_RATIO * len(draft.strip()):
+                    logger.warning(
+                        "YandexGPT review shrank text %d→%d chars, keeping draft",
+                        len(draft.strip()), len(result.strip()),
+                    )
+                    return draft, False
+                return result, True
+            except Exception as e:
+                logger.error("YandexGPT review failed attempt %d (%s: %s)", attempt, type(e).__name__, str(e))
+                if attempt == 2:
+                    from app.services.notifications import send_telegram_alert
+                    await send_telegram_alert(f"⚠️ YandexGPT review failed: {type(e).__name__}: {str(e)[:100]}")
+                    return draft, False
+                await asyncio.sleep(2)
 
-    raise RuntimeError("unreachable")
+        return draft, False
 
 
 def _yandex_configured() -> bool:
     return bool(settings.YANDEX_API_KEY and settings.YANDEX_FOLDER_ID)
 
 
+def _get_gigachat_provider() -> GigaChatProvider:
+    """Синглтон GigaChatProvider."""
+    global _gigachat_provider
+    if "_gigachat_provider" not in globals():
+        _gigachat_provider = GigaChatProvider()
+    return _gigachat_provider
+
+
+def _get_yandex_provider() -> YandexGPTProvider:
+    """Синглтон YandexGPTProvider."""
+    global _yandex_provider
+    if "_yandex_provider" not in globals():
+        _yandex_provider = YandexGPTProvider()
+    return _yandex_provider
+
+
 async def _call_llm(system_prompt: str, user_prompt: str, *, validate: bool = False) -> str:
     """Диспетчер LLM: GigaChat первый, YandexGPT Pro при отказе, СБОЕ или отсутствии GigaChat."""
     if not settings.GIGACHAT_AUTH_KEY:
         logger.info("GigaChat not configured, using YandexGPT as primary")
-        return await _call_yandex_primary(system_prompt, user_prompt)
+        provider = _get_yandex_provider()
+        return await provider.generate(system_prompt, user_prompt, validate=validate)
 
     # Сбой GigaChat (сеть, TLS/сертификат, 5xx) — это исключение, а не «отказ».
     # Раньше оно летело наверх и валило генерацию; теперь фоллбэчим на Yandex.
     try:
-        text = await _call_gigachat(system_prompt, user_prompt, validate=validate)
+        provider = _get_gigachat_provider()
+        text = await provider.generate(system_prompt, user_prompt, validate=validate)
     except Exception:
         if _yandex_configured():
             logger.warning("GigaChat failed, falling back to YandexGPT primary", exc_info=True)
-            return await _call_yandex_primary(system_prompt, user_prompt)
+            provider = _get_yandex_provider()
+            return await provider.generate(system_prompt, user_prompt, validate=validate)
         logger.error("GigaChat failed and YandexGPT not configured", exc_info=True)
         raise
 
@@ -328,7 +385,8 @@ async def _call_llm(system_prompt: str, user_prompt: str, *, validate: bool = Fa
                 "GigaChat refused and YandexGPT not configured — "
                 "set YANDEX_API_KEY + YANDEX_FOLDER_ID to enable fallback."
             )
-        return await _call_yandex_primary(system_prompt, user_prompt)
+        provider = _get_yandex_provider()
+        return await provider.generate(system_prompt, user_prompt, validate=validate)
 
     return text
 
@@ -513,8 +571,9 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
         )
         # Подстраховщик: YandexGPT мягко вычитывает ТОЛЬКО нарратив (творчество LLM).
         # Python-секции (законы, расчёты, требования) детерминированы — их не трогаем.
-        # При обрезке/искажении остаётся версия GigaChat (см. _call_yandex_review).
-        reviewed, yandex_ok = await _call_yandex_review(polished)
+        # При обрезке/искажении остаётся версия GigaChat.
+        yandex_provider = _get_yandex_provider()
+        reviewed, yandex_ok = await yandex_provider.review(polished)
         if yandex_ok:
             polished = reviewed
     else:
@@ -611,7 +670,8 @@ async def fill_template(situation_id: str, form_data: dict) -> tuple[str, list[s
     # YandexGPT — подстраховщик: мягкая вычитка форматирования. Если он отработал
     # безопасно — берём его версию; если недоступен/обрезал/исказил — оставляем
     # готовый текст GigaChat КАК ЕСТЬ (он уже корректен, прогнан через clean_llm_text).
-    reviewed_body, yandex_ok = await _call_yandex_review(body)
+    yandex_provider = _get_yandex_provider()
+    reviewed_body, yandex_ok = await yandex_provider.review(body)
     if yandex_ok:
         body = clean_llm_text(reviewed_body)
     else:
