@@ -20,6 +20,9 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITLEAKS_CONFIG: .gitleaks.toml
+          # gitleaks-action@v2 требует GITHUB_TOKEN для сканирования PR (read-only
+          # токена достаточно — см. permissions: contents: read выше).
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   backend-deps:
     name: pip-audit (backend)
