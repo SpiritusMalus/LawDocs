@@ -36,5 +36,12 @@ class Order(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # Факт явного согласия (оферта + обработка ПДн), проставленного галочкой на
+    # финале визарда. Одна запись покрывает оба согласия. Nullable — старые заказы
+    # без согласия остаются валидными. Версию штампует сервер (app/core/consent.py).
+    offer_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    offer_accepted_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
+    offer_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+
     user: Mapped["User"] = relationship("User", back_populates="orders")  # noqa: F821
     document: Mapped["Document | None"] = relationship("Document", back_populates="order", uselist=False)  # noqa: F821

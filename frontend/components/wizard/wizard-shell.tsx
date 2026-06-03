@@ -119,6 +119,9 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
   const [dateErrors, setDateErrors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Согласие (оферта + ПДн) — обязательная галочка на финальном шаге.
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [consentError, setConsentError] = useState(false);
 
   // Плоская карта всех полей всех шагов — для cross-field валидации дат
   // (поле может ссылаться на дату с предыдущего шага) и подстановки меток.
@@ -226,11 +229,17 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       setDateErrors(problems);
       return;
     }
+    if (!consentAccepted) {
+      setDateErrors([]);
+      setConsentError(true);
+      return;
+    }
     setDateErrors([]);
+    setConsentError(false);
     setSubmitError(null);
     ymGoal("wizard_submitted", { situation: situationId });
     startTransition(async () => {
-      const result = await submitWizard({ situationId, answers });
+      const result = await submitWizard({ situationId, answers, offerAccepted: consentAccepted });
       if (result.status === "redirect" && result.orderId) {
         try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
         router.push(`/orders/${result.orderId}`);
@@ -344,6 +353,52 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
           <div className="mt-5 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
             <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
             <span>{submitError}</span>
+          </div>
+        )}
+
+        {isLast && (
+          <label
+            className={`mt-6 flex items-start gap-3 rounded-lg border px-3 py-3 cursor-pointer transition-colors ${
+              consentError ? "border-red-300 bg-red-50" : "border-gray-200 bg-gray-50"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={consentAccepted}
+              onChange={(e) => {
+                setConsentAccepted(e.target.checked);
+                if (e.target.checked) setConsentError(false);
+              }}
+              className="h-4 w-4 mt-0.5 accent-blue-600 shrink-0"
+            />
+            <span className="text-sm text-gray-700">
+              Я принимаю условия{" "}
+              <a
+                href="/legal/offer"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                договора-оферты
+              </a>{" "}
+              и даю согласие на{" "}
+              <a
+                href="/legal/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                обработку персональных данных
+              </a>
+              .
+            </span>
+          </label>
+        )}
+
+        {consentError && (
+          <div className="mt-3 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <span>Чтобы продолжить, подтвердите согласие с офертой и обработкой персональных данных.</span>
           </div>
         )}
       </div>
