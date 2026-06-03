@@ -79,6 +79,7 @@ def test_order_init_request_rejects_contradictory_dates():
             email="user@example.com",
             situation_id="shop",
             form_data=_shop(purchase_date="01.02.2026", appeal_date="01.01.2026"),
+            offer_accepted=True,
         )
 
 
@@ -87,5 +88,6 @@ def test_order_init_request_accepts_valid_dates():
         email="user@example.com",
         situation_id="shop",
         form_data=_shop(),
+        offer_accepted=True,
     )
     assert req.situation_id == "shop"

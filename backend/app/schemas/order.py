@@ -19,11 +19,21 @@ class OrderInitRequest(BaseModel):
     email: EmailStr
     situation_id: str
     form_data: dict
+    offer_accepted: bool
 
     @field_validator("situation_id")
     @classmethod
     def check_situation(cls, v: str) -> str:
         return _validate_situation(v)
+
+    @field_validator("offer_accepted")
+    @classmethod
+    def must_accept(cls, v: bool) -> bool:
+        if not v:
+            raise ValueError(
+                "Необходимо принять условия оферты и согласие на обработку персональных данных."
+            )
+        return v
 
     @field_validator("form_data")
     @classmethod

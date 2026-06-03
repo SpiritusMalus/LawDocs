@@ -113,9 +113,11 @@ async function getClientIp(): Promise<string> {
 export async function submitWizard({
   situationId,
   answers,
+  offerAccepted,
 }: {
   situationId: string;
   answers: Record<string, string>;
+  offerAccepted: boolean;
 }): Promise<WizardState> {
   pruneRateLimitBuckets();
   const ip = await getClientIp();
@@ -138,6 +140,10 @@ export async function submitWizard({
   if (!isValidPhone(phone)) {
     return { status: "error", message: "Укажите корректный номер телефона." };
   }
+  // Согласие обязательно (UI и так гейтит — это серверная страховка).
+  if (!offerAccepted) {
+    return { status: "error", message: "Подтвердите согласие с офертой и обработкой персональных данных." };
+  }
 
   const backendUrl = process.env.BACKEND_URL;
   if (backendUrl) {
@@ -158,6 +164,7 @@ export async function submitWizard({
           email: answers["email"]!.trim(),
           situation_id: situationId,
           form_data: answers,
+          offer_accepted: offerAccepted,
         }),
         cache: "no-store",
       });
@@ -197,6 +204,7 @@ export async function submitWizard({
     "",
     `<b>Ситуация:</b> ${escapeHtml(situationLabel)}`,
     `<b>IP:</b> ${escapeHtml(ip)}`,
+    `<b>Согласие (оферта+ПДн):</b> да`,
     "",
   ];
 

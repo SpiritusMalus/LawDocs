@@ -10,8 +10,9 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user, get_optional_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.consent import CONSENT_VERSION
 from app.core.enums import OrderStatus
-from app.core.limiter import limiter
+from app.core.limiter import _get_real_ip, limiter
 from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
@@ -71,6 +72,15 @@ async def init_order(
     if composed_store:
         form_data["store_address"] = composed_store
 
+    # Факт согласия с офертой + обработкой ПДн (галочка на финале визарда).
+    # Схема уже отвергла offer_accepted=false; здесь только фиксируем время/IP/версию.
+    # Версию проставляет сервер, IP — из доверенного заголовка (см. _get_real_ip).
+    consent_fields = dict(
+        offer_accepted_at=datetime.now(UTC),
+        offer_accepted_ip=_get_real_ip(request),
+        offer_version=CONSENT_VERSION,
+    )
+
     # Authenticated flow: skip magic link
     if optional_user:
         order = Order(
@@ -78,6 +88,7 @@ async def init_order(
             situation_id=body.situation_id,
             form_data=form_data,
             status=OrderStatus.DRAFT.value,
+            **consent_fields,
         )
         db.add(order)
         await db.commit()
@@ -108,6 +119,7 @@ async def init_order(
         situation_id=body.situation_id,
         form_data=form_data,
         status=OrderStatus.DRAFT.value,
+        **consent_fields,
     )
     db.add(order)
     await db.flush()

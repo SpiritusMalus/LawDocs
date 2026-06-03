@@ -39,6 +39,7 @@ async def test_init_order_unauthenticated_sends_magic_link(client: AsyncClient):
                 "email": "ivan@example.com",
                 "situation_id": "shop",
                 "form_data": FORM_DATA,
+                "offer_accepted": True,
             },
         )
     assert resp.status_code == 201
@@ -62,6 +63,7 @@ async def test_init_order_authenticated_skips_magic_link(
                 "email": "ivan@example.com",
                 "situation_id": "shop",
                 "form_data": FORM_DATA,
+                "offer_accepted": True,
             },
         )
     assert resp.status_code == 201
@@ -88,7 +90,7 @@ async def test_init_order_composes_address_from_subfields(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 201
     order_id = resp.json()["order_id"]
@@ -112,7 +114,7 @@ async def test_init_order_trims_whitespace(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 201
     result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
@@ -132,7 +134,7 @@ async def test_init_order_rejects_empty_address(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 422
 
@@ -150,7 +152,7 @@ async def test_init_order_accepts_partial_address(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 201
     result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
@@ -169,7 +171,7 @@ async def test_init_order_rejects_empty_store_address(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 422
 
@@ -187,7 +189,7 @@ async def test_init_order_accepts_store_site_only(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 201
     result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
@@ -205,7 +207,7 @@ async def test_init_order_composes_store_address(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA, "offer_accepted": True},
         )
     assert resp.status_code == 201
     result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
@@ -223,9 +225,62 @@ async def test_init_order_rejects_overlong_field(
         resp = await client.post(
             "/api/v1/orders/init",
             headers=auth_headers,
-            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data, "offer_accepted": True},
         )
     assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_without_offer_acceptance(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    # Без согласия (оферта + ПДн) заказ не создаётся.
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA, "offer_accepted": False},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_missing_offer_field_rejected(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    # Поле offer_accepted обязательно — без него схема падает.
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_records_offer_acceptance(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    # Факт согласия фиксируется в БД: время, IP, версия (штампует сервер).
+    from app.core.consent import CONSENT_VERSION
+
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA, "offer_accepted": True},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.offer_accepted_at is not None
+    assert order.offer_version == CONSENT_VERSION
+    assert order.offer_accepted_ip  # непустая строка
 
 
 @pytest.mark.asyncio
