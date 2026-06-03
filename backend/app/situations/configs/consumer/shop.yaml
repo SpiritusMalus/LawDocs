@@ -59,10 +59,41 @@ wizard_steps:
         label: "Название магазина"
         placeholder: "М.Видео, DNS, Спортмастер…"
         required: true
-      - id: store_address
+      # Адрес магазина по частям + отдельный сайт (магазин может быть онлайновым).
+      # Детерминированно собираются в store_address (services/address_compose.py).
+      # Каждое поле необязательно, но хотя бы одно (адрес или сайт) — см.
+      # validate_store_address.
+      - id: store_address_city
         type: text
-        label: "Адрес магазина или сайт"
-        placeholder: "ул. Ленина, 1 или www.mvideo.ru"
+        label: "Город магазина"
+        placeholder: "Москва"
+        max_len: 100
+      - id: store_address_street
+        type: text
+        label: "Улица"
+        placeholder: "Ленина (или пр-кт/пер.)"
+        max_len: 150
+      - id: store_address_house
+        type: text
+        label: "Дом / владение"
+        placeholder: "1"
+        max_len: 20
+      - id: store_address_building
+        type: text
+        label: "Корпус"
+        placeholder: "2"
+        max_len: 20
+      - id: store_address_structure
+        type: text
+        label: "Строение"
+        placeholder: "1"
+        max_len: 20
+      - id: store_site
+        type: text
+        label: "Сайт магазина"
+        placeholder: "www.mvideo.ru"
+        hint: "Для онлайн-магазина — вместо адреса"
+        max_len: 254
       - id: product_name
         type: text
         label: "Что купили"

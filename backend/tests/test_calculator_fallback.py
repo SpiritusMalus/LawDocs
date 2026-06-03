@@ -19,6 +19,7 @@ import pytest
 import app.services.calculators as C
 from app.situations.registry import CONTACT_STEP, registry
 from app.services.field_resolve import _FIELD_ALIASES
+from app.services.address_compose import STORE_ADDRESS_FIELD_IDS
 
 CONFIGS_DIR = Path(__file__).parent.parent / "app" / "situations" / "configs"
 
@@ -138,6 +139,12 @@ def _used_field_ids(config) -> set[str]:
         src = inspect.getsource(calc)
         used.update(_CALC_READ_RE.findall(src))
         used.update(_FORM_READ_RE.findall(src))
+
+    # 6. Структурные подполя адреса магазина детерминированно собираются в
+    # store_address (address_compose). Если собранный адрес где-то используется
+    # (шапка/шаблон), подполя тоже считаются используемыми.
+    if "store_address" in used:
+        used.update(STORE_ADDRESS_FIELD_IDS)
 
     return used
 

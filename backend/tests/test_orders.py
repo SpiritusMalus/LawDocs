@@ -18,6 +18,9 @@ FORM_DATA = {
     "address_street": "Пушкина",
     "address_house": "1",
     "store_name": "ТестМаркет",
+    "store_address_city": "Москва",
+    "store_address_street": "Тверская",
+    "store_address_house": "1",
     "product_name": "Тестовый товар",
     "product_price": "5000",
     "purchase_date": "01.01.2025",
@@ -153,6 +156,61 @@ async def test_init_order_accepts_partial_address(
     result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
     order = result.scalar_one()
     assert order.form_data["contact_address"] == "г. Москва, корп. 5"
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_empty_store_address(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    # Ни адреса, ни сайта магазина → непонятно, кому претензия.
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("store_address_")}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_accepts_store_site_only(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    # Онлайн-магазин: только сайт, без физического адреса — допустимо.
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("store_address_")}
+    form_data |= {"store_site": "www.mvideo.ru"}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["store_address"] == "www.mvideo.ru"
+
+
+@pytest.mark.asyncio
+async def test_init_order_composes_store_address(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": FORM_DATA},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["store_address"] == "г. Москва, ул. Тверская, д. 1"
 
 
 @pytest.mark.asyncio

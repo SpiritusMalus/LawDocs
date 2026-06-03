@@ -47,6 +47,21 @@ def validate_address(config: SituationConfig, form_data: dict) -> None:
         raise ValueError("Укажите адрес проживания — хотя бы город или населённый пункт.")
 
 
+def validate_store_address(config: SituationConfig, form_data: dict) -> None:
+    """Адрес магазина по подполям + сайт: каждое поле необязательно, но хотя бы
+    одно (адрес или сайт) должно быть заполнено — иначе непонятно, кому претензия.
+    Проверяем только если ситуация вообще собирает адрес магазина.
+    """
+    from app.services.address_compose import STORE_ADDRESS_FIELD_IDS, compose_store_address
+
+    field_ids = {f.id for step in config.wizard_steps for f in step.fields}
+    if not any(fid in field_ids for fid in STORE_ADDRESS_FIELD_IDS):
+        return  # ситуация без структурного адреса магазина — не наша забота
+
+    if not compose_store_address(form_data):
+        raise ValueError("Укажите адрес магазина или его сайт — хотя бы одно поле.")
+
+
 def validate_lengths(config: SituationConfig, form_data: dict) -> None:
     """Проверяет лимит длины (`max_len`) для полей ситуации. По выбору пользователя
     контролируем только длину, без проверки символов. Бросает ValueError при
@@ -107,7 +122,8 @@ def validate_dates(config: SituationConfig, form_data: dict) -> None:
             if other and parsed < other:
                 other_label = by_id[field.min_field].label if field.min_field in by_id else field.min_field
                 raise ValueError(
-                    f"Поле «{field.label}» не может быть раньше, чем «{other_label}»."
+                    f"Поле «{field.label}» не может быть раньше, чем «{other_label}» "
+                    f"({other.strftime('%d.%m.%Y')})."
                 )
 
         if field.max_field:
@@ -115,5 +131,6 @@ def validate_dates(config: SituationConfig, form_data: dict) -> None:
             if other and parsed > other:
                 other_label = by_id[field.max_field].label if field.max_field in by_id else field.max_field
                 raise ValueError(
-                    f"Поле «{field.label}» не может быть позже, чем «{other_label}»."
+                    f"Поле «{field.label}» не может быть позже, чем «{other_label}» "
+                    f"({other.strftime('%d.%m.%Y')})."
                 )

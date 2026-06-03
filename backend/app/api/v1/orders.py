@@ -16,7 +16,7 @@ from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import OrderInitOut, OrderInitRequest, OrderListItem, OrderOut, PaymentOut
-from app.services.address_compose import compose_contact_address
+from app.services.address_compose import compose_contact_address, compose_store_address
 from app.services.email import send_magic_link
 from app.services.generation import run_document_generation
 from app.services.payment import create_payment
@@ -66,6 +66,10 @@ async def init_order(
     composed_address = compose_contact_address(form_data)
     if composed_address:
         form_data["contact_address"] = composed_address
+    # Аналогично — адрес/сайт магазина-ответчика из store_address_* + store_site.
+    composed_store = compose_store_address(form_data)
+    if composed_store:
+        form_data["store_address"] = composed_store
 
     # Authenticated flow: skip magic link
     if optional_user:
