@@ -44,7 +44,9 @@ class OrderInitRequest(BaseModel):
             if len(val) > _MAX_FIELD_VALUE_LEN:
                 raise ValueError(f"Поле {key!r} превышает {_MAX_FIELD_VALUE_LEN} символов")
 
-        return v
+        # Нормализация: срезаем краевые пробелы, чтобы они не попали в документ
+        # и не ломали проверку длины/сборку адреса. Внутренние пробелы сохраняем.
+        return {key: val.strip() for key, val in v.items()}
 
     @model_validator(mode="after")
     def check_dates(self) -> "OrderInitRequest":
@@ -55,10 +57,11 @@ class OrderInitRequest(BaseModel):
         загружен в тестах) — пропускаем: тип/наличие ситуации проверяется отдельно.
         """
         from app.situations.registry import registry
-        from app.situations.validate import validate_dates
+        from app.situations.validate import validate_dates, validate_lengths
 
         config = registry.get(self.situation_id)
         if config:
+            validate_lengths(config, self.form_data)
             validate_dates(config, self.form_data)
         return self
 

@@ -28,18 +28,18 @@ BASE_RULES = """Правила:
 CONTACT_STEP = WizardStep(
     title="Ваши контакты",
     fields=[
-        WizardField(id="full_name", type="text", label="ФИО", placeholder="Иванов Иван Иванович", required=True),
+        WizardField(id="full_name", type="text", label="ФИО", placeholder="Иванов Иван Иванович", required=True, max_len=150),
         # Адрес заполняется по частям — так в документ не уходит опечатка в составе
         # «одной строкой». Подполя детерминированно собираются в contact_address
         # (см. services/address_compose.py). Индекс не нужен для шапки заявлений.
-        WizardField(id="address_city", type="text", label="Город", placeholder="Москва", required=True, hint="Город или населённый пункт"),
-        WizardField(id="address_street", type="text", label="Улица", placeholder="Пушкина (или пер./просп.)", required=True),
-        WizardField(id="address_house", type="text", label="Дом / владение", placeholder="1", required=True),
-        WizardField(id="address_building", type="text", label="Корпус", placeholder="2"),
-        WizardField(id="address_structure", type="text", label="Строение", placeholder="1"),
-        WizardField(id="address_apartment", type="text", label="Квартира", placeholder="5"),
-        WizardField(id="phone", type="text", label="Телефон", placeholder="+7 999 123-45-67", required=True),
-        WizardField(id="email", type="text", label="Email", placeholder="ivan@mail.ru", required=True, hint="Готовый документ пришлём сюда"),
+        WizardField(id="address_city", type="text", label="Город", placeholder="Москва", required=True, hint="Город или населённый пункт", max_len=100),
+        WizardField(id="address_street", type="text", label="Улица", placeholder="Пушкина (или пер./просп.)", required=True, max_len=150),
+        WizardField(id="address_house", type="text", label="Дом / владение", placeholder="1", required=True, max_len=20),
+        WizardField(id="address_building", type="text", label="Корпус", placeholder="2", max_len=20),
+        WizardField(id="address_structure", type="text", label="Строение", placeholder="1", max_len=20),
+        WizardField(id="address_apartment", type="text", label="Квартира", placeholder="5", max_len=20),
+        WizardField(id="phone", type="text", label="Телефон", placeholder="+7 999 123-45-67", required=True, max_len=20),
+        WizardField(id="email", type="text", label="Email", placeholder="ivan@mail.ru", required=True, hint="Готовый документ пришлём сюда", max_len=254),
     ],
 )
 

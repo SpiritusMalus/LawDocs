@@ -32,6 +32,22 @@ def _parse(value: str | None) -> date | None:
     return None
 
 
+def validate_lengths(config: SituationConfig, form_data: dict) -> None:
+    """Проверяет лимит длины (`max_len`) для полей ситуации. По выбору пользователя
+    контролируем только длину, без проверки символов. Бросает ValueError при
+    первом превышении.
+    """
+    for step in config.wizard_steps:
+        for field in step.fields:
+            if field.max_len is None:
+                continue
+            value = form_data.get(field.id)
+            if isinstance(value, str) and len(value) > field.max_len:
+                raise ValueError(
+                    f"Поле «{field.label}»: не более {field.max_len} символов."
+                )
+
+
 def _date_fields(config: SituationConfig) -> list[WizardField]:
     return [
         field

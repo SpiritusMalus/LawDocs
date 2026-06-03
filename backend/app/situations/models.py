@@ -30,6 +30,10 @@ class WizardField(BaseModel):
     min_field: str | None = None    # id другого date-поля: это поле должно быть ≥ него
     max_field: str | None = None    # id другого date-поля: это поле должно быть ≤ него
 
+    # Лимит длины значения (символов). Фронт ставит maxLength у input, сервер
+    # проверяет повторно. Без проверки символов — только длина (решение пользователя).
+    max_len: int | None = None
+
 
 class WizardStep(BaseModel):
     title: str

@@ -436,6 +436,7 @@ function FieldRenderer({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
+          maxLength={field.max_len ?? undefined}
         />
       )}
 

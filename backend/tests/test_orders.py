@@ -96,6 +96,41 @@ async def test_init_order_composes_address_from_subfields(
 
 
 @pytest.mark.asyncio
+async def test_init_order_trims_whitespace(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    form_data = {**FORM_DATA, "full_name": "  Иванов Иван  ", "address_city": " Москва "}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["full_name"] == "Иванов Иван"  # краевые пробелы срезаны
+    assert order.form_data["address_city"] == "Москва"
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_overlong_field(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    form_data = {**FORM_DATA, "address_city": "Я" * 101}  # max_len=100
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
 async def test_init_order_unknown_situation_rejected(
     client: AsyncClient,
     auth_headers: dict,
