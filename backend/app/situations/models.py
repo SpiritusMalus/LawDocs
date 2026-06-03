@@ -23,6 +23,13 @@ class WizardField(BaseModel):
     hint: str | None = None
     options: list[WizardFieldOption] | None = None
 
+    # Декларативная валидация дат. Один источник правды: эти поля едут на фронт
+    # (через SituationDetailOut) для мгновенной проверки и дублируются на сервере
+    # (schemas/order.py) для защиты API.
+    not_future: bool = False        # дата не может быть позже сегодняшней
+    min_field: str | None = None    # id другого date-поля: это поле должно быть ≥ него
+    max_field: str | None = None    # id другого date-поля: это поле должно быть ≤ него
+
 
 class WizardStep(BaseModel):
     title: str

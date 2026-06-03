@@ -8,6 +8,10 @@ export interface WizardField {
   required?: boolean;
   hint?: string;
   options?: { value: string; label: string }[];
+  // Декларативная валидация дат (зеркало backend WizardField).
+  not_future?: boolean;
+  min_field?: string | null;
+  max_field?: string | null;
 }
 
 export interface WizardStep {

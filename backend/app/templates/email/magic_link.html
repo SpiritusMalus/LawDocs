@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light only">
+    <meta name="supported-color-schemes" content="light only">
     <title>Вход в LawDocs</title>
     <style>
         * {
@@ -156,7 +158,7 @@
                 Ссылка для входа действует {{ expire_minutes }} минут. Нажмите кнопку ниже, чтобы начать работу.
             </div>
             
-            <a href="{{ url }}" class="cta-button">Войти в LawDocs</a>
+            <a href="{{ url }}" class="cta-button" style="display:inline-block;width:100%;padding:14px 24px;background-color:#2563eb;color:#ffffff !important;text-decoration:none;border-radius:8px;font-weight:600;font-size:16px;text-align:center;margin-bottom:24px;">Войти в LawDocs</a>
             
             <p class="footer-note">
                 Если вы не запрашивали вход — просто проигнорируйте это письмо. Ваша учётная запись в безопасности.

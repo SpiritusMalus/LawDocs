@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,60 @@ import { ymGoal } from "@/lib/analytics";
 
 const LS_EMAIL_KEY = "lawdocs_email";
 const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as const;
+
+// «дд.мм.гггг» → Date с проверкой реального календарного дня (31.02 → null).
+function parseRuDate(value: string): Date | null {
+  const m = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
+  if (!m) return null;
+  const day = +m[1]!, month = +m[2]!, year = +m[3]!;
+  const d = new Date(year, month - 1, day);
+  if (d.getFullYear() !== year || d.getMonth() !== month - 1 || d.getDate() !== day) return null;
+  return d;
+}
+
+// Проверка дат: формат, not_future, и cross-field (min_field/max_field).
+// Зеркало серверной validate_dates — мгновенная обратная связь до отправки.
+function getDateErrors(
+  fields: WizardField[],
+  answers: Record<string, string>,
+  fieldById: Map<string, WizardField>,
+): string[] {
+  const errors: string[] = [];
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  for (const f of fields) {
+    if (f.type !== "date") continue;
+    const raw = answers[f.id]?.trim();
+    if (!raw) continue;
+
+    const d = parseRuDate(raw);
+    if (!d) {
+      errors.push(`«${f.label}»: неверная дата. Формат — дд.мм.гггг.`);
+      continue;
+    }
+    if (f.not_future && d > today) {
+      errors.push(`«${f.label}»: дата не может быть в будущем.`);
+    }
+    if (f.min_field) {
+      const other = answers[f.min_field]?.trim();
+      const od = other ? parseRuDate(other) : null;
+      if (od && d < od) {
+        const label = fieldById.get(f.min_field)?.label ?? f.min_field;
+        errors.push(`«${f.label}» не может быть раньше, чем «${label}».`);
+      }
+    }
+    if (f.max_field) {
+      const other = answers[f.max_field]?.trim();
+      const od = other ? parseRuDate(other) : null;
+      if (od && d > od) {
+        const label = fieldById.get(f.max_field)?.label ?? f.max_field;
+        errors.push(`«${f.label}» не может быть позже, чем «${label}».`);
+      }
+    }
+  }
+  return errors;
+}
 
 interface WizardShellProps {
   steps: WizardStep[];
@@ -27,7 +81,16 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
+  const [dateErrors, setDateErrors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Плоская карта всех полей всех шагов — для cross-field валидации дат
+  // (поле может ссылаться на дату с предыдущего шага) и подстановки меток.
+  const fieldById = useMemo(() => {
+    const map = new Map<string, WizardField>();
+    for (const s of steps) for (const f of s.fields) map.set(f.id, f);
+    return map;
+  }, [steps]);
   const [emailSent, setEmailSent] = useState(false);
   const [isPending, startTransition] = useTransition();
 
@@ -80,7 +143,14 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       setFieldErrors(missing);
       return;
     }
+    const dates = getDateErrors(step.fields, answers, fieldById);
+    if (dates.length > 0) {
+      setFieldErrors([]);
+      setDateErrors(dates);
+      return;
+    }
     setFieldErrors([]);
+    setDateErrors([]);
     ymGoal("wizard_step_completed", { step: currentStep + 1, situation: situationId });
     setCurrentStep((s) => s + 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -88,6 +158,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
 
   function handleBack() {
     setFieldErrors([]);
+    setDateErrors([]);
     setSubmitError(null);
     setCurrentStep((s) => s - 1);
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -96,6 +167,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   function handleChange(fieldId: string, value: string) {
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
     if (fieldErrors.length > 0) setFieldErrors([]);
+    if (dateErrors.length > 0) setDateErrors([]);
   }
 
   function handleSubmit() {
@@ -104,6 +176,15 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       setFieldErrors(missing);
       return;
     }
+    // На отправке проверяем даты всей формы (cross-field может тянуться через шаги).
+    const allDateFields = steps.flatMap((s) => s.fields);
+    const dates = getDateErrors(allDateFields, answers, fieldById);
+    if (dates.length > 0) {
+      setFieldErrors([]);
+      setDateErrors(dates);
+      return;
+    }
+    setDateErrors([]);
     setSubmitError(null);
     ymGoal("wizard_submitted", { situation: situationId });
     startTransition(async () => {
@@ -203,6 +284,17 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
               Заполните обязательные поля:{" "}
               <span className="font-medium">{fieldErrors.join(", ")}</span>
             </span>
+          </div>
+        )}
+
+        {dateErrors.length > 0 && (
+          <div className="mt-5 flex items-start gap-2 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+            <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+            <ul className="space-y-1">
+              {dateErrors.map((msg) => (
+                <li key={msg}>{msg}</li>
+              ))}
+            </ul>
           </div>
         )}
 

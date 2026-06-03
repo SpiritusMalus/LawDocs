@@ -7,7 +7,7 @@ Each calculator receives form_data and returns a new dict with injected
 
 import logging
 import re
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from app.core.config import settings
@@ -58,13 +58,22 @@ _DDU_TERMINATION_REASON_TEXTS = {
 _DDU_TERMINATION_REASON_FALLBACK = _DDU_TERMINATION_REASON_TEXTS["other"]
 
 
+# Форматы дат, которые реально приходят из формы. Фронт хранит «дд.мм.гггг»
+# (wizard-shell.tsx), а тесты/старые данные — ISO «гггг-мм-дд». Принимаем оба,
+# иначе дата молча не парсится и расчёт неустойки/просрочки пропускается.
+_DATE_FORMATS = ("%d.%m.%Y", "%Y-%m-%d")
+
+
 def _parse_date(value: str | None) -> date | None:
     if not value:
         return None
-    try:
-        return date.fromisoformat(str(value).strip())
-    except ValueError:
-        return None
+    raw = str(value).strip()
+    for fmt in _DATE_FORMATS:
+        try:
+            return datetime.strptime(raw, fmt).date()
+        except ValueError:
+            continue
+    return None
 
 
 def _fmt(amount: Decimal) -> str:

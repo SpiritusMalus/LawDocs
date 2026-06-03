@@ -77,6 +77,7 @@ wizard_steps:
         type: date
         label: "Дата покупки"
         required: true
+        not_future: true
   - title: "Что случилось"
     fields:
       - id: problem_type
@@ -100,6 +101,8 @@ wizard_steps:
       - id: appeal_date
         type: date
         label: "Когда обратились в магазин"
+        not_future: true
+        min_field: purchase_date
       - id: store_response
         type: textarea
         label: "Что ответил магазин"
@@ -123,6 +126,8 @@ wizard_steps:
         type: date
         label: "Дата начала неустойки"
         hint: "Обычно — дата отказа магазина или дата обращения"
+        not_future: true
+        min_field: appeal_date
 
 legal_refs:
   - law: "ЗоЗПП ст. 18 — права при обнаружении недостатков товара (замена, ремонт, возврат)"

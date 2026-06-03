@@ -74,10 +74,12 @@ wizard_steps:
         type: date
         label: "Дата въезда (начало аренды)"
         required: true
+        not_future: true
       - id: move_out_date
         type: date
         label: "Дата выезда (конец аренды)"
         required: true
+        min_field: move_in_date
       - id: deposit_amount
         type: number
         label: "Сумма залога, ₽"
