@@ -1,5 +1,5 @@
 """Tests for structured address composition (services/address_compose.py)."""
-from app.services.address_compose import compose_contact_address
+from app.services.address_compose import compose_contact_address, compose_store_address
 
 
 def test_full_address():
@@ -87,3 +87,49 @@ def test_whitespace_only_subfields_fall_back():
         "contact_address": "г. Сочи, ул. Морская, д. 2",
     })
     assert result == "г. Сочи, ул. Морская, д. 2"
+
+
+# ── Адрес магазина (compose_store_address) ──────────────────────────────────
+
+
+def test_store_full_physical_address():
+    result = compose_store_address({
+        "store_address_city": "Москва",
+        "store_address_street": "Тверская",
+        "store_address_house": "1",
+        "store_address_building": "2",
+        "store_address_structure": "3",
+    })
+    assert result == "г. Москва, ул. Тверская, д. 1, корп. 2, стр. 3"
+
+
+def test_store_site_only():
+    # Онлайн-магазин: заполнен только сайт.
+    assert compose_store_address({"store_site": "www.mvideo.ru"}) == "www.mvideo.ru"
+
+
+def test_store_address_and_site_combined():
+    result = compose_store_address({
+        "store_address_city": "Москва",
+        "store_site": "www.mvideo.ru",
+    })
+    assert result == "г. Москва, сайт: www.mvideo.ru"
+
+
+def test_store_no_apartment_field():
+    # У магазина квартиры нет — address_apartment не учитывается.
+    result = compose_store_address({
+        "store_address_city": "Казань",
+        "store_address_house": "10",
+    })
+    assert result == "г. Казань, д. 10"
+
+
+def test_store_falls_back_to_legacy_store_address():
+    # Старая форма/заказ: подполей нет, есть готовый store_address.
+    result = compose_store_address({"store_address": "г. Москва, ул. Старая, д. 7"})
+    assert result == "г. Москва, ул. Старая, д. 7"
+
+
+def test_store_empty_returns_empty():
+    assert compose_store_address({}) == ""

@@ -32,6 +32,24 @@ function isAddressEmpty(answers: Record<string, string>): boolean {
 }
 const ADDRESS_REQUIRED_MSG = "Укажите адрес проживания — хотя бы город или населённый пункт.";
 
+// Адрес/сайт магазина (shop): каждое поле необязательно, но хотя бы одно должно
+// быть заполнено (зеркало серверной validate_store_address).
+const STORE_ADDRESS_FIELD_IDS = [
+  "store_address_city",
+  "store_address_street",
+  "store_address_house",
+  "store_address_building",
+  "store_address_structure",
+  "store_site",
+];
+function stepHasStoreAddress(fields: WizardField[]): boolean {
+  return fields.some((f) => STORE_ADDRESS_FIELD_IDS.includes(f.id));
+}
+function isStoreAddressEmpty(answers: Record<string, string>): boolean {
+  return STORE_ADDRESS_FIELD_IDS.every((id) => !answers[id]?.trim());
+}
+const STORE_ADDRESS_REQUIRED_MSG = "Укажите адрес магазина или его сайт — хотя бы одно поле.";
+
 // «дд.мм.гггг» → Date с проверкой реального календарного дня (31.02 → null).
 function parseRuDate(value: string): Date | null {
   const m = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
@@ -71,7 +89,7 @@ function getDateErrors(
       const od = other ? parseRuDate(other) : null;
       if (od && d < od) {
         const label = fieldById.get(f.min_field)?.label ?? f.min_field;
-        errors.push(`«${f.label}» не может быть раньше, чем «${label}».`);
+        errors.push(`«${f.label}» не может быть раньше, чем «${label}» (${other}).`);
       }
     }
     if (f.max_field) {
@@ -79,7 +97,7 @@ function getDateErrors(
       const od = other ? parseRuDate(other) : null;
       if (od && d > od) {
         const label = fieldById.get(f.max_field)?.label ?? f.max_field;
-        errors.push(`«${f.label}» не может быть позже, чем «${label}».`);
+        errors.push(`«${f.label}» не может быть позже, чем «${label}» (${other}).`);
       }
     }
   }
@@ -162,7 +180,9 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       return;
     }
     const addr = stepHasAddress(step.fields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
-    const problems = [...addr, ...getDateErrors(step.fields, answers, fieldById)];
+    const storeAddr =
+      stepHasStoreAddress(step.fields) && isStoreAddressEmpty(answers) ? [STORE_ADDRESS_REQUIRED_MSG] : [];
+    const problems = [...addr, ...storeAddr, ...getDateErrors(step.fields, answers, fieldById)];
     if (problems.length > 0) {
       setFieldErrors([]);
       setDateErrors(problems);
@@ -198,7 +218,9 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
     // На отправке проверяем даты всей формы (cross-field может тянуться через шаги).
     const allFields = steps.flatMap((s) => s.fields);
     const addr = stepHasAddress(allFields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
-    const problems = [...addr, ...getDateErrors(allFields, answers, fieldById)];
+    const storeAddr =
+      stepHasStoreAddress(allFields) && isStoreAddressEmpty(answers) ? [STORE_ADDRESS_REQUIRED_MSG] : [];
+    const problems = [...addr, ...storeAddr, ...getDateErrors(allFields, answers, fieldById)];
     if (problems.length > 0) {
       setFieldErrors([]);
       setDateErrors(problems);
