@@ -49,6 +49,33 @@ def test_falls_back_to_legacy_contact_address():
     assert result == "г. Москва, ул. Старая, д. 7"
 
 
+def test_building_without_house():
+    # «не у всех есть дом, но есть корпус» — корпус выводится без «д.».
+    result = compose_contact_address({
+        "address_city": "Москва",
+        "address_building": "5",
+    })
+    assert result == "г. Москва, корп. 5"
+
+
+def test_city_only():
+    assert compose_contact_address({"address_city": "Норильск"}) == "г. Норильск"
+
+
+def test_apartment_only_no_leading_comma():
+    # Любая одиночная часть — без висячих запятых.
+    assert compose_contact_address({"address_apartment": "12"}) == "кв. 12"
+
+
+def test_village_with_house_no_street():
+    # Село без улицы: «с. Бор» + дом, улица пропущена.
+    result = compose_contact_address({
+        "address_city": "с. Бор",
+        "address_house": "3",
+    })
+    assert result == "с. Бор, д. 3"
+
+
 def test_empty_returns_empty():
     assert compose_contact_address({}) == ""
 

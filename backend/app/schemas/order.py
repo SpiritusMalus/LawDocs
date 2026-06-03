@@ -57,11 +57,12 @@ class OrderInitRequest(BaseModel):
         загружен в тестах) — пропускаем: тип/наличие ситуации проверяется отдельно.
         """
         from app.situations.registry import registry
-        from app.situations.validate import validate_dates, validate_lengths
+        from app.situations.validate import validate_address, validate_dates, validate_lengths
 
         config = registry.get(self.situation_id)
         if config:
             validate_lengths(config, self.form_data)
+            validate_address(config, self.form_data)
             validate_dates(config, self.form_data)
         return self
 

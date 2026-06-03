@@ -31,10 +31,12 @@ CONTACT_STEP = WizardStep(
         WizardField(id="full_name", type="text", label="ФИО", placeholder="Иванов Иван Иванович", required=True, max_len=150),
         # Адрес заполняется по частям — так в документ не уходит опечатка в составе
         # «одной строкой». Подполя детерминированно собираются в contact_address
-        # (см. services/address_compose.py). Индекс не нужен для шапки заявлений.
-        WizardField(id="address_city", type="text", label="Город", placeholder="Москва", required=True, hint="Город или населённый пункт", max_len=100),
-        WizardField(id="address_street", type="text", label="Улица", placeholder="Пушкина (или пер./просп.)", required=True, max_len=150),
-        WizardField(id="address_house", type="text", label="Дом / владение", placeholder="1", required=True, max_len=20),
+        # (см. services/address_compose.py). Все части НЕобязательны по отдельности
+        # (село без улицы, корпус без дома и т.п.), но хотя бы одна должна быть
+        # заполнена — проверяется в validate_address. Индекс не нужен для шапки.
+        WizardField(id="address_city", type="text", label="Город / населённый пункт", placeholder="Москва", hint="Город, посёлок, село, деревня", max_len=100),
+        WizardField(id="address_street", type="text", label="Улица", placeholder="Пушкина (или пер./просп.)", max_len=150),
+        WizardField(id="address_house", type="text", label="Дом / владение", placeholder="1", max_len=20),
         WizardField(id="address_building", type="text", label="Корпус", placeholder="2", max_len=20),
         WizardField(id="address_structure", type="text", label="Строение", placeholder="1", max_len=20),
         WizardField(id="address_apartment", type="text", label="Квартира", placeholder="5", max_len=20),

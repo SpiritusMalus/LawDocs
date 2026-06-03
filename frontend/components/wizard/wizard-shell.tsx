@@ -12,17 +12,25 @@ import { submitWizard } from "@/lib/actions/submit-wizard";
 import { ymGoal } from "@/lib/analytics";
 
 const LS_EMAIL_KEY = "lawdocs_email";
-const CONTACT_FIELDS = [
-  "full_name",
-  "phone",
+// Подполя адреса: каждое необязательно по отдельности, но хотя бы одно должно
+// быть заполнено (зеркало серверной validate_address).
+const ADDRESS_SUBFIELD_IDS = [
   "address_city",
   "address_street",
   "address_house",
   "address_building",
   "address_structure",
   "address_apartment",
-  "email",
-] as const;
+];
+const CONTACT_FIELDS = ["full_name", "phone", ...ADDRESS_SUBFIELD_IDS, "email"] as const;
+
+function stepHasAddress(fields: WizardField[]): boolean {
+  return fields.some((f) => ADDRESS_SUBFIELD_IDS.includes(f.id));
+}
+function isAddressEmpty(answers: Record<string, string>): boolean {
+  return ADDRESS_SUBFIELD_IDS.every((id) => !answers[id]?.trim());
+}
+const ADDRESS_REQUIRED_MSG = "Укажите адрес проживания — хотя бы город или населённый пункт.";
 
 // «дд.мм.гггг» → Date с проверкой реального календарного дня (31.02 → null).
 function parseRuDate(value: string): Date | null {
@@ -153,10 +161,11 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       setFieldErrors(missing);
       return;
     }
-    const dates = getDateErrors(step.fields, answers, fieldById);
-    if (dates.length > 0) {
+    const addr = stepHasAddress(step.fields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
+    const problems = [...addr, ...getDateErrors(step.fields, answers, fieldById)];
+    if (problems.length > 0) {
       setFieldErrors([]);
-      setDateErrors(dates);
+      setDateErrors(problems);
       return;
     }
     setFieldErrors([]);
@@ -187,11 +196,12 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       return;
     }
     // На отправке проверяем даты всей формы (cross-field может тянуться через шаги).
-    const allDateFields = steps.flatMap((s) => s.fields);
-    const dates = getDateErrors(allDateFields, answers, fieldById);
-    if (dates.length > 0) {
+    const allFields = steps.flatMap((s) => s.fields);
+    const addr = stepHasAddress(allFields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
+    const problems = [...addr, ...getDateErrors(allFields, answers, fieldById)];
+    if (problems.length > 0) {
       setFieldErrors([]);
-      setDateErrors(dates);
+      setDateErrors(problems);
       return;
     }
     setDateErrors([]);

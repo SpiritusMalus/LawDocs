@@ -7,6 +7,16 @@
 
 import re
 
+# Подполя структурного адреса (порядок = порядок в собранной строке).
+ADDRESS_SUBFIELD_IDS = (
+    "address_city",
+    "address_street",
+    "address_house",
+    "address_building",
+    "address_structure",
+    "address_apartment",
+)
+
 # Маркеры типа населённого пункта / улицы: если значение уже начинается с такого
 # маркера, повторный префикс не добавляем (иначе «г. г. Москва» / «ул. пер. …»).
 _CITY_MARKERS = re.compile(
@@ -38,7 +48,7 @@ def compose_contact_address(form_data: dict) -> str:
     structure = _clean(form_data.get("address_structure"))
     apartment = _clean(form_data.get("address_apartment"))
 
-    if not any([city, street, house, building, structure, apartment]):
+    if not any(_clean(form_data.get(fid)) for fid in ADDRESS_SUBFIELD_IDS):
         return _clean(form_data.get("contact_address"))
 
     parts: list[str] = []

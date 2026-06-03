@@ -14,6 +14,9 @@ FORM_DATA = {
     "full_name": "Иванов Иван Иванович",
     "phone": "+79001234567",
     "email": "ivan@example.com",
+    "address_city": "Москва",
+    "address_street": "Пушкина",
+    "address_house": "1",
     "store_name": "ТестМаркет",
     "product_name": "Тестовый товар",
     "product_price": "5000",
@@ -113,6 +116,43 @@ async def test_init_order_trims_whitespace(
     order = result.scalar_one()
     assert order.form_data["full_name"] == "Иванов Иван"  # краевые пробелы срезаны
     assert order.form_data["address_city"] == "Москва"
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_empty_address(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    # Все адресные подполя пустые → документ ушёл бы без адреса заявителя.
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("address_")}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_accepts_partial_address(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    # Корпус без дома, без улицы — допустимо (хотя бы одно поле заполнено).
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("address_")}
+    form_data |= {"address_city": "Москва", "address_building": "5"}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["contact_address"] == "г. Москва, корп. 5"
 
 
 @pytest.mark.asyncio
