@@ -19,6 +19,7 @@ def _shop(**overrides) -> dict:
         "demand": "refund",
         "purchase_date": "01.01.2026",
         "appeal_date": "01.02.2026",
+        "address_city": "Москва",  # адрес обязателен на уровне схемы (validate_address)
     }
     data.update(overrides)
     return data

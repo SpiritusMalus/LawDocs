@@ -16,6 +16,7 @@ from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import OrderInitOut, OrderInitRequest, OrderListItem, OrderOut, PaymentOut
+from app.services.address_compose import compose_contact_address
 from app.services.email import send_magic_link
 from app.services.generation import run_document_generation
 from app.services.payment import create_payment
@@ -58,12 +59,20 @@ async def init_order(
     db: AsyncSession = Depends(get_db),
     optional_user: User | None = Depends(get_optional_user),
 ) -> OrderInitOut:
+    # Собираем единую строку адреса из структурных подполей (город/улица/дом/…)
+    # после валидации схемы. contact_address не входит в wizard-поля, поэтому
+    # инжектим его здесь, а не в схеме (иначе check_form_data счёл бы его чужим).
+    form_data = dict(body.form_data)
+    composed_address = compose_contact_address(form_data)
+    if composed_address:
+        form_data["contact_address"] = composed_address
+
     # Authenticated flow: skip magic link
     if optional_user:
         order = Order(
             user_id=optional_user.id,
             situation_id=body.situation_id,
-            form_data=body.form_data,
+            form_data=form_data,
             status=OrderStatus.DRAFT.value,
         )
         db.add(order)
@@ -93,7 +102,7 @@ async def init_order(
     order = Order(
         user_id=user.id,
         situation_id=body.situation_id,
-        form_data=body.form_data,
+        form_data=form_data,
         status=OrderStatus.DRAFT.value,
     )
     db.add(order)

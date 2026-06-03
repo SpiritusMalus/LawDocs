@@ -96,6 +96,12 @@ async def get_user_contact(user: User, db: AsyncSession) -> ContactOut:
         full_name=form_data.get("full_name", ""),
         phone=form_data.get("phone", ""),
         contact_address=form_data.get("contact_address", ""),
+        address_city=form_data.get("address_city", ""),
+        address_street=form_data.get("address_street", ""),
+        address_house=form_data.get("address_house", ""),
+        address_building=form_data.get("address_building", ""),
+        address_structure=form_data.get("address_structure", ""),
+        address_apartment=form_data.get("address_apartment", ""),
         email=str(user.email),
     )
 

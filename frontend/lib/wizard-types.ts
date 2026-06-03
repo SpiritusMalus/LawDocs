@@ -12,6 +12,7 @@ export interface WizardField {
   not_future?: boolean;
   min_field?: string | null;
   max_field?: string | null;
+  max_len?: number | null;
 }
 
 export interface WizardStep {

@@ -14,6 +14,9 @@ FORM_DATA = {
     "full_name": "Иванов Иван Иванович",
     "phone": "+79001234567",
     "email": "ivan@example.com",
+    "address_city": "Москва",
+    "address_street": "Пушкина",
+    "address_house": "1",
     "store_name": "ТестМаркет",
     "product_name": "Тестовый товар",
     "product_price": "5000",
@@ -63,6 +66,108 @@ async def test_init_order_authenticated_skips_magic_link(
     assert data["requires_verification"] is False
     assert "/orders/" in data["redirect_to"]
     mock_mail.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_init_order_composes_address_from_subfields(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    form_data = {
+        **FORM_DATA,
+        "address_city": "Москва",
+        "address_street": "Пушкина",
+        "address_house": "1",
+        "address_apartment": "5",
+    }
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    order_id = resp.json()["order_id"]
+
+    result = await db_session.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one()
+    # Подполя собрались в единую строку для шапки документа.
+    assert order.form_data["contact_address"] == "г. Москва, ул. Пушкина, д. 1, кв. 5"
+    # Сами подполя тоже сохранены — для префилла следующего заказа.
+    assert order.form_data["address_city"] == "Москва"
+
+
+@pytest.mark.asyncio
+async def test_init_order_trims_whitespace(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    form_data = {**FORM_DATA, "full_name": "  Иванов Иван  ", "address_city": " Москва "}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["full_name"] == "Иванов Иван"  # краевые пробелы срезаны
+    assert order.form_data["address_city"] == "Москва"
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_empty_address(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    # Все адресные подполя пустые → документ ушёл бы без адреса заявителя.
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("address_")}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_init_order_accepts_partial_address(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    # Корпус без дома, без улицы — допустимо (хотя бы одно поле заполнено).
+    form_data = {k: v for k, v in FORM_DATA.items() if not k.startswith("address_")}
+    form_data |= {"address_city": "Москва", "address_building": "5"}
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    result = await db_session.execute(select(Order).where(Order.id == resp.json()["order_id"]))
+    order = result.scalar_one()
+    assert order.form_data["contact_address"] == "г. Москва, корп. 5"
+
+
+@pytest.mark.asyncio
+async def test_init_order_rejects_overlong_field(
+    client: AsyncClient,
+    auth_headers: dict,
+):
+    form_data = {**FORM_DATA, "address_city": "Я" * 101}  # max_len=100
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 422
 
 
 @pytest.mark.asyncio

@@ -12,7 +12,13 @@ class VerifyOut(BaseModel):
 class ContactOut(BaseModel):
     full_name: str = ""
     phone: str = ""
-    contact_address: str = ""
+    contact_address: str = ""  # legacy: собранный адрес из старых заказов
+    address_city: str = ""
+    address_street: str = ""
+    address_house: str = ""
+    address_building: str = ""
+    address_structure: str = ""
+    address_apartment: str = ""
     email: str = ""
 
 
