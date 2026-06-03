@@ -66,6 +66,36 @@ async def test_init_order_authenticated_skips_magic_link(
 
 
 @pytest.mark.asyncio
+async def test_init_order_composes_address_from_subfields(
+    client: AsyncClient,
+    auth_headers: dict,
+    db_session: AsyncSession,
+):
+    form_data = {
+        **FORM_DATA,
+        "address_city": "Москва",
+        "address_street": "Пушкина",
+        "address_house": "1",
+        "address_apartment": "5",
+    }
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            headers=auth_headers,
+            json={"email": "ivan@example.com", "situation_id": "shop", "form_data": form_data},
+        )
+    assert resp.status_code == 201
+    order_id = resp.json()["order_id"]
+
+    result = await db_session.execute(select(Order).where(Order.id == order_id))
+    order = result.scalar_one()
+    # Подполя собрались в единую строку для шапки документа.
+    assert order.form_data["contact_address"] == "г. Москва, ул. Пушкина, д. 1, кв. 5"
+    # Сами подполя тоже сохранены — для префилла следующего заказа.
+    assert order.form_data["address_city"] == "Москва"
+
+
+@pytest.mark.asyncio
 async def test_init_order_unknown_situation_rejected(
     client: AsyncClient,
     auth_headers: dict,

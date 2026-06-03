@@ -12,7 +12,17 @@ import { submitWizard } from "@/lib/actions/submit-wizard";
 import { ymGoal } from "@/lib/analytics";
 
 const LS_EMAIL_KEY = "lawdocs_email";
-const CONTACT_FIELDS = ["full_name", "phone", "contact_address", "email"] as const;
+const CONTACT_FIELDS = [
+  "full_name",
+  "phone",
+  "address_city",
+  "address_street",
+  "address_house",
+  "address_building",
+  "address_structure",
+  "address_apartment",
+  "email",
+] as const;
 
 // «дд.мм.гггг» → Date с проверкой реального календарного дня (31.02 → null).
 function parseRuDate(value: string): Date | null {

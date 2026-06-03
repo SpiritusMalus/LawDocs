@@ -19,6 +19,12 @@ const SITUATION_LABELS: Record<string, string> = Object.fromEntries(
 const FIELD_LABELS: Record<string, string> = {
   full_name: "ФИО",
   contact_address: "Адрес",
+  address_city: "Город",
+  address_street: "Улица",
+  address_house: "Дом/владение",
+  address_building: "Корпус",
+  address_structure: "Строение",
+  address_apartment: "Квартира",
   phone: "Телефон",
   email: "Email",
   demand: "Требование",
