@@ -15,8 +15,12 @@ type AuthFetchResult =
 
 /**
  * Authenticated fetch to the backend with sliding session support.
- * Reads access_token cookie, forwards as Bearer, and refreshes the cookie
- * if the backend returns X-Refresh-Token (token is close to expiry).
+ *
+ * Two credentials, either suffices:
+ * - access_token cookie → forwarded as Bearer (logged-in account, sliding session).
+ * - order_token cookie  → forwarded as X-Order-Token (guest, scoped to one order).
+ *
+ * Refreshes the access_token cookie if the backend returns X-Refresh-Token.
  */
 export async function authFetch(
   path: string,
@@ -29,13 +33,18 @@ export async function authFetch(
 
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
-  if (!token) {
+  const orderToken = cookieStore.get("order_token")?.value;
+  if (!token && !orderToken) {
     return { ok: false, error: NextResponse.json({ error: "unauthorized" }, { status: 401 }) };
   }
 
+  const headers: Record<string, string> = { ...(options.headers as Record<string, string>) };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (orderToken) headers["X-Order-Token"] = orderToken;
+
   const res = await fetch(`${backendUrl}${path}`, {
     ...options,
-    headers: { ...options.headers, Authorization: `Bearer ${token}` },
+    headers,
     cache: "no-store",
   });
 

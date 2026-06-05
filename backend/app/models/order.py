@@ -33,6 +33,11 @@ class Order(Base):
     # и не трогая логин-почту аккаунта. NULL → падаем на user.email (см. notification_target).
     notification_email: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    # SHA-256 от гостевого токена доступа к ЭТОМУ заказу. Гость оплачивает и смотрит
+    # заказ по cookie order_token — без magic-link и без сессии аккаунта. Скоуп строго
+    # один заказ: токен авторизует только его, не другие заказы той же почты (privacy).
+    guest_token_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     # Данные из wizard-формы (вопросы + ответы пользователя) — хранятся в зашифрованном виде (152-ФЗ)
     form_data: Mapped[dict] = mapped_column(EncryptedJSON, nullable=False, default=dict)
 

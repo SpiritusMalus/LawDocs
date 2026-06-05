@@ -1,19 +1,24 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import get_current_user, get_optional_user
+from app.api.deps import assert_order_access, get_current_user, get_optional_user
 from app.core.config import settings
 from app.core.database import get_db
 from app.core.consent import CONSENT_VERSION
 from app.core.enums import OrderStatus
 from app.core.limiter import _get_real_ip, limiter
-from app.core.security import generate_magic_token, hash_magic_token
+from app.core.security import (
+    generate_guest_token,
+    generate_magic_token,
+    hash_guest_token,
+    hash_magic_token,
+)
 from app.models.order import Order
 from app.models.user import User
 from app.schemas.order import (
@@ -134,6 +139,11 @@ async def init_order(
     db.add(order)
     await db.flush()
 
+    # Гостевой токен доступа к ЭТОМУ заказу: гость сразу идёт оплачивать по cookie
+    # order_token, без обязательного клика по magic-link. В БД — только хэш.
+    guest_token = generate_guest_token()
+    order.guest_token_hash = hash_guest_token(guest_token)
+
     logger.info("order_created", extra={"action": "order_created", "order_id": str(order.id), "situation_id": body.situation_id, "user_id": str(user.id)})
 
     token = generate_magic_token()
@@ -143,20 +153,23 @@ async def init_order(
     )
     await db.commit()
 
+    # Magic-link шлём «лучшим усилием» — это теперь опциональный путь (вход с другого
+    # устройства / в аккаунт), а НЕ гейт перед оплатой. Сбой почты не должен блокировать
+    # гостевую покупку: доступ уже обеспечен order_token.
     magic_url = f"{settings.FRONTEND_URL}/auth/verify?token={token}&order={order.id}"
     try:
         await send_magic_link(email=str(body.email), url=magic_url)
-    except Exception as exc:
+    except Exception:
         logger.error("order_magic_link_send_failed", extra={"action": "magic_link_send_failed", "order_id": str(order.id)}, exc_info=True)
         if settings.APP_ENV == "development":
             logger.warning("DEV magic link send failed: order=%s token_hash=%s", order.id, hash_magic_token(token))
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Не удалось отправить письмо. Попробуйте ещё раз.",
-            ) from exc
 
-    return OrderInitOut(order_id=order.id)
+    return OrderInitOut(
+        order_id=order.id,
+        requires_verification=False,
+        redirect_to=f"/orders/{order.id}",
+        order_token=guest_token,
+    )
 
 
 @router.post("/{order_id}/pay", response_model=PaymentOut)
@@ -165,36 +178,40 @@ async def pay_order(
     request: Request,
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
 ) -> PaymentOut:
     # Лочим строку заказа на время оплаты: двойной клик «Оплатить» не должен
     # создать два платежа в ЮKassa. skip_locked=True — параллельный запрос не
     # ждёт, а сразу получает None и отдаёт 409 (см. ниже). Паттерн как в retry_order.
+    # Доступ проверяем по владельцу ИЛИ гостевому токену (assert_order_access),
+    # поэтому фильтруем строку только по id, а не по user_id.
     result = await db.execute(
         select(Order)
-        .where(Order.id == order_id, Order.user_id == current_user.id)
+        .where(Order.id == order_id)
         .with_for_update(skip_locked=True)
+        .options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
     if not order:
-        # Либо чужой/несуществующий заказ, либо строка уже залочена параллельной
-        # оплатой. Различаем: есть ли заказ вообще (без лока).
-        exists = await db.execute(
-            select(Order.id).where(Order.id == order_id, Order.user_id == current_user.id)
-        )
+        # Либо несуществующий заказ, либо строка уже залочена параллельной оплатой.
+        # Различаем: есть ли заказ вообще (без лока).
+        exists = await db.execute(select(Order.id).where(Order.id == order_id))
         if exists.scalar_one_or_none() is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="Платёж уже создаётся. Подождите немного.",
         )
+    assert_order_access(order, optional_user, x_order_token)
     if order.status not in (OrderStatus.DRAFT.value, OrderStatus.PENDING_PAYMENT.value):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
+    customer_email = order.notification_target
     try:
-        payment_data = await create_payment(order_id=order.id, amount=order.amount, customer_email=current_user.email)
+        payment_data = await create_payment(order_id=order.id, amount=order.amount, customer_email=customer_email)
     except Exception as exc:
-        logger.error("payment_create_failed", extra={"action": "payment_create_failed", "order_id": str(order.id), "user_id": str(current_user.id)}, exc_info=True)
+        logger.error("payment_create_failed", extra={"action": "payment_create_failed", "order_id": str(order.id)}, exc_info=True)
         raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Не удалось создать платёж. Попробуйте позже.") from exc
 
     order.yookassa_payment_id = payment_data["payment_id"]
@@ -202,7 +219,7 @@ async def pay_order(
     order.status = OrderStatus.PENDING_PAYMENT.value
     await db.commit()
 
-    logger.info("payment_initiated", extra={"action": "payment_initiated", "order_id": str(order.id), "payment_id": payment_data["payment_id"], "user_id": str(current_user.id)})
+    logger.info("payment_initiated", extra={"action": "payment_initiated", "order_id": str(order.id), "payment_id": payment_data["payment_id"]})
 
     return PaymentOut(order_id=order.id, payment_url=payment_data["confirmation_url"])
 
@@ -214,17 +231,21 @@ async def retry_order(
     order_id: str,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
 ) -> dict:
     result = await db.execute(
         select(Order)
-        .where(Order.id == order_id, Order.user_id == current_user.id, Order.status == OrderStatus.FAILED.value)
+        .where(Order.id == order_id)
         .with_for_update(skip_locked=True)
         .options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
     if not order:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found or not retryable")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
+    if order.status != OrderStatus.FAILED.value:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not retryable")
 
     order.status = OrderStatus.GENERATING.value
     situation_id = order.situation_id
@@ -232,7 +253,7 @@ async def retry_order(
     user_email = order.notification_target
     await db.commit()
 
-    logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id, "user_id": str(current_user.id)})
+    logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id})
 
     background_tasks.add_task(
         run_document_generation,
@@ -271,23 +292,25 @@ async def update_order_email(
     order_id: str,
     body: OrderEmailUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
 ) -> Order:
     """Меняет адрес уведомлений заказа. Форму перезаполнять не нужно — правим одно поле.
 
     Не трогает identity-почту аккаунта (User.email): это только адрес доставки писем.
     """
     result = await db.execute(
-        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+        select(Order).where(Order.id == order_id).options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
 
     order.notification_email = body.email.lower()
     await db.commit()
     await db.refresh(order)
-    logger.info("order_email_updated", extra={"action": "order_email_updated", "order_id": order_id, "user_id": str(current_user.id)})
+    logger.info("order_email_updated", extra={"action": "order_email_updated", "order_id": order_id})
     return order
 
 
@@ -297,7 +320,8 @@ async def resend_order_notification(
     request: Request,
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
     body: OrderResendRequest | None = None,
 ) -> dict:
     """Повторно шлёт письмо по заказу; опционально сперва правит адрес уведомлений.
@@ -307,12 +331,13 @@ async def resend_order_notification(
     """
     result = await db.execute(
         select(Order)
-        .where(Order.id == order_id, Order.user_id == current_user.id)
+        .where(Order.id == order_id)
         .options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
 
     # Захватываем значения ДО commit: после него атрибуты ORM-объекта истекают,
     # а ленивая подгрузка в async-сессии бросит исключение (тот же паттерн, что в webhook).
@@ -338,7 +363,7 @@ async def resend_order_notification(
             detail="Для текущего статуса заказа пересылать нечего.",
         )
 
-    logger.info("order_notification_resent", extra={"action": "order_notification_resent", "order_id": order_id, "user_id": str(current_user.id)})
+    logger.info("order_notification_resent", extra={"action": "order_notification_resent", "order_id": order_id})
     return {"status": "sent", "email": email}
 
 
@@ -348,12 +373,14 @@ async def get_order(
     request: Request,
     order_id: str,
     db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
 ) -> Order:
     result = await db.execute(
-        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+        select(Order).where(Order.id == order_id).options(selectinload(Order.user))
     )
     order = result.scalar_one_or_none()
     if not order:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
     return order

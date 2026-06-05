@@ -10,12 +10,19 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-async function fetchOrder(id: string, token: string) {
+async function fetchOrder(
+  id: string,
+  creds: { token?: string; orderToken?: string }
+) {
   const backendUrl = process.env.BACKEND_URL;
   if (!backendUrl) return null;
 
+  const headers: Record<string, string> = {};
+  if (creds.token) headers["Authorization"] = `Bearer ${creds.token}`;
+  if (creds.orderToken) headers["X-Order-Token"] = creds.orderToken;
+
   const res = await fetch(`${backendUrl}/api/v1/orders/${id}`, {
-    headers: { Authorization: `Bearer ${token}` },
+    headers,
     cache: "no-store",
   });
 
@@ -32,9 +39,11 @@ export default async function OrderPage({
 
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
-  if (!token) redirect("/auth/error?reason=unauthorized");
+  const orderToken = cookieStore.get("order_token")?.value;
+  // Гость заходит по order_token (без аккаунта); залогиненный — по access_token.
+  if (!token && !orderToken) redirect("/auth/error?reason=unauthorized");
 
-  const order = await fetchOrder(id, token);
+  const order = await fetchOrder(id, { token, orderToken });
   if (!order) notFound();
 
   return (

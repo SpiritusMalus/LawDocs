@@ -3,6 +3,7 @@ export type OrderInitResponse = {
   order_id: string;
   requires_verification: boolean;
   redirect_to: string | null;
+  order_token: string | null;
 };
 
 export type VerifyMagicLinkResponse = {
@@ -57,6 +58,7 @@ export function validateOrderInitResponse(data: unknown): OrderInitResponse {
     order_id: obj.order_id,
     requires_verification: obj.requires_verification !== false,
     redirect_to: typeof obj.redirect_to === "string" ? obj.redirect_to : null,
+    order_token: typeof obj.order_token === "string" ? obj.order_token : null,
   };
 }
 
