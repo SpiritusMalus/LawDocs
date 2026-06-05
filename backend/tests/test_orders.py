@@ -31,7 +31,12 @@ FORM_DATA = {
 
 
 @pytest.mark.asyncio
-async def test_init_order_unauthenticated_sends_magic_link(client: AsyncClient):
+async def test_init_order_guest_returns_order_token_and_redirect(client: AsyncClient):
+    """Гость идёт сразу к оплате: order_token + redirect, без magic-link-гейта.
+
+    Magic-link всё ещё шлётся (best-effort, для входа в аккаунт), но больше не
+    блокирует и не является обязательным шагом перед оплатой.
+    """
     with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock) as mock_mail:
         resp = await client.post(
             "/api/v1/orders/init",
@@ -44,9 +49,31 @@ async def test_init_order_unauthenticated_sends_magic_link(client: AsyncClient):
         )
     assert resp.status_code == 201
     data = resp.json()
-    assert data["requires_verification"] is True
-    assert data["redirect_to"] is None
+    assert data["requires_verification"] is False
+    assert data["redirect_to"] == f"/orders/{data['order_id']}"
+    assert isinstance(data["order_token"], str) and len(data["order_token"]) > 0
     mock_mail.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_init_order_guest_survives_mail_failure(client: AsyncClient):
+    """Сбой почты не должен блокировать гостевую покупку — доступ даёт order_token."""
+    with patch(
+        "app.api.v1.orders.send_magic_link",
+        new_callable=AsyncMock,
+        side_effect=RuntimeError("smtp down"),
+    ):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            json={
+                "email": "ivan@example.com",
+                "situation_id": "shop",
+                "form_data": FORM_DATA,
+                "offer_accepted": True,
+            },
+        )
+    assert resp.status_code == 201
+    assert resp.json()["order_token"]
 
 
 @pytest.mark.asyncio
@@ -588,3 +615,55 @@ async def test_resend_draft_order_returns_400(
     with patch("app.services.email.send_document_ready", new_callable=AsyncMock):
         resp = await client.post(f"/api/v1/orders/{order.id}/resend", headers=auth_headers)
     assert resp.status_code == 400
+
+
+async def _init_guest_order(client: AsyncClient) -> tuple[str, str]:
+    """Создаёт гостевой заказ, возвращает (order_id, order_token)."""
+    with patch("app.api.v1.orders.send_magic_link", new_callable=AsyncMock):
+        resp = await client.post(
+            "/api/v1/orders/init",
+            json={
+                "email": "guest@example.com",
+                "situation_id": "shop",
+                "form_data": FORM_DATA,
+                "offer_accepted": True,
+            },
+        )
+    data = resp.json()
+    return data["order_id"], data["order_token"]
+
+
+@pytest.mark.asyncio
+async def test_guest_can_pay_with_order_token(client: AsyncClient):
+    order_id, token = await _init_guest_order(client)
+    fake_payment = {"payment_id": "yoo-g1", "confirmation_url": "https://yookassa.ru/pay/g1"}
+    with patch("app.api.v1.orders.create_payment", new_callable=AsyncMock, return_value=fake_payment):
+        resp = await client.post(
+            f"/api/v1/orders/{order_id}/pay", headers={"X-Order-Token": token}
+        )
+    assert resp.status_code == 200
+    assert resp.json()["payment_url"] == fake_payment["confirmation_url"]
+
+
+@pytest.mark.asyncio
+async def test_guest_pay_wrong_token_returns_404(client: AsyncClient):
+    order_id, _ = await _init_guest_order(client)
+    resp = await client.post(
+        f"/api/v1/orders/{order_id}/pay", headers={"X-Order-Token": "totally-wrong"}
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_guest_can_view_order_with_token(client: AsyncClient):
+    order_id, token = await _init_guest_order(client)
+    resp = await client.get(f"/api/v1/orders/{order_id}", headers={"X-Order-Token": token})
+    assert resp.status_code == 200
+    assert resp.json()["id"] == order_id
+
+
+@pytest.mark.asyncio
+async def test_get_order_without_any_credentials_returns_404(client: AsyncClient):
+    order_id, _ = await _init_guest_order(client)
+    resp = await client.get(f"/api/v1/orders/{order_id}")
+    assert resp.status_code == 404

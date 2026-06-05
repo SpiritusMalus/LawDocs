@@ -180,6 +180,17 @@ export async function submitWizard({
         const jsonData = await res.json();
         const validated = validateOrderInitResponse(jsonData);
         if (!validated.requires_verification && validated.redirect_to) {
+          // Гостевой токен заказа кладём в httpOnly-cookie: дальше оплата и просмотр
+          // этого заказа работают без логина (бэкенд шлёт его как X-Order-Token).
+          if (validated.order_token) {
+            cookieStore.set("order_token", validated.order_token, {
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              path: "/",
+              maxAge: 60 * 60 * 24 * 7,
+            });
+          }
           return { status: "redirect", orderId: validated.order_id };
         }
         return { status: "email_sent", orderId: validated.order_id };

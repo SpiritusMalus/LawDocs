@@ -87,6 +87,9 @@ class OrderInitOut(BaseModel):
     order_id: str
     requires_verification: bool = True
     redirect_to: str | None = None
+    # Сырой гостевой токен заказа: фронт кладёт его в httpOnly-cookie order_token.
+    # Возвращается ТОЛЬКО при создании заказа и больше нигде (в БД лежит лишь хэш).
+    order_token: str | None = None
 
 
 class PaymentOut(BaseModel):

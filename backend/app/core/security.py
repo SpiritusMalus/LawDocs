@@ -47,3 +47,12 @@ def generate_magic_token() -> str:
 
 def hash_magic_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def generate_guest_token() -> str:
+    """Секрет доступа гостя к одному заказу (cookie order_token)."""
+    return secrets.token_urlsafe(32)
+
+
+def hash_guest_token(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
