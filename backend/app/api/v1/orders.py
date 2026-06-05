@@ -16,7 +16,15 @@ from app.core.limiter import _get_real_ip, limiter
 from app.core.security import generate_magic_token, hash_magic_token
 from app.models.order import Order
 from app.models.user import User
-from app.schemas.order import OrderInitOut, OrderInitRequest, OrderListItem, OrderOut, PaymentOut
+from app.schemas.order import (
+    OrderEmailUpdate,
+    OrderInitOut,
+    OrderInitRequest,
+    OrderListItem,
+    OrderOut,
+    OrderResendRequest,
+    PaymentOut,
+)
 from app.services.address_compose import compose_contact_address, compose_store_address
 from app.services.email import send_magic_link
 from app.services.generation import run_document_generation
@@ -87,6 +95,7 @@ async def init_order(
             user_id=optional_user.id,
             situation_id=body.situation_id,
             form_data=form_data,
+            notification_email=body.email.lower(),
             status=OrderStatus.DRAFT.value,
             **consent_fields,
         )
@@ -118,6 +127,7 @@ async def init_order(
         user_id=user.id,
         situation_id=body.situation_id,
         form_data=form_data,
+        notification_email=email_normalized,
         status=OrderStatus.DRAFT.value,
         **consent_fields,
     )
@@ -219,7 +229,7 @@ async def retry_order(
     order.status = OrderStatus.GENERATING.value
     situation_id = order.situation_id
     form_data = order.form_data
-    user_email = str(order.user.email)
+    user_email = order.notification_target
     await db.commit()
 
     logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id, "user_id": str(current_user.id)})
@@ -233,6 +243,103 @@ async def retry_order(
     )
 
     return {"status": OrderStatus.GENERATING.value}
+
+
+async def _resend_status_notification(order_status: str, order_id: str, email: str) -> bool:
+    """Шлёт письмо, соответствующее статусу заказа. False — для статуса нечего слать."""
+    from app.services.email import (
+        send_document_failed,
+        send_document_ready,
+        send_refund_notification,
+    )
+
+    if order_status == OrderStatus.DONE.value:
+        await send_document_ready(email=email, order_id=order_id)
+    elif order_status == OrderStatus.FAILED.value:
+        await send_document_failed(email=email, order_id=order_id)
+    elif order_status == OrderStatus.REFUNDED.value:
+        await send_refund_notification(email=email, order_id=order_id)
+    else:
+        return False
+    return True
+
+
+@router.patch("/{order_id}/email", response_model=OrderOut)
+@limiter.limit("10/minute")
+async def update_order_email(
+    request: Request,
+    order_id: str,
+    body: OrderEmailUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> Order:
+    """Меняет адрес уведомлений заказа. Форму перезаполнять не нужно — правим одно поле.
+
+    Не трогает identity-почту аккаунта (User.email): это только адрес доставки писем.
+    """
+    result = await db.execute(
+        select(Order).where(Order.id == order_id, Order.user_id == current_user.id)
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    order.notification_email = body.email.lower()
+    await db.commit()
+    await db.refresh(order)
+    logger.info("order_email_updated", extra={"action": "order_email_updated", "order_id": order_id, "user_id": str(current_user.id)})
+    return order
+
+
+@router.post("/{order_id}/resend")
+@limiter.limit("5/minute")
+async def resend_order_notification(
+    request: Request,
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    body: OrderResendRequest | None = None,
+) -> dict:
+    """Повторно шлёт письмо по заказу; опционально сперва правит адрес уведомлений.
+
+    Закрывает кейс «опечатался в почте → не пришёл документ»: пользователь меняет
+    адрес и пересылает письмо, не оформляя заказ заново.
+    """
+    result = await db.execute(
+        select(Order)
+        .where(Order.id == order_id, Order.user_id == current_user.id)
+        .options(selectinload(Order.user))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+
+    # Захватываем значения ДО commit: после него атрибуты ORM-объекта истекают,
+    # а ленивая подгрузка в async-сессии бросит исключение (тот же паттерн, что в webhook).
+    if body and body.email:
+        order.notification_email = body.email.lower()
+    order_status = order.status
+    email = order.notification_target
+    if body and body.email:
+        await db.commit()
+
+    try:
+        sent = await _resend_status_notification(order_status, order_id, email)
+    except Exception as exc:
+        logger.error("order_resend_failed", extra={"action": "order_resend_failed", "order_id": order_id}, exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail="Не удалось отправить письмо. Попробуйте позже.",
+        ) from exc
+
+    if not sent:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Для текущего статуса заказа пересылать нечего.",
+        )
+
+    logger.info("order_notification_resent", extra={"action": "order_notification_resent", "order_id": order_id, "user_id": str(current_user.id)})
+    return {"status": "sent", "email": email}
 
 
 @router.get("/{order_id}", response_model=OrderOut)

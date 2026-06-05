@@ -110,7 +110,7 @@ async def yookassa_webhook(
     order_id = order.id
     situation_id = order.situation_id
     form_data = order.form_data
-    user_email = order.user.email
+    user_email = order.notification_target
 
     order.status = OrderStatus.GENERATING.value
     order.paid_at = datetime.now(UTC)
