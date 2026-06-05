@@ -94,6 +94,15 @@ class PaymentOut(BaseModel):
     payment_url: str
 
 
+class OrderEmailUpdate(BaseModel):
+    email: EmailStr
+
+
+class OrderResendRequest(BaseModel):
+    # Опционально: если задан — сперва меняем адрес уведомлений, потом шлём письмо.
+    email: EmailStr | None = None
+
+
 class OrderOut(BaseModel):
     id: str
     situation_id: str
@@ -102,6 +111,7 @@ class OrderOut(BaseModel):
     created_at: datetime
     paid_at: datetime | None
     payment_url: str | None = None
+    notification_email: str | None = None
 
     model_config = {"from_attributes": True}
 

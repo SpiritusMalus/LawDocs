@@ -1,0 +1,25 @@
+import { NextRequest, NextResponse } from "next/server";
+import { authFetch } from "@/lib/proxy-fetch";
+import { isValidUuid } from "@/lib/validators";
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  if (!isValidUuid(id)) return NextResponse.json({ error: "invalid_id" }, { status: 400 });
+
+  const body = await request.json().catch(() => ({}));
+  try {
+    const result = await authFetch(`/api/v1/orders/${id}/resend`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!result.ok) return result.error;
+    const data = await result.res.json().catch(() => ({}));
+    return NextResponse.json(data, { status: result.res.status });
+  } catch {
+    return NextResponse.json({ error: "upstream_error" }, { status: 502 });
+  }
+}

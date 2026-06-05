@@ -13,3 +13,21 @@ export function retryOrder(orderId: string): Promise<Response> {
 export function payOrder(orderId: string): Promise<Response> {
   return fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
 }
+
+// Меняет адрес уведомлений заказа без пересылки письма (форму не перезаполняем).
+export function changeOrderEmail(orderId: string, email: string): Promise<Response> {
+  return fetch(`/api/orders/${orderId}/email`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+}
+
+// Пересылает письмо по заказу; опциональный email сперва меняет адрес уведомлений.
+export function resendNotification(orderId: string, email?: string): Promise<Response> {
+  return fetch(`/api/orders/${orderId}/resend`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(email ? { email } : {}),
+  });
+}

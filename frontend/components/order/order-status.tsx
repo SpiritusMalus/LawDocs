@@ -7,6 +7,7 @@ import { E2EEClient } from "@/lib/e2ee-client";
 import { ymGoal } from "@/lib/analytics";
 import { downloadDocument, MissingKeyError } from "@/lib/e2ee-download";
 import { RecoverAccessInline } from "@/components/order/recover-access-inline";
+import { NotificationEmail } from "@/components/order/notification-email";
 import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
@@ -19,6 +20,7 @@ interface Order {
   created_at: string;
   paid_at: string | null;
   payment_url: string | null;
+  notification_email: string | null;
 }
 
 type StatusConfig = {
@@ -251,6 +253,10 @@ export function OrderStatus({
       )}
 
       {order.status === "refunded" && <RefundedSection order={order} />}
+
+      {(order.status === "done" || order.status === "failed" || order.status === "refunded") && (
+        <NotificationEmail orderId={orderId} email={order.notification_email} />
+      )}
 
       <p className="text-xs text-gray-300">
         Заказ № {orderId.slice(0, 8).toUpperCase()}

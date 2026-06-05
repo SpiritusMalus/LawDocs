@@ -28,6 +28,11 @@ class Order(Base):
     yookassa_payment_id: Mapped[str | None] = mapped_column(String, nullable=True)
     payment_url: Mapped[str | None] = mapped_column(String, nullable=True)
 
+    # Адрес для уведомлений по этому заказу. Отвязан от identity юзера: пользователь
+    # может опечататься в почте и поправить её на странице заказа, не перезаполняя форму
+    # и не трогая логин-почту аккаунта. NULL → падаем на user.email (см. notification_target).
+    notification_email: Mapped[str | None] = mapped_column(String, nullable=True)
+
     # Данные из wizard-формы (вопросы + ответы пользователя) — хранятся в зашифрованном виде (152-ФЗ)
     form_data: Mapped[dict] = mapped_column(EncryptedJSON, nullable=False, default=dict)
 
@@ -45,3 +50,11 @@ class Order(Base):
 
     user: Mapped["User"] = relationship("User", back_populates="orders")  # noqa: F821
     document: Mapped["Document | None"] = relationship("Document", back_populates="order", uselist=False)  # noqa: F821
+
+    @property
+    def notification_target(self) -> str:
+        """Куда слать письма по заказу: per-order адрес, иначе identity-почта юзера.
+
+        Требует загруженного self.user (selectinload) при падении на user.email.
+        """
+        return self.notification_email or self.user.email

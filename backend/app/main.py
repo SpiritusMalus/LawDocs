@@ -177,7 +177,7 @@ async def _auto_retry_loop() -> None:
                     if o.auto_retry_count >= _MAX_AUTO_RETRIES and o.yookassa_payment_id:
                         # Сервер упал на последней retry — нужен рефанд
                         watchdog_refund_tasks.append((
-                            str(o.id), o.situation_id, str(o.user.email),
+                            str(o.id), o.situation_id, o.notification_target,
                         ))
                         o.status = OrderStatus.REFUNDED.value
                         o.form_data = {}
@@ -204,7 +204,7 @@ async def _auto_retry_loop() -> None:
                         str(o.id),
                         o.situation_id,
                         o.form_data,
-                        str(o.user.email),
+                        o.notification_target,
                         o.auto_retry_count >= _MAX_AUTO_RETRIES,
                     )
                     for o in orders_to_retry

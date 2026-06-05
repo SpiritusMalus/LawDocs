@@ -501,3 +501,90 @@ async def test_retry_non_failed_order_returns_404(
 async def test_unauthenticated_request_returns_401(client: AsyncClient):
     resp = await client.get("/api/v1/orders/")
     assert resp.status_code == 401
+
+
+async def _make_order(db_session: AsyncSession, user: User, status: str = "done") -> Order:
+    order = Order(
+        user_id=user.id,
+        situation_id="shop",
+        form_data=FORM_DATA,
+        notification_email="typo@exmaple.com",
+        status=status,
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+    return order
+
+
+@pytest.mark.asyncio
+async def test_update_order_email_changes_notification_target(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_order(db_session, user)
+    resp = await client.patch(
+        f"/api/v1/orders/{order.id}/email",
+        headers=auth_headers,
+        json={"email": "Fixed@Mail.RU"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["notification_email"] == "fixed@mail.ru"
+    await db_session.refresh(order)
+    assert order.notification_email == "fixed@mail.ru"
+
+
+@pytest.mark.asyncio
+async def test_update_order_email_wrong_owner_404(
+    client: AsyncClient, auth_headers: dict, db_session: AsyncSession
+):
+    other = User(email="other@example.com")
+    db_session.add(other)
+    await db_session.commit()
+    await db_session.refresh(other)
+    order = await _make_order(db_session, other)
+    resp = await client.patch(
+        f"/api/v1/orders/{order.id}/email", headers=auth_headers, json={"email": "x@y.ru"}
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_resend_done_order_sends_document_ready(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_order(db_session, user, status="done")
+    with patch("app.services.email.send_document_ready", new_callable=AsyncMock) as mock_mail:
+        resp = await client.post(f"/api/v1/orders/{order.id}/resend", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "sent"
+    mock_mail.assert_called_once()
+    assert mock_mail.call_args.kwargs["email"] == "typo@exmaple.com"
+
+
+@pytest.mark.asyncio
+async def test_resend_with_email_updates_then_sends_to_new_address(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_order(db_session, user, status="done")
+    with patch("app.services.email.send_document_ready", new_callable=AsyncMock) as mock_mail:
+        resp = await client.post(
+            f"/api/v1/orders/{order.id}/resend",
+            headers=auth_headers,
+            json={"email": "correct@mail.ru"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["email"] == "correct@mail.ru"
+    mock_mail.assert_called_once()
+    assert mock_mail.call_args.kwargs["email"] == "correct@mail.ru"
+    await db_session.refresh(order)
+    assert order.notification_email == "correct@mail.ru"
+
+
+@pytest.mark.asyncio
+async def test_resend_draft_order_returns_400(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_order(db_session, user, status="draft")
+    with patch("app.services.email.send_document_ready", new_callable=AsyncMock):
+        resp = await client.post(f"/api/v1/orders/{order.id}/resend", headers=auth_headers)
+    assert resp.status_code == 400
