@@ -13,6 +13,9 @@ export interface WizardField {
   min_field?: string | null;
   max_field?: string | null;
   max_len?: number | null;
+  // Условная видимость: поле показывается, только если значение поля `field`
+  // входит в `values`. Иначе скрыто и не участвует в валидации/отправке.
+  show_if?: { field: string; values: string[] } | null;
 }
 
 export interface WizardStep {
