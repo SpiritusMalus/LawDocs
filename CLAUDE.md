@@ -27,20 +27,23 @@
 
 ## Git workflow
 
-**Claude:** feature branch → code → commit → STOP  
-**User:** push → deploy → verify
+**Порядок:** User утверждает план → Claude кодит → commit → **push → merge в git-main сам**.
+**User:** деплой на прод + verify (когда заливать прод-main — решает User).
 
 ```bash
-git checkout -b fix-issue-XXX   # всегда от main
+git checkout -b feat-XXX        # всегда от main
 # ... код ...
 git add <files>
-git commit -m "fix: description"
-# STOP — push делает User
+git commit -m "feat: description"
+git push -u origin feat-XXX
+gh pr create --base main --head feat-XXX --title "…" --body "…"
+gh pr merge feat-XXX --merge    # Claude мержит в git-main
 ```
 
-**Запрещено Claude:** `git push`, `/ship`, docker команды, SSH на сервер.
+**Claude делает сам:** `git push`, создание PR, **merge в git-main**.
+**Запрещено Claude (зона User'а — прод):** docker-команды, SSH на сервер, деплой на прод, чтение секретов.
 
-Причина: push и deploy — зона ответственности User'а. Claude не видит состояние прода, не знает когда безопасно деплоить, и не должен принимать эти решения самостоятельно.
+Причина: код-ревью/мерж в git-main — рабочий цикл, его ведёт Claude после утверждения плана. Прод (когда и что деплоить) Claude не видит и не трогает — это решает User.
 
 ## Стиль кода: читаемость и ООП
 
