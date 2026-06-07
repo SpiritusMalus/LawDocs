@@ -1,4 +1,6 @@
+import base64
 import hashlib
+import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
 
@@ -7,6 +9,10 @@ from jose import JWTError, jwt
 from app.core.config import settings
 
 ALGORITHM = "HS256"
+
+# PBKDF2-HMAC-SHA256 для пароля аккаунта. Stdlib — без новых зависимостей.
+# 600k итераций — рекомендация OWASP (2023) для PBKDF2-SHA256.
+_PBKDF2_ITERATIONS = 600_000
 
 
 def create_access_token(user_id: str) -> str:
@@ -61,3 +67,27 @@ def hash_guest_token(token: str) -> str:
 def hash_challenge_nonce(nonce: bytes) -> str:
     """Хэш nonce для challenge-response логина (сверка без хранения самого nonce)."""
     return hashlib.sha256(nonce).hexdigest()
+
+
+def hash_password(password: str) -> str:
+    """Хэш пароля аккаунта: pbkdf2_sha256$iterations$salt$hash (base64)."""
+    salt = secrets.token_bytes(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, _PBKDF2_ITERATIONS)
+    return (
+        f"pbkdf2_sha256${_PBKDF2_ITERATIONS}$"
+        f"{base64.b64encode(salt).decode()}${base64.b64encode(dk).decode()}"
+    )
+
+
+def verify_password(password: str, stored: str) -> bool:
+    """Проверяет пароль против сохранённого хэша (constant-time)."""
+    try:
+        algo, iterations, salt_b64, hash_b64 = stored.split("$")
+        if algo != "pbkdf2_sha256":
+            return False
+        dk = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), base64.b64decode(salt_b64), int(iterations)
+        )
+        return hmac.compare_digest(dk, base64.b64decode(hash_b64))
+    except (ValueError, TypeError):
+        return False

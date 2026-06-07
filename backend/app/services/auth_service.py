@@ -13,17 +13,24 @@ from app.core.security import (
     generate_magic_token,
     hash_challenge_nonce,
     hash_magic_token,
+    hash_password,
+    verify_password,
 )
 from app.models.auth_challenge import AuthChallenge
 from app.models.order import Order
 from app.models.user import User
+from app.models.user_key import UserKey
 from app.schemas.auth import (
     ContactOut,
     E2EESetupRequest,
     E2EESetupResponse,
     KeyChallengeResponse,
     KeyLoginResponse,
+    KeyringEntryOut,
+    PasswordLoginResponse,
     RecoverAccessResponse,
+    SetPasswordRequest,
+    SetPasswordResponse,
 )
 from app.services.e2ee_file import encrypt_for_public_key
 from app.schemas.user import UserOut
@@ -316,3 +323,87 @@ async def key_login(challenge_id: str, nonce_b64: str, ip: str, db: AsyncSession
 
     access_token = create_access_token(str(user.id))
     return KeyLoginResponse(access_token=access_token, user=UserOut.model_validate(user))
+
+
+# ============================================================================
+# KEYRING под паролем — вторая дверь к тем же ключам
+# ============================================================================
+
+
+async def _upsert_keyring(user_id: str, wrapped_keys: list, db: AsyncSession) -> int:
+    """Добавляет/обновляет записи keyring (по public_key). Возвращает число ключей.
+
+    wrapped_private_key — непрозрачный для сервера blob (обёрнут паролем в браузере).
+    """
+    stored = 0
+    for wk in wrapped_keys:
+        result = await db.execute(
+            select(UserKey).where(
+                UserKey.user_id == user_id, UserKey.public_key == wk.public_key
+            )
+        )
+        entry = result.scalar_one_or_none()
+        if entry is None:
+            db.add(
+                UserKey(
+                    user_id=user_id,
+                    public_key=wk.public_key,
+                    wrapped_private_key=wk.wrapped_private_key,
+                    label=wk.label,
+                )
+            )
+        else:
+            # Перевыпуск пароля: blob переобёрнут новым паролем — обновляем.
+            entry.wrapped_private_key = wk.wrapped_private_key
+            if wk.label:
+                entry.label = wk.label
+        stored += 1
+    return stored
+
+
+async def set_password(
+    user: User, body: SetPasswordRequest, db: AsyncSession
+) -> SetPasswordResponse:
+    """Устанавливает пароль аккаунта и кладёт обёрнутые им ключи в keyring.
+
+    Пароль доходит до сервера только чтобы посчитать pbkdf2-хэш для последующей
+    аутентификации. Сами приватные ключи сервер не видит — они приходят уже
+    зашифрованными паролем на клиенте (wrapped_private_key).
+    """
+    user.password_hash = hash_password(body.password)
+    keys_stored = await _upsert_keyring(str(user.id), body.wrapped_keys, db)
+    await db.commit()
+    logger.info(
+        "account_password_set",
+        extra={"action": "set_password", "user_id": str(user.id), "keys_stored": keys_stored},
+    )
+    return SetPasswordResponse(status="success", keys_stored=keys_stored)
+
+
+async def password_login(
+    email_normalized: str, password: str, ip: str, db: AsyncSession
+) -> PasswordLoginResponse:
+    """Логин email+паролем. Отдаёт keyring — браузер раскрывает ключи паролем сам."""
+    invalid = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный email или пароль")
+
+    result = await db.execute(select(User).where(User.email == email_normalized))
+    user = result.scalar_one_or_none()
+    if user is None or not user.password_hash or not verify_password(password, user.password_hash):
+        logger.warning("password_login_failed", extra={"action": "password_login", "ip": ip})
+        raise invalid
+
+    keys_result = await db.execute(select(UserKey).where(UserKey.user_id == user.id))
+    keyring = [
+        KeyringEntryOut(
+            public_key=k.public_key,
+            wrapped_private_key=k.wrapped_private_key,
+            label=k.label,
+        )
+        for k in keys_result.scalars().all()
+    ]
+
+    logger.info("password_login_success", extra={"action": "password_login", "user_id": str(user.id), "ip": ip})
+    access_token = create_access_token(str(user.id))
+    return PasswordLoginResponse(
+        access_token=access_token, user=UserOut.model_validate(user), keyring=keyring
+    )

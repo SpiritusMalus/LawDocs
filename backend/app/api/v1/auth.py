@@ -15,8 +15,12 @@ from app.schemas.auth import (
     KeyChallengeResponse,
     KeyLoginRequest,
     KeyLoginResponse,
+    PasswordLoginRequest,
+    PasswordLoginResponse,
     RecoverAccessRequest,
     RecoverAccessResponse,
+    SetPasswordRequest,
+    SetPasswordResponse,
     VerifyOut,
 )
 from app.schemas.user import MagicLinkRequest, UserOut
@@ -142,3 +146,34 @@ async def key_login(
     """Логин по решённому challenge. JWT в теле — Next.js Route Handler ставит cookie."""
     ip = request.client.host if request.client else "unknown"
     return await auth_service.key_login(body.challenge_id, body.nonce, ip, db)
+
+
+# ============================================================================
+# KEYRING под паролем (вторая дверь к тем же ключам)
+# ============================================================================
+
+
+@router.post("/set-password", response_model=SetPasswordResponse)
+async def set_password(
+    body: SetPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SetPasswordResponse:
+    """Ставит пароль аккаунта и кладёт обёрнутые им ключи в keyring.
+
+    Требует уже выполненного входа (по ключу или magic-link). Приватные ключи
+    приходят уже зашифрованными паролем на клиенте — сервер их не видит.
+    """
+    return await auth_service.set_password(current_user, body, db)
+
+
+@router.post("/password-login", response_model=PasswordLoginResponse)
+@limiter.limit("10/minute")
+async def password_login(
+    request: Request,
+    body: PasswordLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> PasswordLoginResponse:
+    """Логин email+паролем. Возвращает keyring; браузер раскрывает ключи паролем сам."""
+    ip = request.client.host if request.client else "unknown"
+    return await auth_service.password_login(body.email.lower(), body.password, ip, db)
