@@ -86,47 +86,8 @@ def _sanitize_value(value: str) -> str:
     return " ".join(value.split())
 
 
-_gigachat_token: str | None = None
-_gigachat_token_expires_at: datetime | None = None
-_gigachat_lock = asyncio.Lock()
-
 GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
-
-
-async def _get_gigachat_token() -> str:
-    global _gigachat_token, _gigachat_token_expires_at
-
-    async with _gigachat_lock:
-        if (
-            _gigachat_token
-            and _gigachat_token_expires_at
-            and _gigachat_token_expires_at > datetime.now(UTC)
-        ):
-            return _gigachat_token
-
-        # verify=False: GigaChat использует CA «МинЦифры России», не входящий
-        # в стандартный доверенный список. В продакшне можно добавить CA-cert
-        # через httpx.AsyncClient(verify="/path/to/mintsifry_ca.pem").
-        async with httpx.AsyncClient(verify=_get_verify()) as client:
-            resp = await client.post(
-                GIGACHAT_AUTH_URL,
-                headers={
-                    "Authorization": f"Basic {settings.GIGACHAT_AUTH_KEY}",
-                    "RqUID": str(uuid.uuid4()),
-                    "Content-Type": "application/x-www-form-urlencoded",
-                },
-                data={"scope": "GIGACHAT_API_PERS"},
-                timeout=10,
-            )
-            if not resp.is_success:
-                logger.error("GigaChat auth failed %s: %s", resp.status_code, resp.text)
-                resp.raise_for_status()
-            data = resp.json()
-
-        _gigachat_token = data["access_token"]
-        _gigachat_token_expires_at = datetime.fromtimestamp(data["expires_at"] / 1000, tz=UTC)
-        return _gigachat_token
 
 
 _RETRY_FEEDBACK = (
@@ -142,7 +103,50 @@ _RETRY_FEEDBACK = (
 
 
 class GigaChatProvider(LLMProvider):
-    """Провайдер GigaChat (Сбер) — основной генератор."""
+    """Провайдер GigaChat (Сбер) — основной генератор.
+
+    Хранит OAuth-токен и переиспользует его до истечения TTL (из ответа auth).
+    Обновление токена защищено локом, чтобы конкурентные генерации не дёргали
+    auth-эндпоинт одновременно. Состояние живёт в экземпляре — провайдер
+    создаётся синглтоном (см. _get_gigachat_provider).
+    """
+
+    def __init__(self) -> None:
+        self._token: str | None = None
+        self._token_expires_at: datetime | None = None
+        self._token_lock = asyncio.Lock()
+
+    async def _get_token(self) -> str:
+        async with self._token_lock:
+            if (
+                self._token
+                and self._token_expires_at
+                and self._token_expires_at > datetime.now(UTC)
+            ):
+                return self._token
+
+            # verify=False: GigaChat использует CA «МинЦифры России», не входящий
+            # в стандартный доверенный список. В продакшне можно добавить CA-cert
+            # через httpx.AsyncClient(verify="/path/to/mintsifry_ca.pem").
+            async with httpx.AsyncClient(verify=_get_verify()) as client:
+                resp = await client.post(
+                    GIGACHAT_AUTH_URL,
+                    headers={
+                        "Authorization": f"Basic {settings.GIGACHAT_AUTH_KEY}",
+                        "RqUID": str(uuid.uuid4()),
+                        "Content-Type": "application/x-www-form-urlencoded",
+                    },
+                    data={"scope": "GIGACHAT_API_PERS"},
+                    timeout=10,
+                )
+                if not resp.is_success:
+                    logger.error("GigaChat auth failed %s: %s", resp.status_code, resp.text)
+                    resp.raise_for_status()
+                data = resp.json()
+
+            self._token = data["access_token"]
+            self._token_expires_at = datetime.fromtimestamp(data["expires_at"] / 1000, tz=UTC)
+            return self._token
 
     async def generate(
         self, system_prompt: str, user_prompt: str, *, validate: bool = False
@@ -151,7 +155,7 @@ class GigaChatProvider(LLMProvider):
 
         async def _once(extra_feedback: str = "") -> str:
             # Токен перезапрашивается каждый раз — защита от истечения между retry
-            fresh_token = await _get_gigachat_token()
+            fresh_token = await self._get_token()
             for net_attempt in range(1, 3):
                 try:
                     async with httpx.AsyncClient(verify=_get_verify()) as client:
@@ -342,19 +346,17 @@ def _yandex_configured() -> bool:
     return bool(settings.YANDEX_API_KEY and settings.YANDEX_FOLDER_ID)
 
 
+# Синглтоны: провайдеры держат состояние (кэш токена GigaChat), поэтому
+# переиспользуются между запросами. Доступ через геттеры — точка патча в тестах.
+_gigachat_provider = GigaChatProvider()
+_yandex_provider = YandexGPTProvider()
+
+
 def _get_gigachat_provider() -> GigaChatProvider:
-    """Синглтон GigaChatProvider."""
-    global _gigachat_provider
-    if "_gigachat_provider" not in globals():
-        _gigachat_provider = GigaChatProvider()
     return _gigachat_provider
 
 
 def _get_yandex_provider() -> YandexGPTProvider:
-    """Синглтон YandexGPTProvider."""
-    global _yandex_provider
-    if "_yandex_provider" not in globals():
-        _yandex_provider = YandexGPTProvider()
     return _yandex_provider
 
 
@@ -413,16 +415,6 @@ def _is_gigachat_refusal(text: str) -> bool:
 
 # ── Постобработка и валидация ответа GigaChat ─────────────────────────────────
 # (all patterns and logic moved to app.services.text_cleanup)
-
-
-def _has_quality_artifacts(text: str) -> bool:
-    """Проверяет, содержит ли текст типичные артефакты GigaChat."""
-    if not has_quality_artifacts(text):
-        return False
-    # Слишком короткий — не документ
-    if len(text.strip()) < 300:
-        return True
-    return False
 
 
 _DEFAULT_SYSTEM_PROMPT = """Ты — опытный юрист. Составь официальную претензию или жалобу.
