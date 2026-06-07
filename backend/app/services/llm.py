@@ -579,6 +579,13 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
     else:
         polished = raw_narrative
 
+    # Чистим нарратив тем же чистильщиком, что и полный режим: убирает
+    # LLM-артефакты, включая мета-выжимки вроде «В форме указано:» (метки-разделы).
+    # Применяем к фрагменту нарратива, а не ко всему шаблону — детерминированные
+    # python-секции (законы/расчёты/требования) при этом не трогаются.
+    if polished:
+        polished = clean_llm_text(polished)
+
     text = _pre_substitute_prompt(config.python_template, form_data)
     text = text.replace("{{llm_narrative}}", polished)
     # Лёгкая подчистка детерминированного текста (полный clean_llm_text НЕ применяем,
