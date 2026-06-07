@@ -103,26 +103,35 @@ export function PreviewSection({ orderId }: { orderId: string }) {
               </button>
             </div>
           ) : (
-            <button
+            <div
               key={i}
-              type="button"
-              onClick={() => setOpenAt(i)}
-              className="group relative block w-full overflow-hidden rounded-lg border border-gray-200 shadow-sm transition hover:border-primary/40 hover:shadow"
-              aria-label={`Открыть страницу ${i + 1}`}
+              className="overflow-hidden rounded-lg border border-gray-200 shadow-sm"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={url}
-                alt={`Страница ${i + 1}`}
-                draggable={false}
-                onError={() => setBroken((prev) => new Set(prev).add(i))}
-                className="w-full select-none"
-              />
-              <span className="pointer-events-none absolute right-2 top-2 flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-xs font-medium text-white opacity-0 transition group-hover:opacity-100">
-                <Maximize2 className="h-3 w-3" />
-                Открыть
-              </span>
-            </button>
+              <button
+                type="button"
+                onClick={() => setOpenAt(i)}
+                className="block w-full"
+                aria-label={`Открыть страницу ${i + 1}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={url}
+                  alt={`Страница ${i + 1}`}
+                  draggable={false}
+                  onError={() => setBroken((prev) => new Set(prev).add(i))}
+                  className="w-full select-none"
+                />
+              </button>
+              {/* Кнопка всегда видна (в т.ч. на телефоне, где нет hover). */}
+              <button
+                type="button"
+                onClick={() => setOpenAt(i)}
+                className="flex w-full items-center justify-center gap-1.5 border-t border-gray-100 bg-gray-50 py-2.5 text-sm font-medium text-primary hover:bg-gray-100"
+              >
+                <Maximize2 className="h-4 w-4" />
+                Страница {i + 1} — открыть
+              </button>
+            </div>
           ),
         )}
       </div>
