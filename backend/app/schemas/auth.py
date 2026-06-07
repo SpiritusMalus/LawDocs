@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.user import UserOut
 
@@ -67,3 +67,44 @@ class KeyLoginRequest(BaseModel):
 class KeyLoginResponse(BaseModel):
     access_token: str
     user: UserOut
+
+
+# ============================================================================
+# KEYRING под паролем аккаунта (вторая дверь к тем же ключам)
+# ============================================================================
+
+
+class WrappedKeyIn(BaseModel):
+    public_key: str
+    # blob, зашифрованный паролем НА КЛИЕНТЕ — сервер хранит непрозрачно.
+    wrapped_private_key: str
+    label: str | None = None
+
+
+class SetPasswordRequest(BaseModel):
+    password: str = Field(min_length=8, max_length=128)
+    # Ключи, обёрнутые этим же паролем в браузере (обычно текущий ключ устройства).
+    wrapped_keys: list[WrappedKeyIn] = Field(default_factory=list)
+
+
+class SetPasswordResponse(BaseModel):
+    status: str
+    keys_stored: int
+
+
+class PasswordLoginRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class KeyringEntryOut(BaseModel):
+    public_key: str
+    wrapped_private_key: str
+    label: str | None = None
+
+
+class PasswordLoginResponse(BaseModel):
+    access_token: str
+    user: UserOut
+    # Весь keyring — браузер раскроет каждый ключ паролем и расшифрует заказы.
+    keyring: list[KeyringEntryOut]

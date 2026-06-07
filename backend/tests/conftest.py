@@ -49,7 +49,7 @@ from app.core.security import create_access_token
 _test_engine = create_async_engine(_db_url, echo=False)
 _TestSessionLocal = async_sessionmaker(_test_engine, expire_on_commit=False)
 
-_TRUNCATE_ORDER = ["documents", "orders", "auth_challenges", "users"]
+_TRUNCATE_ORDER = ["documents", "orders", "auth_challenges", "user_keys", "users"]
 
 
 async def _create_all():

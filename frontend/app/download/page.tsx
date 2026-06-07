@@ -6,14 +6,17 @@ import { useRouter } from "next/navigation";
 import { Loader2, KeyRound, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { loginViaKeyFile, loginViaPrivateKey } from "@/lib/e2ee-login";
+import { loginViaPassword } from "@/lib/e2ee-password";
 
-type Method = "keyfile" | "paste";
+type Method = "keyfile" | "paste" | "password";
 
 export default function DownloadPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [method, setMethod] = useState<Method>("keyfile");
   const [pastedKey, setPastedKey] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,6 +74,17 @@ export default function DownloadPage() {
             >
               Вставить ключ
             </button>
+            <button
+              type="button"
+              onClick={() => { setMethod("password"); setError(null); }}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                method === "password"
+                  ? "border-primary bg-primary/5 text-primary"
+                  : "border-gray-200 text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Пароль
+            </button>
           </div>
 
           {method === "keyfile" ? (
@@ -100,7 +114,7 @@ export default function DownloadPage() {
                 )}
               </Button>
             </div>
-          ) : (
+          ) : method === "paste" ? (
             <div className="space-y-3">
               <textarea
                 value={pastedKey}
@@ -119,6 +133,40 @@ export default function DownloadPage() {
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Войти по ключу"}
               </Button>
             </div>
+          ) : (
+            <form
+              className="space-y-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                run(() => loginViaPassword(email, password));
+              }}
+            >
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={busy}
+                placeholder="you@example.com"
+                className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:border-primary focus:outline-none"
+              />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                disabled={busy}
+                placeholder="Пароль аккаунта"
+                className="w-full h-10 rounded-lg border border-gray-200 px-3 text-sm focus:border-primary focus:outline-none"
+              />
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={busy || email.trim().length === 0 || password.length === 0}
+              >
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Войти по паролю"}
+              </Button>
+            </form>
           )}
 
           {error && <p className="text-sm text-red-600 text-center">{error}</p>}
