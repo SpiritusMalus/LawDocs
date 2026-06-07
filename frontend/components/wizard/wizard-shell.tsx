@@ -428,7 +428,12 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
 
         {isLast ? (
           <div className="flex flex-col items-end gap-2">
-            <Button onClick={handleSubmit} disabled={isPending} className="h-11 px-8 text-base">
+            {/* Кнопка заблокирована, пока не отмечено согласие с офертой и обработкой ПДн. */}
+            <Button
+              onClick={handleSubmit}
+              disabled={isPending || !consentAccepted}
+              className="h-11 px-8 text-base"
+            >
               {isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
