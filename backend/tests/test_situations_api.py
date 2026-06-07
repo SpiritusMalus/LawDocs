@@ -58,6 +58,28 @@ async def test_get_situation_detail():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "situation_id, field_id, ctrl_field, ctrl_values",
+    [
+        ("telecom", "monthly_fee", "problem_type", {"no_service", "slow_speed"}),
+        ("auto_repair", "agreed_price", "violation_type", {"overcharge"}),
+    ],
+)
+async def test_show_if_exposed_in_detail(situation_id, field_id, ctrl_field, ctrl_values):
+    """show_if доезжает до фронта через детальный эндпоинт ситуации."""
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        resp = await client.get(f"/api/v1/situations/{situation_id}")
+    assert resp.status_code == 200
+    fields = [f for step in resp.json()["wizard_steps"] for f in step["fields"]]
+    field = next(f for f in fields if f["id"] == field_id)
+    assert field["show_if"]["field"] == ctrl_field
+    assert set(field["show_if"]["values"]) == ctrl_values
+    # Поля без условия не должны получить show_if (остаётся null).
+    plain = next(f for f in fields if f["id"] == ctrl_field)
+    assert plain["show_if"] is None
+
+
+@pytest.mark.asyncio
 async def test_get_situation_not_found():
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         resp = await client.get("/api/v1/situations/does_not_exist")

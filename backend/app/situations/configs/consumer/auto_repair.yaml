@@ -113,6 +113,9 @@ wizard_steps:
         type: number
         label: "Первоначально согласованная цена, ₽"
         hint: "Если цену завысили — укажите сумму из договора или сметы"
+        show_if:
+          field: violation_type
+          values: [overcharge]
   - title: "Что вы хотите"
     fields:
       - id: demand

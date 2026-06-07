@@ -50,6 +50,13 @@ function isStoreAddressEmpty(answers: Record<string, string>): boolean {
 }
 const STORE_ADDRESS_REQUIRED_MSG = "Укажите адрес магазина или его сайт — хотя бы одно поле.";
 
+// Видимость поля по правилу show_if: показываем, только если значение
+// контролирующего поля входит в заданный набор. Без show_if — всегда видимо.
+function isFieldVisible(field: WizardField, answers: Record<string, string>): boolean {
+  if (!field.show_if) return true;
+  return field.show_if.values.includes(answers[field.show_if.field] ?? "");
+}
+
 // «дд.мм.гггг» → Date с проверкой реального календарного дня (31.02 → null).
 function parseRuDate(value: string): Date | null {
   const m = value.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
@@ -173,7 +180,8 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const progressPct = Math.round(((currentStep + 1) / steps.length) * 100);
 
   function getMissingRequiredFields(fields: WizardField[]): WizardField[] {
-    return fields.filter((f) => f.required && !answers[f.id]?.trim());
+    // Скрытые (show_if) поля не обязательны — их не показываем и не требуем.
+    return fields.filter((f) => f.required && isFieldVisible(f, answers) && !answers[f.id]?.trim());
   }
 
   function handleNext() {
@@ -186,7 +194,8 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
     const addr = stepHasAddress(step.fields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
     const storeAddr =
       stepHasStoreAddress(step.fields) && isStoreAddressEmpty(answers) ? [STORE_ADDRESS_REQUIRED_MSG] : [];
-    const problems = [...addr, ...storeAddr, ...getDateErrors(step.fields, answers, fieldById)];
+    const visibleStepFields = step.fields.filter((f) => isFieldVisible(f, answers));
+    const problems = [...addr, ...storeAddr, ...getDateErrors(visibleStepFields, answers, fieldById)];
     if (problems.length > 0) {
       setFieldErrors([]);
       setDateErrors(problems);
@@ -223,7 +232,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
       return;
     }
     // На отправке проверяем даты всей формы (cross-field может тянуться через шаги).
-    const allFields = steps.flatMap((s) => s.fields);
+    const allFields = steps.flatMap((s) => s.fields).filter((f) => isFieldVisible(f, answers));
     const addr = stepHasAddress(allFields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
     const storeAddr =
       stepHasStoreAddress(allFields) && isStoreAddressEmpty(answers) ? [STORE_ADDRESS_REQUIRED_MSG] : [];
@@ -242,8 +251,15 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
     setConsentError(false);
     setSubmitError(null);
     ymGoal("wizard_submitted", { situation: situationId });
+    // Скрытые (show_if) поля не отправляем — их значения не относятся к выбранному варианту.
+    const hiddenIds = new Set(
+      steps.flatMap((s) => s.fields).filter((f) => !isFieldVisible(f, answers)).map((f) => f.id),
+    );
+    const submittedAnswers = Object.fromEntries(
+      Object.entries(answers).filter(([k]) => !hiddenIds.has(k)),
+    );
     startTransition(async () => {
-      const result = await submitWizard({ situationId, answers, offerAccepted: consentAccepted });
+      const result = await submitWizard({ situationId, answers: submittedAnswers, offerAccepted: consentAccepted });
       if (result.status === "redirect" && result.orderId) {
         try { localStorage.setItem(LS_EMAIL_KEY, answers["email"] ?? ""); } catch {}
         router.push(`/orders/${result.orderId}`);
@@ -322,15 +338,17 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
         <h2 className="text-xl font-bold text-gray-900 mb-6">{step.title}</h2>
 
         <div className="space-y-5">
-          {step.fields.map((field) => (
-            <FieldRenderer
-              key={field.id}
-              field={field}
-              value={answers[field.id] ?? ""}
-              onChange={(v) => handleChange(field.id, v)}
-              invalid={invalidFieldIds.includes(field.id)}
-            />
-          ))}
+          {step.fields
+            .filter((field) => isFieldVisible(field, answers))
+            .map((field) => (
+              <FieldRenderer
+                key={field.id}
+                field={field}
+                value={answers[field.id] ?? ""}
+                onChange={(v) => handleChange(field.id, v)}
+                invalid={invalidFieldIds.includes(field.id)}
+              />
+            ))}
         </div>
 
         {fieldErrors.length > 0 && (
@@ -477,6 +495,7 @@ function ReviewSummary({
   const rows: { id: string; label: string; value: string }[] = [];
   for (const s of steps) {
     for (const f of s.fields) {
+      if (!isFieldVisible(f, answers)) continue;
       const raw = answers[f.id]?.trim();
       if (raw) rows.push({ id: f.id, label: f.label, value: displayValue(f, raw) });
     }

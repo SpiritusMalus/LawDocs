@@ -131,6 +131,9 @@ wizard_steps:
         label: "Ежемесячный платёж по тарифу, ₽"
         placeholder: "890"
         hint: "Нужно для расчёта суммы возврата"
+        show_if:
+          field: problem_type
+          values: [no_service, slow_speed]
 
 legal_refs:
   - law: "ФЗ «О связи» — права абонента и обязанности оператора"

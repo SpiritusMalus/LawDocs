@@ -14,6 +14,14 @@ class WizardFieldOption(BaseModel):
     label: str
 
 
+class ShowIf(BaseModel):
+    """Условие видимости поля: показывать, только если значение поля `field`
+    входит в `values`. Иначе поле скрыто и не участвует в валидации/отправке."""
+
+    field: str
+    values: list[str]
+
+
 class WizardField(BaseModel):
     id: str
     type: Literal["text", "number", "date", "textarea", "radio"]
@@ -33,6 +41,11 @@ class WizardField(BaseModel):
     # Лимит длины значения (символов). Фронт ставит maxLength у input, сервер
     # проверяет повторно. Без проверки символов — только длина (решение пользователя).
     max_len: int | None = None
+
+    # Условная видимость: поле показывается, только если выполнено условие show_if
+    # (значение другого поля входит в заданный набор). Скрытое поле не валидируется
+    # и не уходит в form_data.
+    show_if: ShowIf | None = None
 
 
 class WizardStep(BaseModel):
