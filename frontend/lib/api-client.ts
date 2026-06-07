@@ -19,6 +19,15 @@ export function fetchPreview(orderId: string): Promise<Response> {
   return fetch(`/api/orders/${orderId}/preview`, { cache: "no-store" });
 }
 
+// Регистрирует публичный E2EE-ключ для пользователя заказа (ставится, если был пуст).
+export function registerOrderPublicKey(orderId: string, publicKey: string): Promise<Response> {
+  return fetch(`/api/orders/${orderId}/public-key`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ public_key: publicKey }),
+  });
+}
+
 // Меняет адрес уведомлений заказа без пересылки письма (форму не перезаполняем).
 export function changeOrderEmail(orderId: string, email: string): Promise<Response> {
   return fetch(`/api/orders/${orderId}/email`, {

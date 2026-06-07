@@ -28,6 +28,8 @@ from app.schemas.order import (
     OrderListItem,
     OrderOut,
     OrderPreviewOut,
+    OrderPublicKeyIn,
+    OrderPublicKeyOut,
     OrderResendRequest,
     PaymentOut,
 )
@@ -423,6 +425,39 @@ async def get_order_preview(
 
     pages = [await get_presigned_url(key, expires=900) for key in document.preview_keys]
     return OrderPreviewOut(pages=pages)
+
+
+@router.post("/{order_id}/public-key", response_model=OrderPublicKeyOut)
+@limiter.limit("10/minute")
+async def register_order_public_key(
+    request: Request,
+    order_id: str,
+    body: OrderPublicKeyIn,
+    db: AsyncSession = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
+) -> OrderPublicKeyOut:
+    """Регистрирует публичный E2EE-ключ для пользователя этого заказа (гость — по
+    order_token). Ставит user.public_key ТОЛЬКО если он пуст: перезапись осиротила бы
+    ранее зашифрованные документы. Возвращает эффективный (уже стоявший либо новый) ключ.
+    """
+    result = await db.execute(
+        select(Order).where(Order.id == order_id).options(selectinload(Order.user))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
+
+    user = order.user
+    # Захватываем эффективный ключ ДО commit (после него атрибуты истекают).
+    effective = user.public_key or body.public_key
+    if not user.public_key:
+        user.public_key = body.public_key
+        await db.commit()
+        logger.info("order_public_key_set", extra={"action": "order_public_key_set", "order_id": order_id})
+
+    return OrderPublicKeyOut(public_key=effective)
 
 
 @router.get("/{order_id}", response_model=OrderOut)

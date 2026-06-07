@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle, Clock, Eye, FileText, Loader2, XCircle } from "lucide-react";
 import { ymGoal } from "@/lib/analytics";
 import { downloadDocument, MissingKeyError } from "@/lib/e2ee-download";
+import { E2EEClient } from "@/lib/e2ee-client";
+import type { E2EEKeyPair } from "@/lib/e2ee-client";
 import { NotificationEmail } from "@/components/order/notification-email";
 import { PreviewSection } from "@/components/order/preview-section";
-import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
+import { KeySaveGate } from "@/components/order/key-save-gate";
+import { fetchOrder, retryOrder, payOrder, registerOrderPublicKey } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
@@ -94,6 +97,9 @@ export function OrderStatus({
   const [order, setOrder] = useState<Order>(initialOrder);
   const [payError, setPayError] = useState<string | null>(null);
   const [isPaying, setIsPaying] = useState(false);
+  // Шаг обязательного сохранения ключа перед оплатой (E2EE для гостя).
+  const [keyStep, setKeyStep] = useState<"idle" | "save_key">("idle");
+  const keyPairRef = useRef<E2EEKeyPair | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
   const [downloadingFmt, setDownloadingFmt] = useState<string | null>(null);
@@ -190,7 +196,41 @@ export function OrderStatus({
     }
   }
 
-  async function handlePay() {
+  // Готовит ключ перед оплатой: гарантирует пару, регистрирует public key на заказе.
+  // Новая пара → обязательный шаг сохранения ключ-файла; существующая → сразу к оплате.
+  async function preparePay() {
+    setIsPaying(true);
+    setPayError(null);
+    try {
+      const kp = E2EEClient.ensureKeyPair();
+      keyPairRef.current = kp;
+      const res = await registerOrderPublicKey(orderId, kp.publicKey);
+      if (!res.ok) {
+        setPayError("Не удалось подготовить ключ доступа. Попробуйте ещё раз.");
+        return;
+      }
+      const data = await res.json().catch(() => ({}));
+      if (data.public_key && data.public_key !== kp.publicKey) {
+        // На сервере уже зарегистрирован другой ключ — наш локальный не подойдёт.
+        // Это случай возврата на новом устройстве: нужен ключ-файл / восстановление.
+        setPayError(
+          "На сервере уже зарегистрирован ваш ключ. Восстановите доступ по ключ-файлу на странице /recovery перед оплатой."
+        );
+        return;
+      }
+      if (kp.generated) {
+        setKeyStep("save_key");
+      } else {
+        await doPay();
+      }
+    } catch {
+      setPayError("Не удалось подготовить оплату. Попробуйте позже.");
+    } finally {
+      setIsPaying(false);
+    }
+  }
+
+  async function doPay() {
     setIsPaying(true);
     setPayError(null);
     ymGoal("payment_initiated", { situation: order.situation_id });
@@ -224,9 +264,17 @@ export function OrderStatus({
         <PreviewSection orderId={orderId} />
       )}
 
-      {(order.status === "preview_ready" || order.status === "pending_payment") && (
-        <PaySection order={order} isPaying={isPaying} payError={payError} onPay={handlePay} />
-      )}
+      {(order.status === "preview_ready" || order.status === "pending_payment") &&
+        (keyStep === "save_key" && keyPairRef.current ? (
+          <KeySaveGate
+            keyPair={keyPairRef.current}
+            isPaying={isPaying}
+            error={payError}
+            onProceed={doPay}
+          />
+        ) : (
+          <PaySection order={order} isPaying={isPaying} payError={payError} onPay={preparePay} />
+        ))}
 
       {order.status === "done" && (
         <DoneSection
