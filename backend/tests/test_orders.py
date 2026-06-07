@@ -766,6 +766,40 @@ async def test_preview_page_denied_without_access(
 
 
 @pytest.mark.asyncio
+async def test_order_summary_returns_labeled_fields(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
+    )
+    db_session.add(order)
+    await db_session.commit()
+
+    resp = await client.get(f"/api/v1/orders/{order.id}/summary", headers=auth_headers)
+    assert resp.status_code == 200
+    items = resp.json()["items"]
+    pairs = {(it["label"], it["value"]) for it in items}
+    # Метки берутся из реестра ситуаций, значения — из form_data.
+    assert ("Название магазина", "ТестМаркет") in pairs
+    assert ("Что купили", "Тестовый товар") in pairs
+    # Служебный составной ключ (собранный адрес) не выводится — у него нет wizard-поля.
+    assert all("contact_address" != it["label"] for it in items)
+
+
+@pytest.mark.asyncio
+async def test_order_summary_denied_without_access(
+    client: AsyncClient, user: User, db_session: AsyncSession
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    resp = await client.get(f"/api/v1/orders/{order.id}/summary")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
 async def test_preview_empty_when_no_document(
     client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
 ):

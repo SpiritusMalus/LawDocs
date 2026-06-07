@@ -31,6 +31,8 @@ from app.schemas.order import (
     OrderPublicKeyIn,
     OrderPublicKeyOut,
     OrderResendRequest,
+    OrderSummaryItem,
+    OrderSummaryOut,
     PaymentOut,
 )
 from app.services.address_compose import compose_contact_address, compose_store_address
@@ -458,6 +460,47 @@ async def get_order_preview_page(
     png = await download_bytes(document.preview_keys[page])
     # Превью-картинки приватны и быстро протухают логически — не кэшируем у CDN.
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=60"})
+
+
+@router.get("/{order_id}/summary", response_model=OrderSummaryOut)
+@limiter.limit("30/minute")
+async def get_order_summary(
+    request: Request,
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
+) -> OrderSummaryOut:
+    """Сводка введённых пользователем полей (метка → значение) — для сверки на превью.
+
+    Метки и подписи radio-вариантов берём из реестра ситуаций (на сервере), а не из
+    шапки документа. Показываем только заполненные wizard-поля; служебные/составные
+    ключи (например собранный contact_address) не выводим — у них нет wizard-метки.
+    """
+    result = await db.execute(
+        select(Order).where(Order.id == order_id).options(selectinload(Order.user))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
+
+    from app.situations.registry import registry
+
+    config = registry.get(order.situation_id)
+    form_data = order.form_data or {}
+    items: list[OrderSummaryItem] = []
+    if config:
+        for step in config.wizard_steps:
+            for field in step.fields:
+                raw = form_data.get(field.id)
+                if raw is None or str(raw).strip() == "":
+                    continue
+                value = str(raw)
+                if field.type == "radio" and field.options:
+                    value = next((o.label for o in field.options if o.value == raw), value)
+                items.append(OrderSummaryItem(label=field.label, value=value))
+    return OrderSummaryOut(items=items)
 
 
 @router.post("/{order_id}/public-key", response_model=OrderPublicKeyOut)

@@ -8,6 +8,7 @@ import { E2EEClient } from "@/lib/e2ee-client";
 import type { E2EEKeyPair } from "@/lib/e2ee-client";
 import { NotificationEmail } from "@/components/order/notification-email";
 import { PreviewSection } from "@/components/order/preview-section";
+import { SubmittedSummary } from "@/components/order/submitted-summary";
 import { KeySaveGate } from "@/components/order/key-save-gate";
 import { fetchOrder, retryOrder, payOrder, registerOrderPublicKey } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
@@ -262,6 +263,10 @@ export function OrderStatus({
 
       {(order.status === "preview_ready" || order.status === "pending_payment") && (
         <PreviewSection orderId={orderId} />
+      )}
+
+      {(order.status === "preview_ready" || order.status === "pending_payment") && (
+        <SubmittedSummary orderId={orderId} />
       )}
 
       {(order.status === "preview_ready" || order.status === "pending_payment") &&
