@@ -12,9 +12,23 @@ interface ProfileFormProps {
   initialName: string | null;
   email: string;
   processingRestricted: boolean;
+  consentVersion: string | null;
+  consentTimestamp: string | null;
 }
 
-export function ProfileForm({ initialName, email, processingRestricted }: ProfileFormProps) {
+function formatConsentDate(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export function ProfileForm({
+  initialName,
+  email,
+  processingRestricted,
+  consentVersion,
+  consentTimestamp,
+}: ProfileFormProps) {
   const [name, setName] = useState(initialName ?? "");
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -155,6 +169,15 @@ export function ProfileForm({ initialName, email, processingRestricted }: Profil
       </div>
     </form>
     <div className="mt-8 pt-6 border-t border-gray-100 space-y-6">
+      {consentTimestamp && (
+        <div>
+          <p className="text-sm text-gray-500">
+            Согласие на обработку персональных данных принято{" "}
+            {formatConsentDate(consentTimestamp)}
+            {consentVersion && <> (редакция от {consentVersion})</>}.
+          </p>
+        </div>
+      )}
       <div>
         <p className="text-sm text-gray-500 mb-3">
           {restricted

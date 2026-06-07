@@ -27,6 +27,8 @@ class UserMeOut(BaseModel):
     public_key: str | None = None
     processing_restricted: bool = False
     processing_restricted_at: datetime | None = None
+    consent_version: str | None = None
+    consent_timestamp: datetime | None = None
 
 
 class UserUpdate(BaseModel):
