@@ -113,6 +113,16 @@ class OrderPreviewOut(BaseModel):
     page_count: int
 
 
+class OrderSummaryItem(BaseModel):
+    label: str
+    value: str
+
+
+class OrderSummaryOut(BaseModel):
+    # Сводка введённых пользователем полей (метка → значение) для сверки на превью.
+    items: list[OrderSummaryItem]
+
+
 class OrderPublicKeyIn(BaseModel):
     public_key: str
 
