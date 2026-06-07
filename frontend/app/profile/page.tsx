@@ -18,6 +18,8 @@ interface UserData {
   name: string | null;
   completed_orders_count: number;
   processing_restricted?: boolean;
+  consent_version?: string | null;
+  consent_timestamp?: string | null;
 }
 
 async function fetchUser(token: string): Promise<UserData | null> {
@@ -51,7 +53,13 @@ export default async function ProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900">Профиль</h1>
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-6">
-          <ProfileForm initialName={user.name} email={user.email} processingRestricted={user.processing_restricted ?? false} />
+          <ProfileForm
+            initialName={user.name}
+            email={user.email}
+            processingRestricted={user.processing_restricted ?? false}
+            consentVersion={user.consent_version ?? null}
+            consentTimestamp={user.consent_timestamp ?? null}
+          />
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-6 mt-4">
           <SetPasswordSection />
