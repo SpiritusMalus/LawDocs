@@ -117,6 +117,8 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fieldErrors, setFieldErrors] = useState<string[]>([]);
+  // id невалидных полей текущего шага — для красной подсветки самих полей.
+  const [invalidFieldIds, setInvalidFieldIds] = useState<string[]>([]);
   const [dateErrors, setDateErrors] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // Согласие (оферта + ПДн) — обязательная галочка на финальном шаге.
@@ -170,16 +172,15 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   const isLast = currentStep === steps.length - 1;
   const progressPct = Math.round(((currentStep + 1) / steps.length) * 100);
 
-  function getMissingRequired(): string[] {
-    return step.fields
-      .filter((f) => f.required && !answers[f.id]?.trim())
-      .map((f) => f.label);
+  function getMissingRequiredFields(fields: WizardField[]): WizardField[] {
+    return fields.filter((f) => f.required && !answers[f.id]?.trim());
   }
 
   function handleNext() {
-    const missing = getMissingRequired();
-    if (missing.length > 0) {
-      setFieldErrors(missing);
+    const missingFields = getMissingRequiredFields(step.fields);
+    if (missingFields.length > 0) {
+      setFieldErrors(missingFields.map((f) => f.label));
+      setInvalidFieldIds(missingFields.map((f) => f.id));
       return;
     }
     const addr = stepHasAddress(step.fields) && isAddressEmpty(answers) ? [ADDRESS_REQUIRED_MSG] : [];
@@ -200,6 +201,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
 
   function handleBack() {
     setFieldErrors([]);
+    setInvalidFieldIds([]);
     setDateErrors([]);
     setSubmitError(null);
     setCurrentStep((s) => s - 1);
@@ -210,12 +212,14 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
     setAnswers((prev) => ({ ...prev, [fieldId]: value }));
     if (fieldErrors.length > 0) setFieldErrors([]);
     if (dateErrors.length > 0) setDateErrors([]);
+    setInvalidFieldIds((prev) => (prev.includes(fieldId) ? prev.filter((id) => id !== fieldId) : prev));
   }
 
   function handleSubmit() {
-    const missing = getMissingRequired();
-    if (missing.length > 0) {
-      setFieldErrors(missing);
+    const missingFields = getMissingRequiredFields(step.fields);
+    if (missingFields.length > 0) {
+      setFieldErrors(missingFields.map((f) => f.label));
+      setInvalidFieldIds(missingFields.map((f) => f.id));
       return;
     }
     // На отправке проверяем даты всей формы (cross-field может тянуться через шаги).
@@ -324,6 +328,7 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
               field={field}
               value={answers[field.id] ?? ""}
               onChange={(v) => handleChange(field.id, v)}
+              invalid={invalidFieldIds.includes(field.id)}
             />
           ))}
         </div>
@@ -355,6 +360,8 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
             <span>{submitError}</span>
           </div>
         )}
+
+        {isLast && <ReviewSummary steps={steps} answers={answers} />}
 
         {isLast && (
           <label
@@ -446,18 +453,62 @@ export function WizardShell({ steps, situationId, hasBackend = false, isAuthenti
   );
 }
 
+// Человекочитаемое значение поля для сводки: radio → подпись варианта, прочее — как ввели.
+function displayValue(field: WizardField, raw: string): string {
+  if (field.type === "radio" && field.options) {
+    return field.options.find((o) => o.value === raw)?.label ?? raw;
+  }
+  return raw;
+}
+
+// Сводка «что вы ввели» на финальном шаге — пользователь проверяет форму перед отправкой.
+function ReviewSummary({
+  steps,
+  answers,
+}: {
+  steps: WizardStep[];
+  answers: Record<string, string>;
+}) {
+  const rows: { id: string; label: string; value: string }[] = [];
+  for (const s of steps) {
+    for (const f of s.fields) {
+      const raw = answers[f.id]?.trim();
+      if (raw) rows.push({ id: f.id, label: f.label, value: displayValue(f, raw) });
+    }
+  }
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-4">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">Проверьте введённые данные</h3>
+      <dl className="divide-y divide-gray-200">
+        {rows.map((r) => (
+          <div key={r.id} className="flex gap-3 py-1.5 text-sm">
+            <dt className="w-2/5 shrink-0 text-gray-500">{r.label}</dt>
+            <dd className="flex-1 text-gray-900 break-words whitespace-pre-wrap">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 function FieldRenderer({
   field,
   value,
   onChange,
+  invalid = false,
 }: {
   field: WizardField;
   value: string;
   onChange: (v: string) => void;
+  invalid?: boolean;
 }) {
+  // Красная подсветка для невалидного поля (пустое обязательное / ошибка типа).
+  const invalidCls = invalid ? "border-red-400 focus-visible:ring-red-400" : "";
   return (
     <div className="space-y-2">
-      <Label htmlFor={field.id}>
+      <Label htmlFor={field.id} className={invalid ? "text-red-600" : undefined}>
         {field.label}
         {field.required && <span className="text-red-500 ml-1">*</span>}
       </Label>
@@ -494,6 +545,7 @@ function FieldRenderer({
           onChange={(e) => onChange(e.target.value)}
           placeholder={field.placeholder}
           rows={4}
+          className={invalidCls}
         />
       )}
 
@@ -512,18 +564,23 @@ function FieldRenderer({
           }}
           placeholder="дд.мм.гггг"
           maxLength={10}
+          className={invalidCls}
         />
       )}
 
       {(field.type === "text" || field.type === "number") && (
         <Input
           id={field.id}
-          type={field.type === "number" ? "text" : field.type}
+          type="text"
           inputMode={field.type === "number" ? "numeric" : undefined}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          // Числовое поле принимает только цифры — нецифровые символы отсекаются на вводе.
+          onChange={(e) =>
+            onChange(field.type === "number" ? e.target.value.replace(/\D/g, "") : e.target.value)
+          }
           placeholder={field.placeholder}
           maxLength={field.max_len ?? undefined}
+          className={invalidCls}
         />
       )}
 
