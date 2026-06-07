@@ -11,6 +11,10 @@ from app.schemas.auth import (
     ContactOut,
     E2EESetupRequest,
     E2EESetupResponse,
+    KeyChallengeRequest,
+    KeyChallengeResponse,
+    KeyLoginRequest,
+    KeyLoginResponse,
     RecoverAccessRequest,
     RecoverAccessResponse,
     VerifyOut,
@@ -105,3 +109,36 @@ async def recover_access(
     """
     ip = request.client.host if request.client else "unknown"
     return await auth_service.recover_access(body.email.lower(), ip, db)
+
+
+# ============================================================================
+# LOGIN BY KEY (challenge-response)
+# ============================================================================
+
+
+@router.post("/key-challenge", response_model=KeyChallengeResponse)
+@limiter.limit("10/minute")
+async def key_challenge(
+    request: Request,
+    body: KeyChallengeRequest,
+    db: AsyncSession = Depends(get_db),
+) -> KeyChallengeResponse:
+    """Выдаёт challenge для логина по ключу: nonce, зашифрованный публичным ключом.
+
+    Расшифровать nonce может только владелец приватного ключа (в браузере).
+    Ответ не зависит от существования аккаунта — нет enumeration.
+    """
+    ip = request.client.host if request.client else "unknown"
+    return await auth_service.issue_key_challenge(body.public_key, ip, db)
+
+
+@router.post("/key-login", response_model=KeyLoginResponse)
+@limiter.limit("10/minute")
+async def key_login(
+    request: Request,
+    body: KeyLoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> KeyLoginResponse:
+    """Логин по решённому challenge. JWT в теле — Next.js Route Handler ставит cookie."""
+    ip = request.client.host if request.client else "unknown"
+    return await auth_service.key_login(body.challenge_id, body.nonce, ip, db)

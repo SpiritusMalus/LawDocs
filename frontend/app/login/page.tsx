@@ -112,6 +112,13 @@ export default function LoginPage() {
                   )}
                 </Button>
               </form>
+
+              <p className="text-center text-sm text-gray-400 mt-5">
+                Есть ключ-файл?{" "}
+                <Link href="/download" className="text-blue-600 hover:underline">
+                  Скачать свои файлы
+                </Link>
+              </p>
             </>
           )}
         </div>

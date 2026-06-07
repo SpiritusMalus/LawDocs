@@ -81,6 +81,29 @@ def encrypt_file_for_user(file_bytes: bytes, public_key_b64: str) -> bytes:
         raise
 
 
+def encrypt_for_public_key(plaintext: bytes, public_key_b64: str) -> str:
+    """Шифрует короткий plaintext публичным ключом юзера → base64.
+
+    Формат идентичен key_blob из encrypt_file_for_user и тому, что ждёт фронт
+    (e2ee-client.ts:decryptFormData): nonce[24] | ephemeral_pub[32] | box.
+    Используется для challenge-response логина: сервер шлёт зашифрованный nonce,
+    только владелец приватного ключа сможет его расшифровать и вернуть.
+    """
+    import base64
+
+    pub_bytes = base64.b64decode(public_key_b64)
+    recipient_pub = PublicKey(pub_bytes)
+
+    ephemeral_priv = PrivateKey.generate()
+    box = Box(ephemeral_priv, recipient_pub)
+
+    nacl_nonce = nacl.utils.random(_NONCE_LEN)
+    box_ciphertext = box.encrypt(plaintext, nacl_nonce).ciphertext
+
+    blob = nacl_nonce + bytes(ephemeral_priv.public_key) + box_ciphertext
+    return base64.b64encode(blob).decode()
+
+
 def is_encrypted_file(data: bytes) -> bool:
     """Проверяет что data начинается с валидного key_blob (длина >= 116)."""
     return len(data) >= _KEY_BLOB_LEN + _AES_NONCE_LEN
