@@ -15,6 +15,9 @@ from app.schemas.auth import (
     KeyChallengeResponse,
     KeyLoginRequest,
     KeyLoginResponse,
+    KeyringImportRequest,
+    KeyringImportResponse,
+    KeyringListResponse,
     PasswordLoginRequest,
     PasswordLoginResponse,
     RecoverAccessRequest,
@@ -177,3 +180,25 @@ async def password_login(
     """Логин email+паролем. Возвращает keyring; браузер раскрывает ключи паролем сам."""
     ip = request.client.host if request.client else "unknown"
     return await auth_service.password_login(body.email.lower(), body.password, ip, db)
+
+
+@router.post("/keyring/import", response_model=KeyringImportResponse)
+async def import_keys(
+    body: KeyringImportRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> KeyringImportResponse:
+    """Импорт ключ-файлов в keyring под паролем аккаунта (объединение ключей).
+
+    Документы не переподписываются — один пароль открывает заказы по всем ключам.
+    """
+    return await auth_service.import_keys(current_user, body, db)
+
+
+@router.get("/keyring", response_model=KeyringListResponse)
+async def list_keyring(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> KeyringListResponse:
+    """Метаданные keyring текущего юзера (без обёрнутых ключей)."""
+    return await auth_service.list_keyring(current_user, db)

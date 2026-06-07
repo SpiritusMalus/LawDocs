@@ -27,6 +27,10 @@ from app.schemas.auth import (
     KeyChallengeResponse,
     KeyLoginResponse,
     KeyringEntryOut,
+    KeyringImportRequest,
+    KeyringImportResponse,
+    KeyringItemOut,
+    KeyringListResponse,
     PasswordLoginResponse,
     RecoverAccessResponse,
     SetPasswordRequest,
@@ -407,3 +411,40 @@ async def password_login(
     return PasswordLoginResponse(
         access_token=access_token, user=UserOut.model_validate(user), keyring=keyring
     )
+
+
+async def import_keys(
+    user: User, body: KeyringImportRequest, db: AsyncSession
+) -> KeyringImportResponse:
+    """Импортирует ключ-файлы в keyring под уже установленным паролем аккаунта.
+
+    Пароль сверяем на сервере, чтобы все обёртки в keyring были сделаны верным
+    паролем — иначе при логине ключ молча не раскроется. Документы НЕ
+    переподписываются: один пароль просто открывает заказы по всем ключам.
+    """
+    if not user.password_hash:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Сначала установите пароль аккаунта",
+        )
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Неверный пароль")
+
+    await _upsert_keyring(str(user.id), body.wrapped_keys, db)
+
+    count_result = await db.execute(select(UserKey).where(UserKey.user_id == user.id))
+    total = len(count_result.scalars().all())
+    await db.commit()
+
+    logger.info(
+        "keyring_import",
+        extra={"action": "keyring_import", "user_id": str(user.id), "total_keys": total},
+    )
+    return KeyringImportResponse(status="success", total_keys=total)
+
+
+async def list_keyring(user: User, db: AsyncSession) -> KeyringListResponse:
+    """Метаданные keyring для UI (публичные ключи + метки, без обёрнутых ключей)."""
+    result = await db.execute(select(UserKey).where(UserKey.user_id == user.id))
+    keys = [KeyringItemOut(public_key=k.public_key, label=k.label) for k in result.scalars().all()]
+    return KeyringListResponse(keys=keys)
