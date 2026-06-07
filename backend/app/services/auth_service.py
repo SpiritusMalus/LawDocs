@@ -1,4 +1,6 @@
+import base64
 import logging
+import os
 from datetime import UTC, datetime, timedelta
 
 from fastapi import HTTPException, status
@@ -6,16 +8,35 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.core.security import create_access_token, generate_magic_token, hash_magic_token
+from app.core.security import (
+    create_access_token,
+    generate_magic_token,
+    hash_challenge_nonce,
+    hash_magic_token,
+)
+from app.models.auth_challenge import AuthChallenge
 from app.models.order import Order
 from app.models.user import User
-from app.schemas.auth import ContactOut, E2EESetupRequest, E2EESetupResponse, RecoverAccessResponse
+from app.schemas.auth import (
+    ContactOut,
+    E2EESetupRequest,
+    E2EESetupResponse,
+    KeyChallengeResponse,
+    KeyLoginResponse,
+    RecoverAccessResponse,
+)
+from app.services.e2ee_file import encrypt_for_public_key
 from app.schemas.user import UserOut
 from app.services.audit_logger import AuditLogger
 from app.services.e2ee_service import E2EEService
 from app.services.email import send_magic_link
 
 logger = logging.getLogger(__name__)
+
+# Challenge живёт коротко: окна хватает на расшифровку в браузере, но не на
+# офлайн-перебор/replay. Single-use гарантируется отметкой used_at.
+_KEY_CHALLENGE_TTL_SECONDS = 120
+_CHALLENGE_NONCE_LEN = 32
 
 
 async def request_magic_link(email_normalized: str, ip: str, db: AsyncSession) -> None:
@@ -217,3 +238,81 @@ async def recover_access(email_normalized: str, ip: str, db: AsyncSession) -> Re
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Ошибка при восстановлении доступа",
         ) from e
+
+
+# ============================================================================
+# LOGIN BY KEY — challenge-response на keypair
+# ============================================================================
+
+
+async def issue_key_challenge(public_key: str, ip: str, db: AsyncSession) -> KeyChallengeResponse:
+    """Шлёт challenge: случайный nonce, зашифрованный публичным ключом.
+
+    Челлендж выдаём ВСЕГДА (даже если под этим ключом нет аккаунта) — иначе ответ
+    раскрывал бы существование аккаунта (enumeration). Существование проверяется
+    только на verify, обобщённой 401.
+    """
+    try:
+        nonce = os.urandom(_CHALLENGE_NONCE_LEN)
+        encrypted_challenge = encrypt_for_public_key(nonce, public_key)
+    except Exception as exc:
+        # Битый/невалидный public_key — не наша ошибка, отвечаем 400.
+        logger.warning("key_challenge_bad_pubkey", extra={"action": "key_challenge", "ip": ip})
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Некорректный публичный ключ",
+        ) from exc
+
+    challenge = AuthChallenge(
+        public_key=public_key,
+        nonce_hash=hash_challenge_nonce(nonce),
+        expires_at=datetime.now(UTC) + timedelta(seconds=_KEY_CHALLENGE_TTL_SECONDS),
+    )
+    db.add(challenge)
+    await db.commit()
+
+    logger.info("key_challenge_issued", extra={"action": "key_challenge", "challenge_id": challenge.id, "ip": ip})
+    return KeyChallengeResponse(challenge_id=challenge.id, encrypted_challenge=encrypted_challenge)
+
+
+async def key_login(challenge_id: str, nonce_b64: str, ip: str, db: AsyncSession) -> KeyLoginResponse:
+    """Проверяет расшифрованный nonce и логинит юзера по публичному ключу.
+
+    Single-use: на успехе помечаем challenge used_at. Существование аккаунта и
+    верность nonce неотличимы для клиента — везде обобщённая 401.
+    """
+    invalid = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Не удалось войти по ключу")
+
+    result = await db.execute(select(AuthChallenge).where(AuthChallenge.id == challenge_id))
+    challenge = result.scalar_one_or_none()
+    if challenge is None or challenge.used_at is not None:
+        raise invalid
+
+    expires_at = challenge.expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=UTC)
+    if expires_at < datetime.now(UTC):
+        raise invalid
+
+    try:
+        presented = base64.b64decode(nonce_b64, validate=True)
+    except Exception as exc:
+        raise invalid from exc
+    if hash_challenge_nonce(presented) != challenge.nonce_hash:
+        raise invalid
+
+    # Челлендж решён верно — сжигаем его (даже если юзера под ключом нет).
+    challenge.used_at = datetime.now(UTC)
+
+    user_result = await db.execute(select(User).where(User.public_key == challenge.public_key))
+    user = user_result.scalars().first()
+    if user is None:
+        await db.commit()
+        logger.warning("key_login_no_account", extra={"action": "key_login", "ip": ip})
+        raise invalid
+
+    await db.commit()
+    logger.info("key_login_success", extra={"action": "key_login", "user_id": str(user.id), "ip": ip})
+
+    access_token = create_access_token(str(user.id))
+    return KeyLoginResponse(access_token=access_token, user=UserOut.model_validate(user))

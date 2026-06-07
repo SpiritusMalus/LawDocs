@@ -56,3 +56,8 @@ def generate_guest_token() -> str:
 
 def hash_guest_token(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def hash_challenge_nonce(nonce: bytes) -> str:
+    """Хэш nonce для challenge-response логина (сверка без хранения самого nonce)."""
+    return hashlib.sha256(nonce).hexdigest()

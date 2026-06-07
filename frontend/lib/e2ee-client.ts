@@ -173,6 +173,32 @@ export class E2EEClient {
     }
   }
 
+  /** Выводит публичный ключ (base64) из приватного. X25519 — детерминированно. */
+  static publicKeyFromPrivateKey(privateKeyB64: string): string {
+    const secret = decodeBase64(privateKeyB64);
+    return encodeBase64(nacl.box.keyPair.fromSecretKey(secret).publicKey);
+  }
+
+  /**
+   * Решает challenge логина по ключу: расшифровывает присланный сервером nonce
+   * приватным ключом и возвращает его (base64). Формат blob идентичен
+   * encryptFormData: nonce[24] | ephemeralPub[32] | box.
+   * Бросает Error, если ключ не подходит (доказательство владения не выйдет).
+   */
+  static solveChallenge(encryptedChallengeB64: string, privateKeyB64: string): string {
+    const packed = decodeBase64(encryptedChallengeB64);
+    const nonce = packed.slice(0, NONCE_LENGTH);
+    const ephemeralPublicKey = packed.slice(NONCE_LENGTH, NONCE_LENGTH + PUBLIC_KEY_LENGTH);
+    const box = packed.slice(NONCE_LENGTH + PUBLIC_KEY_LENGTH);
+    const privateKey = decodeBase64(privateKeyB64);
+
+    const opened = nacl.box.open(box, nonce, ephemeralPublicKey, privateKey);
+    if (!opened) {
+      throw new Error("Не удалось решить challenge — ключ не подходит");
+    }
+    return encodeBase64(opened);
+  }
+
   /**
    * Шифрует данные формы публичным ключом получателя.
    * Использует одноразовую (ephemeral) пару отправителя — анонимный box.

@@ -41,3 +41,29 @@ class RecoverAccessRequest(BaseModel):
 class RecoverAccessResponse(BaseModel):
     backup_encrypted: str  # blob зашифрован фразой пользователя — сервер его не читает
     message: str
+
+
+# ============================================================================
+# LOGIN BY KEY (challenge-response на keypair)
+# ============================================================================
+
+
+class KeyChallengeRequest(BaseModel):
+    public_key: str  # base64 публичного ключа из key-файла пользователя
+
+
+class KeyChallengeResponse(BaseModel):
+    challenge_id: str
+    # nonce, зашифрованный на public_key (формат как у decryptFormData).
+    # Расшифровать может только владелец приватного ключа.
+    encrypted_challenge: str
+
+
+class KeyLoginRequest(BaseModel):
+    challenge_id: str
+    nonce: str  # base64 расшифрованного nonce — доказательство владения ключом
+
+
+class KeyLoginResponse(BaseModel):
+    access_token: str
+    user: UserOut

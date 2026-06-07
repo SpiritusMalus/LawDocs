@@ -24,7 +24,7 @@ class User(Base):
     email_encrypted: Mapped[str | None] = mapped_column(String, nullable=True)
     name_encrypted: Mapped[str | None] = mapped_column(String, nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
-    public_key: Mapped[str | None] = mapped_column(String, nullable=True)
+    public_key: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
     private_key_backup_encrypted: Mapped[str | None] = mapped_column(String, nullable=True)
     consent_timestamp: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     consent_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
