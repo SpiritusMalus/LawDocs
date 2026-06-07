@@ -117,14 +117,17 @@ async def _finalize_success(
     from app.models.document import Document
     from app.services.email import send_document_ready
 
-    doc = Document(
-        order_id=order_id,
-        docx_key=docx_key,
-        pdf_key=pdf_key,
-        instruction_pdf_key=instruction_pdf_key,
-        user_encrypted=user_encrypted,
-    )
-    db.add(doc)
+    # Идемпотентно: документ мог уже существовать (превью-генерация / повторный
+    # вызов) — обновляем, а не вставляем второй (order_id уникален).
+    existing = await db.execute(select(Document).where(Document.order_id == order_id))
+    doc = existing.scalar_one_or_none()
+    if doc is None:
+        doc = Document(order_id=order_id)
+        db.add(doc)
+    doc.docx_key = docx_key
+    doc.pdf_key = pdf_key
+    doc.instruction_pdf_key = instruction_pdf_key
+    doc.user_encrypted = user_encrypted
     order.status = OrderStatus.DONE.value
     order.payment_url = None
     if user_obj:
@@ -239,3 +242,133 @@ async def run_document_generation(
             await _handle_generation_failure(
                 db, order, order_id, situation_id, user_email, notify_on_failure
             )
+
+
+async def _build_and_store_preview(order_id: str, pdf_key: str) -> list[str]:
+    """Растеризует чистый PDF в watermarked-PNG (по странице) и кладёт в storage."""
+    import asyncio
+
+    from app.services.docgen import s3_key
+    from app.services.preview import render_watermarked_pngs
+    from app.services.storage import download_bytes, upload_bytes
+
+    pdf_bytes = await download_bytes(pdf_key)
+    loop = asyncio.get_running_loop()
+    pages = await loop.run_in_executor(None, render_watermarked_pngs, pdf_bytes)
+
+    keys: list[str] = []
+    for i, png in enumerate(pages):
+        key = s3_key(order_id, f"preview-{i}.png")
+        await upload_bytes(key, png)
+        keys.append(key)
+    return keys
+
+
+async def run_preview_generation(order_id: str, situation_id: str, form_data: dict) -> None:
+    """ДО оплаты: генерирует чистый документ + watermarked-превью, ставит PREVIEW_READY.
+
+    Денег ещё нет — при сбое просто FAILED (без рефанда). Чистый docx/pdf лежат в
+    storage под gate'ом оплаты; наружу до оплаты уходит только превью.
+    """
+    from app.models.document import Document
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if not order:
+            return
+
+        try:
+            form_data = _apply_calculator(situation_id, form_data)
+            docx_key, pdf_key = await _generate_main_document(order_id, situation_id, form_data)
+            instruction_pdf_key = await _generate_instruction(order_id, situation_id, form_data)
+            preview_keys = await _build_and_store_preview(order_id, pdf_key)
+
+            doc = Document(
+                order_id=order_id,
+                docx_key=docx_key,
+                pdf_key=pdf_key,
+                instruction_pdf_key=instruction_pdf_key,
+                user_encrypted=False,
+                preview_keys=preview_keys,
+            )
+            db.add(doc)
+            order.status = OrderStatus.PREVIEW_READY.value
+            await db.commit()
+            logger.info("preview_ready for order %s (%d pages)", order_id, len(preview_keys))
+        except Exception:
+            logger.exception("Preview generation failed for order %s", order_id)
+            order.status = OrderStatus.FAILED.value
+            await db.commit()
+
+
+async def _finalize_release(
+    db, order: Order, document, user_obj: User | None, user_email: str, order_id: str, user_encrypted: bool
+) -> None:
+    """Отпускает уже сгенерированный документ: DONE + письмо + стирание ПДн."""
+    from app.services.email import send_document_ready
+
+    document.user_encrypted = user_encrypted
+    order.status = OrderStatus.DONE.value
+    order.payment_url = None
+    if user_obj:
+        user_obj.completed_orders_count += 1
+    await db.commit()
+
+    try:
+        await send_document_ready(email=user_email, order_id=order_id)
+    except Exception:
+        logger.exception("Email delivery failed for order %s (release) — document ready", order_id)
+
+    try:
+        order.form_data = {}
+        await db.commit()
+    except Exception:
+        logger.exception("Failed to wipe form_data for order %s", order_id)
+
+
+async def run_document_release(order_id: str, user_email: str, notify_on_failure: bool = True) -> None:
+    """ПОСЛЕ оплаты: отпускает уже готовый документ (DONE + письмо + шифрование под
+    ключ юзера). Документ обычно уже есть (оплата возможна только из PREVIEW_READY);
+    холодный фолбэк — если его нет, генерируем полностью старым путём.
+    """
+    from app.models.document import Document
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if not order:
+            return
+
+        situation_id = order.situation_id
+        form_data = order.form_data
+
+        doc_result = await db.execute(select(Document).where(Document.order_id == order_id))
+        document = doc_result.scalar_one_or_none()
+
+    if document is None:
+        # Холодный фолбэк: превью не сгенерилось, но оплата прошла — генерируем полностью.
+        logger.warning("release: no document for paid order %s — full generation fallback", order_id)
+        await run_document_generation(
+            order_id=order_id, situation_id=situation_id, form_data=form_data,
+            user_email=user_email, notify_on_failure=notify_on_failure,
+        )
+        return
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(Order).where(Order.id == order_id))
+        order = result.scalar_one_or_none()
+        if not order:
+            return
+        doc_result = await db.execute(select(Document).where(Document.order_id == order_id))
+        document = doc_result.scalar_one_or_none()
+        user_result = await db.execute(select(User).where(User.id == order.user_id))
+        user_obj = user_result.scalar_one_or_none()
+
+        try:
+            user_encrypted = await _maybe_encrypt_files(
+                order_id, user_obj, [document.docx_key, document.pdf_key]
+            )
+            await _finalize_release(db, order, document, user_obj, user_email, order_id, user_encrypted)
+        except Exception:
+            logger.exception("Document release failed for order %s — order stays paid for retry", order_id)

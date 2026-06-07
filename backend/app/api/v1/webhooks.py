@@ -14,7 +14,7 @@ from app.core.database import get_db
 from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.models.order import Order
-from app.services.generation import run_document_generation
+from app.services.generation import run_document_release
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -108,22 +108,18 @@ async def yookassa_webhook(
     # Захватываем нужные значения до commit: после него атрибуты ORM-объекта
     # истекают, а ленивая подгрузка в async-сессии бросит исключение.
     order_id = order.id
-    situation_id = order.situation_id
-    form_data = order.form_data
     user_email = order.notification_target
 
-    order.status = OrderStatus.GENERATING.value
+    order.status = OrderStatus.PAID.value
     order.paid_at = datetime.now(UTC)
     await db.commit()
 
-    # Генерация уходит в фон: YooKassa получает 200 сразу, без ожидания LLM/рендера/S3
-    # (иначе вебхук рискует словить таймаут и прийти повторно). Тот же пайплайн, что у
-    # retry и авто-retry; он сам ловит ошибки, ставит status=failed и шлёт уведомления.
+    # Документ уже сгенерирован ДО оплаты (PREVIEW_READY) — здесь только «отпускаем»
+    # его (DONE + письмо + шифрование под ключ юзера). Уходит в фон: YooKassa получает
+    # 200 сразу. release сам холодно фолбэкнет на полную генерацию, если документа нет.
     background_tasks.add_task(
-        run_document_generation,
+        run_document_release,
         order_id=order_id,
-        situation_id=situation_id,
-        form_data=form_data,
         user_email=user_email,
     )
 

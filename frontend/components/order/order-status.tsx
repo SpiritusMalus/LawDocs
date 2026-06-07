@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CheckCircle, Clock, FileText, Loader2, XCircle } from "lucide-react";
-import Link from "next/link";
-import { E2EEClient } from "@/lib/e2ee-client";
+import { CheckCircle, Clock, Eye, FileText, Loader2, XCircle } from "lucide-react";
 import { ymGoal } from "@/lib/analytics";
 import { downloadDocument, MissingKeyError } from "@/lib/e2ee-download";
-import { RecoverAccessInline } from "@/components/order/recover-access-inline";
 import { NotificationEmail } from "@/components/order/notification-email";
+import { PreviewSection } from "@/components/order/preview-section";
 import { fetchOrder, retryOrder, payOrder } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
@@ -33,8 +31,20 @@ type StatusConfig = {
 const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
   draft: {
     icon: <Clock className="h-8 w-8 text-gray-400" />,
-    label: "Ожидание оплаты",
-    description: "Нажмите кнопку ниже, чтобы оплатить и запустить создание документа.",
+    label: "Готовим документ",
+    description: "Составляем ваш документ — это займёт меньше минуты.",
+    terminal: false,
+  },
+  generating: {
+    icon: <Loader2 className="h-8 w-8 text-primary animate-spin" />,
+    label: "Готовим документ",
+    description: "Составляем ваш документ — это займёт меньше минуты.",
+    terminal: false,
+  },
+  preview_ready: {
+    icon: <Eye className="h-8 w-8 text-primary" />,
+    label: "Документ готов — посмотрите предпросмотр",
+    description: "Проверьте документ ниже. Чтобы скачать чистый файл без водяного знака — оплатите.",
     terminal: false,
   },
   pending_payment: {
@@ -46,13 +56,7 @@ const STATUS_CONFIG: Record<OrderStatusValue, StatusConfig> = {
   paid: {
     icon: <CheckCircle className="h-8 w-8 text-green-500" />,
     label: "Оплачено",
-    description: "Оплата получена. Начинаем подготовку документа.",
-    terminal: false,
-  },
-  generating: {
-    icon: <Loader2 className="h-8 w-8 text-primary animate-spin" />,
-    label: "Создаём документ",
-    description: "Документ готовится — обычно это занимает меньше минуты.",
+    description: "Оплата получена. Готовим чистый файл к скачиванию.",
     terminal: false,
   },
   done: {
@@ -216,19 +220,11 @@ export function OrderStatus({
         <p className="text-gray-500 text-sm mt-1">{cfg.description}</p>
       </div>
 
-      {(order.status === "draft" || order.status === "pending_payment") && !E2EEClient.hasKeys() && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-left">
-          <p className="text-sm text-amber-800">
-            Доступ к документам не настроен в этом браузере. Готовый файл шифруется вашим ключом — без него вы не сможете его открыть здесь.{" "}
-            <Link href="/login" className="font-medium underline hover:no-underline">
-              Войдите на устройстве, где настраивали доступ
-            </Link>
-            , или восстановите доступ перед оплатой.
-          </p>
-        </div>
+      {(order.status === "preview_ready" || order.status === "pending_payment") && (
+        <PreviewSection orderId={orderId} />
       )}
 
-      {(order.status === "draft" || order.status === "pending_payment") && (
+      {(order.status === "preview_ready" || order.status === "pending_payment") && (
         <PaySection order={order} isPaying={isPaying} payError={payError} onPay={handlePay} />
       )}
 

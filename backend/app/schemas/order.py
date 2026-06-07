@@ -106,6 +106,11 @@ class OrderResendRequest(BaseModel):
     email: EmailStr | None = None
 
 
+class OrderPreviewOut(BaseModel):
+    # Временные ссылки на watermarked-PNG страницы превью (по странице).
+    pages: list[str]
+
+
 class OrderOut(BaseModel):
     id: str
     situation_id: str

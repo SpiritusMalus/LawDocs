@@ -27,12 +27,13 @@ from app.schemas.order import (
     OrderInitRequest,
     OrderListItem,
     OrderOut,
+    OrderPreviewOut,
     OrderResendRequest,
     PaymentOut,
 )
 from app.services.address_compose import compose_contact_address, compose_store_address
 from app.services.email import send_magic_link
-from app.services.generation import run_document_generation
+from app.services.generation import run_document_release, run_preview_generation
 from app.services.payment import create_payment
 
 logger = logging.getLogger(__name__)
@@ -70,6 +71,7 @@ async def list_orders(
 async def init_order(
     request: Request,
     body: OrderInitRequest,
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     optional_user: User | None = Depends(get_optional_user),
 ) -> OrderInitOut:
@@ -101,12 +103,19 @@ async def init_order(
             situation_id=body.situation_id,
             form_data=form_data,
             notification_email=body.email.lower(),
-            status=OrderStatus.DRAFT.value,
+            status=OrderStatus.GENERATING.value,
             **consent_fields,
         )
         db.add(order)
         await db.commit()
         logger.info("order_created_auth", extra={"action": "order_created_auth", "order_id": str(order.id), "situation_id": body.situation_id, "user_id": str(optional_user.id)})
+        # Генерация документа + watermarked-превью идёт ДО оплаты (см. эпик).
+        background_tasks.add_task(
+            run_preview_generation,
+            order_id=order.id,
+            situation_id=body.situation_id,
+            form_data=form_data,
+        )
         return OrderInitOut(
             order_id=order.id,
             requires_verification=False,
@@ -133,7 +142,7 @@ async def init_order(
         situation_id=body.situation_id,
         form_data=form_data,
         notification_email=email_normalized,
-        status=OrderStatus.DRAFT.value,
+        status=OrderStatus.GENERATING.value,
         **consent_fields,
     )
     db.add(order)
@@ -163,6 +172,14 @@ async def init_order(
         logger.error("order_magic_link_send_failed", extra={"action": "magic_link_send_failed", "order_id": str(order.id)}, exc_info=True)
         if settings.APP_ENV == "development":
             logger.warning("DEV magic link send failed: order=%s token_hash=%s", order.id, hash_magic_token(token))
+
+    # Генерация документа + watermarked-превью идёт ДО оплаты (см. эпик).
+    background_tasks.add_task(
+        run_preview_generation,
+        order_id=order.id,
+        situation_id=body.situation_id,
+        form_data=form_data,
+    )
 
     return OrderInitOut(
         order_id=order.id,
@@ -204,7 +221,9 @@ async def pay_order(
             detail="Платёж уже создаётся. Подождите немного.",
         )
     assert_order_access(order, optional_user, x_order_token)
-    if order.status not in (OrderStatus.DRAFT.value, OrderStatus.PENDING_PAYMENT.value):
+    # Оплата возможна только когда превью готово (PREVIEW_READY) либо платёж уже
+    # создавался (PENDING_PAYMENT — юзер вернулся). До готовности превью платить нечего.
+    if order.status not in (OrderStatus.PREVIEW_READY.value, OrderStatus.PENDING_PAYMENT.value):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Order not payable")
 
     customer_email = order.notification_target
@@ -247,21 +266,30 @@ async def retry_order(
     if order.status != OrderStatus.FAILED.value:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not retryable")
 
+    paid = order.paid_at is not None
     order.status = OrderStatus.GENERATING.value
     situation_id = order.situation_id
     form_data = order.form_data
     user_email = order.notification_target
     await db.commit()
 
-    logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id})
+    logger.info("order_retry", extra={"action": "order_retry", "order_id": order_id, "paid": paid})
 
-    background_tasks.add_task(
-        run_document_generation,
-        order_id=order_id,
-        situation_id=situation_id,
-        form_data=form_data,
-        user_email=user_email,
-    )
+    # Не оплачен → пере-генерируем превью (вернёт PREVIEW_READY). Оплачен → отпускаем
+    # документ заново (release сам фолбэкнет на полную генерацию, если документа нет).
+    if paid:
+        background_tasks.add_task(
+            run_document_release,
+            order_id=order_id,
+            user_email=user_email,
+        )
+    else:
+        background_tasks.add_task(
+            run_preview_generation,
+            order_id=order_id,
+            situation_id=situation_id,
+            form_data=form_data,
+        )
 
     return {"status": OrderStatus.GENERATING.value}
 
@@ -365,6 +393,36 @@ async def resend_order_notification(
 
     logger.info("order_notification_resent", extra={"action": "order_notification_resent", "order_id": order_id})
     return {"status": "sent", "email": email}
+
+
+@router.get("/{order_id}/preview", response_model=OrderPreviewOut)
+@limiter.limit("30/minute")
+async def get_order_preview(
+    request: Request,
+    order_id: str,
+    db: AsyncSession = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
+) -> OrderPreviewOut:
+    """Watermarked-превью (по странице) — доступно ДО оплаты. Чистый файл — нет."""
+    result = await db.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.user), selectinload(Order.document))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
+
+    document = order.document
+    if not document or not document.preview_keys:
+        return OrderPreviewOut(pages=[])
+
+    from app.services.storage import get_presigned_url
+
+    pages = [await get_presigned_url(key, expires=900) for key in document.preview_keys]
+    return OrderPreviewOut(pages=pages)
 
 
 @router.get("/{order_id}", response_model=OrderOut)
