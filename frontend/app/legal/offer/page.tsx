@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OFFER_EDITION } from "@/lib/legal-version";
 
 export const metadata = {
   title: "Договор-оферта — LawDocs",
@@ -9,7 +10,7 @@ export default function OfferPage() {
   return (
     <article className="max-w-3xl mx-auto px-4 py-16 prose prose-gray">
       <h1 className="text-3xl font-bold mb-2">Договор-оферта</h1>
-      <p className="text-sm text-gray-400 mb-8">Редакция от 2 июня 2026 г.</p>
+      <p className="text-sm text-gray-400 mb-8">Редакция от {OFFER_EDITION.human}</p>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
         <p className="font-semibold text-gray-800 mb-3">Главное для вас</p>
@@ -106,7 +107,7 @@ export default function OfferPage() {
       </p>
 
       <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-500 not-prose">
-        <p>Редакция от 2 июня 2026 г.</p>
+        <p>Редакция от {OFFER_EDITION.human}</p>
         <p>Статус: Опубликована и действует</p>
         <p>Соответствие: ГК РФ · ФЗ «О защите прав потребителей»</p>
       </div>
