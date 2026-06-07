@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { Scale, ArrowLeft } from "lucide-react";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { SetPasswordSection } from "@/components/profile/set-password";
+import { ImportKeysSection } from "@/components/profile/import-keys";
 
 export const metadata: Metadata = {
   title: "Профиль — LawDocs",
@@ -54,6 +55,9 @@ export default async function ProfilePage() {
         </div>
         <div className="bg-white rounded-2xl border border-gray-100 p-6 mt-4">
           <SetPasswordSection />
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-100 p-6 mt-4">
+          <ImportKeysSection />
         </div>
         <div className="mt-4">
           <Link
