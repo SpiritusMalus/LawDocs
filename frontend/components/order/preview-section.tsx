@@ -25,8 +25,12 @@ export function PreviewSection({ orderId }: { orderId: string }) {
         setError(true);
         return;
       }
-      const data: { pages: string[] } = await res.json();
-      setPages(data.pages ?? []);
+      const data: { page_count: number } = await res.json();
+      // Картинки грузим через бэкенд-прокси (same-origin), а не по S3-ссылке.
+      // ?r=timestamp — cache-buster, чтобы «Обновить» перегрузило ранее битый кадр.
+      const count = data.page_count ?? 0;
+      const bust = Date.now();
+      setPages(Array.from({ length: count }, (_, i) => `/api/orders/${orderId}/preview/${i}?r=${bust}`));
     } catch {
       setError(true);
     }

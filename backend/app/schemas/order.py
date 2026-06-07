@@ -107,8 +107,10 @@ class OrderResendRequest(BaseModel):
 
 
 class OrderPreviewOut(BaseModel):
-    # Временные ссылки на watermarked-PNG страницы превью (по странице).
-    pages: list[str]
+    # Число watermarked-страниц превью. Сами картинки фронт грузит через
+    # бэкенд-прокси GET /orders/{id}/preview/{page} — не через S3-ссылку напрямую,
+    # чтобы не зависеть от доступности S3-эндпоинта/CORS из браузера.
+    page_count: int
 
 
 class OrderPublicKeyIn(BaseModel):

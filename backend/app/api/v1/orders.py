@@ -1,7 +1,7 @@
 import logging
 from datetime import UTC, datetime, timedelta
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Request, Response, status
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -419,12 +419,45 @@ async def get_order_preview(
 
     document = order.document
     if not document or not document.preview_keys:
-        return OrderPreviewOut(pages=[])
+        return OrderPreviewOut(page_count=0)
+    return OrderPreviewOut(page_count=len(document.preview_keys))
 
-    from app.services.storage import get_presigned_url
 
-    pages = [await get_presigned_url(key, expires=900) for key in document.preview_keys]
-    return OrderPreviewOut(pages=pages)
+@router.get("/{order_id}/preview/{page}")
+@limiter.limit("120/minute")
+async def get_order_preview_page(
+    request: Request,
+    order_id: str,
+    page: int,
+    db: AsyncSession = Depends(get_db),
+    optional_user: User | None = Depends(get_optional_user),
+    x_order_token: str | None = Header(default=None),
+) -> Response:
+    """Стримит одну watermarked-PNG страницу превью через бэкенд.
+
+    Не отдаём S3-presigned-URL в браузер: сервер сам качает PNG из S3 и отдаёт
+    его same-origin — это снимает зависимость от доступности S3-эндпоинта/CORS
+    из браузера. Доступно ДО оплаты (это образец с водяным знаком).
+    """
+    result = await db.execute(
+        select(Order)
+        .where(Order.id == order_id)
+        .options(selectinload(Order.user), selectinload(Order.document))
+    )
+    order = result.scalar_one_or_none()
+    if not order:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Order not found")
+    assert_order_access(order, optional_user, x_order_token)
+
+    document = order.document
+    if not document or page < 0 or page >= len(document.preview_keys):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Preview page not found")
+
+    from app.services.storage import download_bytes
+
+    png = await download_bytes(document.preview_keys[page])
+    # Превью-картинки приватны и быстро протухают логически — не кэшируем у CDN.
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=60"})
 
 
 @router.post("/{order_id}/public-key", response_model=OrderPublicKeyOut)

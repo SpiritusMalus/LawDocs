@@ -700,37 +700,69 @@ async def test_get_order_without_any_credentials_returns_404(client: AsyncClient
     assert resp.status_code == 404
 
 
-@pytest.mark.asyncio
-async def test_preview_returns_presigned_pages(
-    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
-):
+async def _make_preview_order(user, db_session, *, status: str = "preview_ready"):
     from app.models.document import Document
 
-    order = Order(
-        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
-    )
+    order = Order(user_id=user.id, situation_id="shop", form_data=FORM_DATA, status=status)
     db_session.add(order)
     await db_session.commit()
     await db_session.refresh(order)
-    doc = Document(
-        order_id=order.id,
-        docx_key=f"{order.id}/doc.docx",
-        pdf_key=f"{order.id}/doc.pdf",
-        preview_keys=[f"{order.id}/preview-0.png", f"{order.id}/preview-1.png"],
+    db_session.add(
+        Document(
+            order_id=order.id,
+            docx_key=f"{order.id}/doc.docx",
+            pdf_key=f"{order.id}/doc.pdf",
+            preview_keys=[f"{order.id}/preview-0.png", f"{order.id}/preview-1.png"],
+        )
     )
-    db_session.add(doc)
     await db_session.commit()
+    return order
 
-    async def _fake_url(key, expires=300):
-        return f"https://s3.test/{key}?sig=x"
 
-    with patch("app.services.storage.get_presigned_url", side_effect=_fake_url):
-        resp = await client.get(f"/api/v1/orders/{order.id}/preview", headers=auth_headers)
+@pytest.mark.asyncio
+async def test_preview_returns_page_count(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_preview_order(user, db_session)
+    resp = await client.get(f"/api/v1/orders/{order.id}/preview", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["page_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_preview_page_streams_png(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_preview_order(user, db_session)
+
+    async def _fake_download(key):
+        assert key == f"{order.id}/preview-1.png"
+        return b"\x89PNG\r\n\x1a\nFAKE"
+
+    with patch("app.services.storage.download_bytes", side_effect=_fake_download):
+        resp = await client.get(f"/api/v1/orders/{order.id}/preview/1", headers=auth_headers)
 
     assert resp.status_code == 200
-    pages = resp.json()["pages"]
-    assert len(pages) == 2
-    assert all(p.startswith("https://s3.test/") for p in pages)
+    assert resp.headers["content-type"] == "image/png"
+    assert resp.content == b"\x89PNG\r\n\x1a\nFAKE"
+
+
+@pytest.mark.asyncio
+async def test_preview_page_out_of_range_404(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = await _make_preview_order(user, db_session)
+    resp = await client.get(f"/api/v1/orders/{order.id}/preview/9", headers=auth_headers)
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_preview_page_denied_without_access(
+    client: AsyncClient, user: User, db_session: AsyncSession
+):
+    order = await _make_preview_order(user, db_session)
+    resp = await client.get(f"/api/v1/orders/{order.id}/preview/0")
+    assert resp.status_code == 404
 
 
 @pytest.mark.asyncio
@@ -746,7 +778,7 @@ async def test_preview_empty_when_no_document(
 
     resp = await client.get(f"/api/v1/orders/{order.id}/preview", headers=auth_headers)
     assert resp.status_code == 200
-    assert resp.json()["pages"] == []
+    assert resp.json()["page_count"] == 0
 
 
 @pytest.mark.asyncio
