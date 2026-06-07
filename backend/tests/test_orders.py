@@ -769,3 +769,70 @@ async def test_pay_not_allowed_before_preview_ready(
 
     resp = await client.post(f"/api/v1/orders/{order.id}/pay", headers=auth_headers)
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_register_public_key_sets_when_empty(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    resp = await client.post(
+        f"/api/v1/orders/{order.id}/public-key",
+        headers=auth_headers,
+        json={"public_key": "PUBKEY_NEW"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["public_key"] == "PUBKEY_NEW"
+    await db_session.refresh(user)
+    assert user.public_key == "PUBKEY_NEW"
+
+
+@pytest.mark.asyncio
+async def test_register_public_key_does_not_overwrite(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    # Перезапись осиротила бы ранее зашифрованные документы — ключ остаётся прежним.
+    user.public_key = "PUBKEY_OLD"
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    resp = await client.post(
+        f"/api/v1/orders/{order.id}/public-key",
+        headers=auth_headers,
+        json={"public_key": "PUBKEY_NEW"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["public_key"] == "PUBKEY_OLD"
+    await db_session.refresh(user)
+    assert user.public_key == "PUBKEY_OLD"
+
+
+@pytest.mark.asyncio
+async def test_register_public_key_denied_without_access(client: AsyncClient):
+    order_id, _ = await _init_guest_order(client)
+    resp = await client.post(
+        f"/api/v1/orders/{order_id}/public-key", json={"public_key": "X"}
+    )
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_guest_register_public_key_with_token(client: AsyncClient):
+    order_id, token = await _init_guest_order(client)
+    resp = await client.post(
+        f"/api/v1/orders/{order_id}/public-key",
+        headers={"X-Order-Token": token},
+        json={"public_key": "GUEST_PUB"},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["public_key"] == "GUEST_PUB"

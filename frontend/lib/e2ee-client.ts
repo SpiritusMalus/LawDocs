@@ -110,6 +110,46 @@ export class E2EEClient {
   }
 
   /**
+   * Возвращает локальную пару ключей, создавая её при отсутствии (и сохраняя в
+   * localStorage). `generated` = true, если пара только что создана — для UX
+   * «обязательно сохраните ключ-файл».
+   */
+  static ensureKeyPair(): E2EEKeyPair & { generated: boolean } {
+    const existingPriv = this.getPrivateKeyFromLocalStorage();
+    const existingPub = this.getPublicKeyFromLocalStorage();
+    if (existingPriv && existingPub) {
+      return { publicKey: existingPub, privateKey: existingPriv, generated: false };
+    }
+    const pair = this.generateKeyPair();
+    this.savePrivateKeyToLocalStorage(pair.privateKey);
+    this.savePublicKeyToLocalStorage(pair.publicKey);
+    return { ...pair, generated: true };
+  }
+
+  /**
+   * Скачивает recovery-файл `lawdocs-key.json` с приватным ключом. Формат совпадает
+   * с тем, что принимает recoverViaKeyFile (страница /recovery). Это единственная
+   * копия ключа — без неё доступ к зашифрованным документам не вернуть.
+   */
+  static downloadKeyFile(pair: E2EEKeyPair): void {
+    if (typeof window === "undefined") return;
+    const content = JSON.stringify(
+      { privateKey: pair.privateKey, publicKey: pair.publicKey, createdAt: new Date().toISOString() },
+      null,
+      2
+    );
+    const blob = new Blob([content], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "lawdocs-key.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  /**
    * Проверяет, что приватный ключ действительно соответствует публичному.
    * Публичный ключ X25519 детерминированно выводится из приватного, поэтому
    * сверяем выведенный публичный с переданным. Возвращает false на любом

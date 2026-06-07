@@ -111,6 +111,15 @@ class OrderPreviewOut(BaseModel):
     pages: list[str]
 
 
+class OrderPublicKeyIn(BaseModel):
+    public_key: str
+
+
+class OrderPublicKeyOut(BaseModel):
+    # Эффективный публичный ключ пользователя (уже стоявший либо только что заданный).
+    public_key: str
+
+
 class OrderOut(BaseModel):
     id: str
     situation_id: str
