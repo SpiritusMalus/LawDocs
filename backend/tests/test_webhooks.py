@@ -93,7 +93,7 @@ async def test_webhook_ip_77_75_154_accepted_in_production(
 
 
 @pytest.mark.asyncio
-async def test_webhook_schedules_generation_and_sets_generating(
+async def test_webhook_schedules_release_and_sets_paid(
     client: AsyncClient,
     db_session: AsyncSession,
     user: User,
@@ -109,12 +109,11 @@ async def test_webhook_schedules_generation_and_sets_generating(
     await db_session.commit()
     await db_session.refresh(order)
 
-    # Генерация теперь уходит в BackgroundTasks — вебхук не ждёт её завершения.
-    # Зона ответственности вебхука: статус → generating и постановка задачи в фон
-    # с верными аргументами. Сам run_document_generation покрыт отдельно.
+    # Документ сгенерирован ДО оплаты — вебхук лишь ставит paid и отпускает его в фон
+    # (run_document_release). Сам release покрыт отдельно.
     with patch(
-        "app.api.v1.webhooks.run_document_generation", new_callable=AsyncMock
-    ) as mock_gen:
+        "app.api.v1.webhooks.run_document_release", new_callable=AsyncMock
+    ) as mock_release:
         resp = await client.post(
             "/api/v1/webhooks/yookassa",
             content=_webhook_body("pay-happy-001"),
@@ -124,15 +123,14 @@ async def test_webhook_schedules_generation_and_sets_generating(
     assert resp.status_code == 200
     assert resp.json()["received"] is True
 
-    mock_gen.assert_awaited_once()
-    kwargs = mock_gen.await_args.kwargs
+    mock_release.assert_awaited_once()
+    kwargs = mock_release.await_args.kwargs
     assert kwargs["order_id"] == str(order.id)
-    assert kwargs["situation_id"] == "shop"
     assert kwargs["user_email"] == user.email
 
     await db_session.refresh(order)
-    assert order.status == "generating"
-    assert order.payment_url is None
+    assert order.status == "paid"
+    assert order.paid_at is not None
 
 
 @pytest.mark.asyncio
@@ -170,9 +168,8 @@ async def test_webhook_responds_before_generation_completes(
     db_session: AsyncSession,
     user: User,
 ):
-    """Вебхук обязан ответить 200, не дожидаясь завершения генерации (иначе YooKassa
-    шлёт повторы). Обработку ошибок и статус failed выполняет сам
-    run_document_generation в фоне — это покрыто его собственными тестами."""
+    """Вебхук обязан ответить 200, не дожидаясь завершения релиза (иначе YooKassa
+    шлёт повторы). Обработку выполняет сам run_document_release в фоне."""
     order = Order(
         user_id=user.id,
         situation_id="shop",
@@ -185,7 +182,7 @@ async def test_webhook_responds_before_generation_completes(
     await db_session.refresh(order)
 
     with patch(
-        "app.api.v1.webhooks.run_document_generation", new_callable=AsyncMock
+        "app.api.v1.webhooks.run_document_release", new_callable=AsyncMock
     ) as mock_gen:
         resp = await client.post(
             "/api/v1/webhooks/yookassa",

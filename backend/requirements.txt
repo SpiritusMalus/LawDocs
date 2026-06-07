@@ -19,6 +19,7 @@ slowapi==0.1.9
 boto3==1.35.99
 PyNaCl==1.6.2
 pillow>=12.2.0
+pymupdf>=1.24.0
 urllib3>=2.7.0
 python-dotenv>=1.2.2
 openai>=1.0.0

@@ -328,17 +328,18 @@ async def test_init_order_unknown_situation_rejected(
 
 
 @pytest.mark.asyncio
-async def test_pay_order_draft_creates_payment(
+async def test_pay_order_preview_ready_creates_payment(
     client: AsyncClient,
     auth_headers: dict,
     user: User,
     db_session: AsyncSession,
 ):
+    # Оплата возможна только когда превью готово (генерация идёт ДО оплаты).
     order = Order(
         user_id=user.id,
         situation_id="shop",
         form_data=FORM_DATA,
-        status="draft",
+        status="preview_ready",
     )
     db_session.add(order)
     await db_session.commit()
@@ -477,12 +478,13 @@ async def test_list_orders_returns_user_orders(
 
 
 @pytest.mark.asyncio
-async def test_retry_failed_order_starts_generation(
+async def test_retry_unpaid_failed_order_regenerates_preview(
     client: AsyncClient,
     auth_headers: dict,
     user: User,
     db_session: AsyncSession,
 ):
+    # Не оплачен → retry перегенерирует превью (run_preview_generation), не релиз.
     order = Order(
         user_id=user.id,
         situation_id="shop",
@@ -493,14 +495,43 @@ async def test_retry_failed_order_starts_generation(
     await db_session.commit()
     await db_session.refresh(order)
 
-    with patch("app.api.v1.orders.run_document_generation", new_callable=AsyncMock):
+    with patch("app.api.v1.orders.run_preview_generation", new_callable=AsyncMock) as m:
         resp = await client.post(f"/api/v1/orders/{order.id}/retry", headers=auth_headers)
 
     assert resp.status_code == 200
     assert resp.json()["status"] == "generating"
+    m.assert_called_once()
 
     await db_session.refresh(order)
     assert order.status == "generating"
+
+
+@pytest.mark.asyncio
+async def test_retry_paid_failed_order_releases(
+    client: AsyncClient,
+    auth_headers: dict,
+    user: User,
+    db_session: AsyncSession,
+):
+    # Оплачен (paid_at задан) → retry отпускает документ (run_document_release).
+    from datetime import UTC, datetime
+
+    order = Order(
+        user_id=user.id,
+        situation_id="shop",
+        form_data=FORM_DATA,
+        status="failed",
+        paid_at=datetime.now(UTC),
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    with patch("app.api.v1.orders.run_document_release", new_callable=AsyncMock) as m:
+        resp = await client.post(f"/api/v1/orders/{order.id}/retry", headers=auth_headers)
+
+    assert resp.status_code == 200
+    m.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -667,3 +698,74 @@ async def test_get_order_without_any_credentials_returns_404(client: AsyncClient
     order_id, _ = await _init_guest_order(client)
     resp = await client.get(f"/api/v1/orders/{order_id}")
     assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_preview_returns_presigned_pages(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    from app.models.document import Document
+
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="preview_ready"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+    doc = Document(
+        order_id=order.id,
+        docx_key=f"{order.id}/doc.docx",
+        pdf_key=f"{order.id}/doc.pdf",
+        preview_keys=[f"{order.id}/preview-0.png", f"{order.id}/preview-1.png"],
+    )
+    db_session.add(doc)
+    await db_session.commit()
+
+    async def _fake_url(key, expires=300):
+        return f"https://s3.test/{key}?sig=x"
+
+    with patch("app.services.storage.get_presigned_url", side_effect=_fake_url):
+        resp = await client.get(f"/api/v1/orders/{order.id}/preview", headers=auth_headers)
+
+    assert resp.status_code == 200
+    pages = resp.json()["pages"]
+    assert len(pages) == 2
+    assert all(p.startswith("https://s3.test/") for p in pages)
+
+
+@pytest.mark.asyncio
+async def test_preview_empty_when_no_document(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="generating"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    resp = await client.get(f"/api/v1/orders/{order.id}/preview", headers=auth_headers)
+    assert resp.status_code == 200
+    assert resp.json()["pages"] == []
+
+
+@pytest.mark.asyncio
+async def test_preview_denied_without_access(client: AsyncClient):
+    order_id, _ = await _init_guest_order(client)
+    resp = await client.get(f"/api/v1/orders/{order_id}/preview")
+    assert resp.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_pay_not_allowed_before_preview_ready(
+    client: AsyncClient, auth_headers: dict, user: User, db_session: AsyncSession
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA, status="generating"
+    )
+    db_session.add(order)
+    await db_session.commit()
+    await db_session.refresh(order)
+
+    resp = await client.post(f"/api/v1/orders/{order.id}/pay", headers=auth_headers)
+    assert resp.status_code == 400

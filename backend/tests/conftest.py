@@ -70,6 +70,17 @@ def load_registry():
     yield
 
 
+@pytest.fixture(autouse=True)
+def _stub_preview_generation():
+    """init планирует генерацию превью в фоне; в тестах глушим, чтобы не дёргать
+    LLM/S3 и не уводить статус заказа. Тесты, которым нужна проверка планирования,
+    патчат поверх своим mock'ом."""
+    from unittest.mock import AsyncMock, patch
+
+    with patch("app.api.v1.orders.run_preview_generation", new_callable=AsyncMock):
+        yield
+
+
 @pytest.fixture
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async with _TestSessionLocal() as session:

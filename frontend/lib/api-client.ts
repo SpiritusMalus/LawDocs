@@ -14,6 +14,11 @@ export function payOrder(orderId: string): Promise<Response> {
   return fetch(`/api/orders/${orderId}/pay`, { method: "POST" });
 }
 
+// Watermarked-превью (по странице) — доступно до оплаты.
+export function fetchPreview(orderId: string): Promise<Response> {
+  return fetch(`/api/orders/${orderId}/preview`, { cache: "no-store" });
+}
+
 // Меняет адрес уведомлений заказа без пересылки письма (форму не перезаполняем).
 export function changeOrderEmail(orderId: string, email: string): Promise<Response> {
   return fetch(`/api/orders/${orderId}/email`, {
