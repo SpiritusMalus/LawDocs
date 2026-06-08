@@ -12,6 +12,7 @@ import { SubmittedSummary } from "@/components/order/submitted-summary";
 import { KeySaveGate } from "@/components/order/key-save-gate";
 import { fetchOrder, retryOrder, payOrder, registerOrderPublicKey } from "@/lib/api-client";
 import { PaySection, DoneSection, FailedSection, RefundedSection } from "@/components/order/order-status-sections";
+import { OrderReadyToast } from "@/components/order/order-ready-toast";
 import type { OrderStatus as OrderStatusValue } from "@/lib/api-schemas";
 
 interface Order {
@@ -107,6 +108,17 @@ export function OrderStatus({
   const [downloadError, setDownloadError] = useState<string | null>(null);
   // Формат, который юзер пытался скачать без ключа — повторим после восстановления.
   const [pendingFmt, setPendingFmt] = useState<"docx" | "pdf" | null>(null);
+  const [readyToastOpen, setReadyToastOpen] = useState(false);
+  const prevStatusRef = useRef<OrderStatusValue>(initialOrder.status);
+
+  // Тост «Документ готов» — только на переходе в done (не при загрузке уже-готового
+  // заказа), пока пользователь на странице.
+  useEffect(() => {
+    if (order.status === "done" && prevStatusRef.current !== "done") {
+      setReadyToastOpen(true);
+    }
+    prevStatusRef.current = order.status;
+  }, [order.status]);
 
   async function handleDownload(fmt: "docx" | "pdf") {
     setDownloadingFmt(fmt);
@@ -310,6 +322,8 @@ export function OrderStatus({
       <p className="text-xs text-gray-300">
         Заказ № {orderId.slice(0, 8).toUpperCase()}
       </p>
+
+      <OrderReadyToast open={readyToastOpen} onClose={() => setReadyToastOpen(false)} />
     </div>
   );
 }
