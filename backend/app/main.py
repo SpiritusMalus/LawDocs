@@ -50,9 +50,15 @@ _law_monitor_logger = logging.getLogger("law_monitor")
 _auto_retry_logger = logging.getLogger("auto_retry")
 _retention_logger = logging.getLogger("data_retention")
 _alerting_logger = logging.getLogger("alerting")
+_reconcile_logger = logging.getLogger("payment_reconcile")
 
 _MAX_AUTO_RETRIES = 5
 _AUTO_RETRY_INTERVAL = 15 * 60  # 15 минут
+
+# Восстановление потерянных вебхуков ЮKassa (system-design §6): заказ оплачен, но
+# вебхук не дошёл → висит в PENDING_PAYMENT, деньги получены, документ не отдан.
+_RECONCILE_INTERVAL = 15 * 60         # период сверки, 15 минут
+_RECONCILE_GRACE_MIN = 15             # даём вебхуку шанс прийти первым
 
 # Активное алертинг событий, которые тихо стоят денег (system-design §4):
 # заказ оплачен, но не дошёл до DONE; и всплеск рефандов.
@@ -392,6 +398,67 @@ async def _alerting_loop() -> None:
             _alerting_logger.exception("alerting_loop_failed")
 
 
+async def _payment_reconcile_loop() -> None:
+    """Восстановление потерянных вебхуков ЮKassa (system-design §6).
+
+    Заказ может зависнуть в PENDING_PAYMENT, если оплата прошла, а вебхук не дошёл:
+    деньги получены, документ не отдан — тихая потеря денег. Каждые 15 мин сверяем
+    «зависшие» заказы напрямую с ЮKassa и, если платёж succeeded, прогоняем тот же
+    путь, что и вебхук (claim → release). Идемпотентно: claim_paid_order + журнал
+    событий не дадут обработать дважды, если вебхук всё-таки придёт.
+    """
+    from app.services.payment import (
+        claim_paid_order,
+        record_payment_event,
+        verify_payment_succeeded,
+    )
+    from app.services.generation import run_document_release
+
+    while True:
+        await asyncio.sleep(_RECONCILE_INTERVAL)
+        # В dev (нет ключей ЮKassa) verify всегда True — не массово «оплачивать» заказы.
+        if not settings.YOOKASSA_SHOP_ID:
+            continue
+        try:
+            cutoff = datetime.now(UTC) - timedelta(minutes=_RECONCILE_GRACE_MIN)
+            async with AsyncSessionLocal() as db:
+                result = await db.execute(
+                    select(Order).where(
+                        Order.status == OrderStatus.PENDING_PAYMENT.value,
+                        Order.yookassa_payment_id.is_not(None),
+                        Order.created_at < cutoff,
+                    )
+                )
+                stuck = result.scalars().all()
+                pending = [(str(o.id), o.yookassa_payment_id) for o in stuck]
+
+            for order_id, payment_id in pending:
+                if not await verify_payment_succeeded(payment_id):
+                    continue
+                async with AsyncSessionLocal() as db:
+                    claimed = await claim_paid_order(db, payment_id)
+                    if not claimed:
+                        continue
+                    claimed_order_id, user_email = claimed
+                    await record_payment_event(
+                        db, payment_id, "payment.succeeded",
+                        order_id=claimed_order_id, outcome="reconciled", source="reconcile",
+                    )
+                _reconcile_logger.warning(
+                    "payment_reconciled",
+                    extra={
+                        "action": "payment_reconciled",
+                        "order_id": claimed_order_id,
+                        "payment_id": payment_id,
+                    },
+                )
+                asyncio.create_task(
+                    run_document_release(order_id=claimed_order_id, user_email=user_email)
+                )
+        except Exception:
+            _reconcile_logger.exception("payment_reconcile_loop_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from decimal import Decimal
@@ -437,12 +504,14 @@ async def lifespan(app: FastAPI):
     retry_task = asyncio.create_task(_auto_retry_loop())
     retention_task = asyncio.create_task(_data_retention_loop())
     alerting_task = asyncio.create_task(_alerting_loop())
+    reconcile_task = asyncio.create_task(_payment_reconcile_loop())
     yield
     task.cancel()
     law_task.cancel()
     retry_task.cancel()
     retention_task.cancel()
     alerting_task.cancel()
+    reconcile_task.cancel()
 
 
 app = FastAPI(

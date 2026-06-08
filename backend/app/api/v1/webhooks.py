@@ -1,25 +1,24 @@
 import ipaddress
 import json
 import logging
-from datetime import UTC, datetime
 
-import httpx
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.enums import OrderStatus
 from app.core.limiter import limiter
 from app.models.order import Order
 from app.services.generation import run_document_release
+from app.services.payment import (
+    claim_paid_order,
+    record_payment_event,
+    verify_payment_succeeded,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-YOOKASSA_API = "https://api.yookassa.ru/v3"
 
 # Актуальный список IP ЮKassa для webhook-уведомлений (док-ция yookassa.ru).
 # 77.75.154.128/25 добавлен: реальные уведомления приходили с 77.75.154.206,
@@ -48,23 +47,6 @@ def _is_yookassa_ip(request: Request) -> bool:
     return any(ip in cidr for cidr in _YOOKASSA_CIDRS)
 
 
-async def _verify_payment(payment_id: str) -> bool:
-    """Verify payment status by calling back to YooKassa API."""
-    if not settings.YOOKASSA_SHOP_ID or not settings.YOOKASSA_SECRET_KEY:
-        # Dev mode: skip verification
-        return True
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            f"{YOOKASSA_API}/payments/{payment_id}",
-            auth=(settings.YOOKASSA_SHOP_ID, settings.YOOKASSA_SECRET_KEY),
-        )
-        if not resp.is_success:
-            logger.error("YooKassa payment verify failed: %s %s", resp.status_code, payment_id)
-            return False
-        data = resp.json()
-        return data.get("status") == "succeeded"
-
-
 @router.post("/yookassa", status_code=status.HTTP_200_OK)
 @limiter.limit("60/minute")
 async def yookassa_webhook(
@@ -84,43 +66,50 @@ async def yookassa_webhook(
         logger.warning("Webhook received invalid JSON")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON")
 
-    if event.get("event") != "payment.succeeded":
+    event_type = event.get("event")
+    if event_type != "payment.succeeded":
         return {"received": True}
 
     payment_id = event["object"]["id"]
 
     # Verify payment status via YooKassa API (prevents fake webhook attacks)
-    if not await _verify_payment(payment_id):
+    if not await verify_payment_succeeded(payment_id):
         logger.warning("Webhook payment verification failed for payment_id=%s", payment_id)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment verification failed")
 
-    # SELECT FOR UPDATE SKIP LOCKED — атомарный захват строки, второй retry не получит её
-    result = await db.execute(
-        select(Order)
-        .where(Order.yookassa_payment_id == payment_id, Order.status == OrderStatus.PENDING_PAYMENT.value)
-        .with_for_update(skip_locked=True)
-        .options(selectinload(Order.user))
+    # Атомарный идемпотентный захват заказа PENDING_PAYMENT → PAID (см. claim_paid_order).
+    claimed = await claim_paid_order(db, payment_id)
+
+    if claimed:
+        order_id, user_email = claimed
+        outcome, event_order_id = "processed", order_id
+    else:
+        # Заказ не захвачен: либо уже оплачен (дубль-вебхук), либо payment_id
+        # не сопоставлен ни одному заказу (dead-letter).
+        order_exists = await db.scalar(
+            select(Order.id).where(Order.yookassa_payment_id == payment_id)
+        )
+        outcome, event_order_id = ("duplicate" if order_exists else "unmatched"), None
+
+    # Журнал событий: идемпотентность на уровне БД + dead-letter. Дубль (UNIQUE
+    # payment_id+event_type) → release не запускаем повторно.
+    inserted = await record_payment_event(
+        db, payment_id, event_type, order_id=event_order_id, outcome=outcome
     )
-    order = result.scalar_one_or_none()
-    if not order:
-        return {"received": True}
-
-    # Захватываем нужные значения до commit: после него атрибуты ORM-объекта
-    # истекают, а ленивая подгрузка в async-сессии бросит исключение.
-    order_id = order.id
-    user_email = order.notification_target
-
-    order.status = OrderStatus.PAID.value
-    order.paid_at = datetime.now(UTC)
-    await db.commit()
+    if outcome == "unmatched":
+        logger.warning(
+            "webhook_unmatched_payment",
+            extra={"action": "webhook_unmatched_payment", "payment_id": payment_id},
+        )
 
     # Документ уже сгенерирован ДО оплаты (PREVIEW_READY) — здесь только «отпускаем»
     # его (DONE + письмо + шифрование под ключ юзера). Уходит в фон: YooKassa получает
     # 200 сразу. release сам холодно фолбэкнет на полную генерацию, если документа нет.
-    background_tasks.add_task(
-        run_document_release,
-        order_id=order_id,
-        user_email=user_email,
-    )
+    if claimed and inserted:
+        background_tasks.add_task(
+            run_document_release,
+            order_id=order_id,
+            user_email=user_email,
+        )
 
     return {"received": True}

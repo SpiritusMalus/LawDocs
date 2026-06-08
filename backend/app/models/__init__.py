@@ -5,5 +5,6 @@ from app.models.review import OrderReview
 from app.models.audit_log import AuditLog
 from app.models.auth_challenge import AuthChallenge
 from app.models.user_key import UserKey
+from app.models.payment_event import PaymentEvent
 
-__all__ = ["User", "Order", "Document", "OrderReview", "AuditLog", "AuthChallenge", "UserKey"]
+__all__ = ["User", "Order", "Document", "OrderReview", "AuditLog", "AuthChallenge", "UserKey", "PaymentEvent"]
