@@ -49,9 +49,21 @@ _cleanup_logger = logging.getLogger("cleanup")
 _law_monitor_logger = logging.getLogger("law_monitor")
 _auto_retry_logger = logging.getLogger("auto_retry")
 _retention_logger = logging.getLogger("data_retention")
+_alerting_logger = logging.getLogger("alerting")
 
 _MAX_AUTO_RETRIES = 5
 _AUTO_RETRY_INTERVAL = 15 * 60  # 15 минут
+
+# Активное алертинг событий, которые тихо стоят денег (system-design §4):
+# заказ оплачен, но не дошёл до DONE; и всплеск рефандов.
+_ALERTING_INTERVAL = 15 * 60          # период проверки, 15 минут
+_STUCK_PAID_THRESHOLD_MIN = 120       # оплачен, но не терминальный > 2 ч = застрял
+_REFUND_SPIKE_THRESHOLD = 3           # столько новых рефандов за цикл = всплеск
+
+# In-process состояние алертинга. Не replica-safe (как и остальные in-process
+# loop'ы — см. system-design §4): при горизонтальном масштабировании вынести.
+_alerted_stuck_orders: set[str] = set()
+_last_refund_total: int | None = None
 
 
 async def _cleanup_draft_orders() -> None:
@@ -298,6 +310,88 @@ async def _data_retention_loop() -> None:
             _retention_logger.exception("data_retention_failed")
 
 
+async def _alerting_loop() -> None:
+    """Активный алертинг событий, которые тихо стоят денег (system-design §4).
+
+    Только наблюдает и шлёт Telegram — ремедиацию делает _auto_retry_loop.
+    1) Stuck PAID: заказ оплачен, но > 2 ч не дошёл до DONE/REFUNDED (деньги
+       получены, документ не доставлен). Дедуп по in-process set, чтобы не
+       спамить одним и тем же заказом каждый цикл.
+    2) Refund spike: прирост числа REFUNDED за цикл ≥ порога (вероятный
+       системный сбой). Считаем по дельте счётчика между циклами — не требует
+       колонки refunded_at.
+    """
+    global _last_refund_total
+    while True:
+        await asyncio.sleep(_ALERTING_INTERVAL)
+        try:
+            from app.services.notifications import (
+                format_refund_spike_alert,
+                format_stuck_orders_alert,
+                send_telegram_alert,
+            )
+
+            now = datetime.now(UTC)
+            async with AsyncSessionLocal() as db:
+                stuck_cutoff = now - timedelta(minutes=_STUCK_PAID_THRESHOLD_MIN)
+                stuck_result = await db.execute(
+                    select(Order).where(
+                        Order.paid_at.is_not(None),
+                        Order.paid_at < stuck_cutoff,
+                        Order.status.notin_(
+                            [OrderStatus.DONE.value, OrderStatus.REFUNDED.value]
+                        ),
+                    )
+                )
+                stuck = stuck_result.scalars().all()
+
+                refund_total = (
+                    await db.execute(
+                        select(func.count()).select_from(Order).where(
+                            Order.status == OrderStatus.REFUNDED.value
+                        )
+                    )
+                ).scalar_one()
+
+            # 1) Stuck PAID — алертим только про новые застрявшие заказы.
+            current_ids = {str(o.id) for o in stuck}
+            new_stuck = [o for o in stuck if str(o.id) not in _alerted_stuck_orders]
+            if new_stuck:
+                _alerting_logger.warning(
+                    "stuck_paid_orders",
+                    extra={
+                        "action": "stuck_paid_orders",
+                        "count": len(new_stuck),
+                        "order_ids": [str(o.id) for o in new_stuck],
+                    },
+                )
+                await send_telegram_alert(
+                    format_stuck_orders_alert(
+                        [(str(o.id), o.status, o.situation_id) for o in new_stuck],
+                        _STUCK_PAID_THRESHOLD_MIN,
+                    )
+                )
+            # Сбрасываем дедуп для уже разрулённых заказов — чтобы повторный
+            # застрявший заказ снова дал алерт.
+            _alerted_stuck_orders.intersection_update(current_ids)
+            _alerted_stuck_orders.update(current_ids)
+
+            # 2) Refund spike — по приросту счётчика между циклами.
+            if _last_refund_total is not None:
+                delta = refund_total - _last_refund_total
+                if delta >= _REFUND_SPIKE_THRESHOLD:
+                    _alerting_logger.warning(
+                        "refund_spike",
+                        extra={"action": "refund_spike", "delta": delta},
+                    )
+                    await send_telegram_alert(
+                        format_refund_spike_alert(delta, _ALERTING_INTERVAL // 60)
+                    )
+            _last_refund_total = refund_total
+        except Exception:
+            _alerting_logger.exception("alerting_loop_failed")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from decimal import Decimal
@@ -342,11 +436,13 @@ async def lifespan(app: FastAPI):
     law_task = asyncio.create_task(_law_monitor_loop())
     retry_task = asyncio.create_task(_auto_retry_loop())
     retention_task = asyncio.create_task(_data_retention_loop())
+    alerting_task = asyncio.create_task(_alerting_loop())
     yield
     task.cancel()
     law_task.cancel()
     retry_task.cancel()
     retention_task.cancel()
+    alerting_task.cancel()
 
 
 app = FastAPI(
