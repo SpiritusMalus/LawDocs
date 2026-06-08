@@ -40,6 +40,35 @@ def format_order_alert(
     )
 
 
+def format_stuck_orders_alert(
+    orders: list[tuple[str, str, str]], threshold_min: int
+) -> str:
+    """Алерт по заказам PAID-not-DONE: деньги получены, документ не доставлен.
+
+    orders: список (order_id, status, situation_id) застрявших заказов.
+    Это событие тихо стоит денег — требует ручного разбора (system-design §4).
+    """
+    lines = "\n".join(
+        f"• <code>{oid}</code> [{status}] {sid}" for oid, status, sid in orders
+    )
+    return (
+        f"🚨 <b>Stuck PAID orders</b> — оплачены, но не DONE > {threshold_min} мин\n"
+        f"Деньги получены, документ не доставлен. Нужен ручной разбор:\n{lines}"
+    )
+
+
+def format_refund_spike_alert(delta: int, interval_min: int) -> str:
+    """Алерт о всплеске рефандов: delta новых возвратов за один цикл (~interval_min мин).
+
+    Резкий рост возвратов = вероятный системный сбой генерации/оплаты.
+    """
+    return (
+        f"📈 <b>Refund spike</b>\n"
+        f"{delta} новых рефанд(ов) за последние ~{interval_min} мин.\n"
+        f"Похоже на системный сбой генерации/оплаты — проверьте логи и провайдеров."
+    )
+
+
 async def send_telegram_alert(message: str) -> None:
     from app.core.config import settings
 
