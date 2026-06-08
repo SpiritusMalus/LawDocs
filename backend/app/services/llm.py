@@ -10,7 +10,7 @@ import logging
 import re
 import uuid
 from abc import ABC, abstractmethod
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 
 import httpx
 from openai import AsyncOpenAI
@@ -89,6 +89,10 @@ def _sanitize_value(value: str) -> str:
 GIGACHAT_AUTH_URL = "https://ngw.devices.sberbank.ru:9443/api/v2/oauth"
 GIGACHAT_API_URL = "https://gigachat.devices.sberbank.ru/api/v1"
 
+# Запас на истечение токена GigaChat: считаем токен «протухшим» за N секунд до
+# реального expires_at, чтобы он не истёк между проверкой и сетевым запросом.
+_TOKEN_EXPIRY_SKEW_SEC = 60
+
 
 _RETRY_FEEDBACK = (
     "\n\nВАЖНО: предыдущий ответ содержал ошибки форматирования. Повтори, строго соблюдая правила:\n"
@@ -118,10 +122,12 @@ class GigaChatProvider(LLMProvider):
 
     async def _get_token(self) -> str:
         async with self._token_lock:
+            # Запас 60 с: между этой проверкой и реальным запросом токен не должен
+            # успеть истечь (иначе словим 401 уже после прохождения guard'а).
             if (
                 self._token
                 and self._token_expires_at
-                and self._token_expires_at > datetime.now(UTC)
+                and self._token_expires_at > datetime.now(UTC) + timedelta(seconds=_TOKEN_EXPIRY_SKEW_SEC)
             ):
                 return self._token
 
@@ -612,11 +618,8 @@ def _parse_body_json(raw: str) -> str:
     except json.JSONDecodeError:
         pass
 
-    # Fallback: ищем "body": "..." или "body": """..."""
-    m = re.search(r'"body"\s*:\s*"(.*?)"', text, re.DOTALL)
-    if m:
-        return m.group(1).replace('\\n', '\n').strip()
-
+    # Намеренно НЕ латаем регэкспом: нежадный `.*?` обрезал бы body по первой
+    # кавычке внутри текста и тихо усёк бы платный документ. Лучше явно упасть.
     # Если JSON не распознан — поднимаем ошибку, чтобы не вставить сырой отказ в документ
     logger.error("Could not parse JSON body from GigaChat response: %s", text[:200])
     raise RuntimeError("GigaChat вернул ответ в неожиданном формате (не удалось извлечь body).")

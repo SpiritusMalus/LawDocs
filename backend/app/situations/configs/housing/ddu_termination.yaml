@@ -106,8 +106,8 @@ wizard_steps:
         type: number
         label: "Ключевая ставка ЦБ РФ, %"
         placeholder: "21"
-        required: true
-        hint: "На дату направления требования. Актуальную ставку смотрите на сайте cbr.ru"
+        required: false
+        hint: "Оставьте пустым — подставим текущую ставку ЦБ автоматически. Заполните, только если нужна ставка на конкретную дату (см. cbr.ru)"
       - id: problem_desc
         type: textarea
         label: "Опишите ситуацию"
