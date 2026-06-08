@@ -120,15 +120,29 @@ class GigaChatProvider(LLMProvider):
         self._token_expires_at: datetime | None = None
         self._token_lock = asyncio.Lock()
 
+    def _token_is_fresh(self) -> bool:
+        """Токен есть и не истечёт в ближайшие _TOKEN_EXPIRY_SKEW_SEC секунд.
+
+        Запас нужен, чтобы токен не протух между проверкой и сетевым запросом.
+        """
+        return bool(
+            self._token
+            and self._token_expires_at
+            and self._token_expires_at
+            > datetime.now(UTC) + timedelta(seconds=_TOKEN_EXPIRY_SKEW_SEC)
+        )
+
     async def _get_token(self) -> str:
+        # Быстрый путь без локов: в steady-state (токен валиден) конкурентные
+        # генерации не сериализуются на _token_lock. Чтение атомарно между await
+        # в однопоточном asyncio.
+        if self._token_is_fresh():
+            return self._token
+
+        # Обновление под локом — но с повторной проверкой: пока ждали лок, другой
+        # корутин мог уже обновить токен (single-flight, без дублей auth-POST).
         async with self._token_lock:
-            # Запас 60 с: между этой проверкой и реальным запросом токен не должен
-            # успеть истечь (иначе словим 401 уже после прохождения guard'а).
-            if (
-                self._token
-                and self._token_expires_at
-                and self._token_expires_at > datetime.now(UTC) + timedelta(seconds=_TOKEN_EXPIRY_SKEW_SEC)
-            ):
+            if self._token_is_fresh():
                 return self._token
 
             # verify=False: GigaChat использует CA «МинЦифры России», не входящий
@@ -411,6 +425,20 @@ _REFUSAL_MARKERS = (
     "чувствительные темы",
     "не обладают собственным мнением",
     "ограничены разговоры",
+    # Ложноположительный безвреден (лишний fallback), ложноотрицательный опаснее —
+    # отказ уедет в документ (review L4). Поэтому список расширен агрессивно.
+    "не могу обсуждать",
+    "не могу дать",
+    "не могу генерировать",
+    "не могу создавать",
+    "не могу сгенерировать",
+    "не являюсь юристом",
+    "я не юрист",
+    "не уполномочен",
+    "как ии",
+    "как искусственный интеллект",
+    "как нейросеть",
+    "не могу ответить",
 )
 
 
@@ -567,13 +595,24 @@ async def _fill_template_hybrid(config, form_data: dict) -> str:
             config.narrative_prompt,
             f"Исправь и перефразируй: {raw_narrative}",
         )
-        # Подстраховщик: YandexGPT мягко вычитывает ТОЛЬКО нарратив (творчество LLM).
-        # Python-секции (законы, расчёты, требования) детерминированы — их не трогаем.
-        # При обрезке/искажении остаётся версия GigaChat.
-        yandex_provider = _get_yandex_provider()
-        reviewed, yandex_ok = await yandex_provider.review(polished)
-        if yandex_ok:
-            polished = reviewed
+        # L4: в гибридном пути нет страховки JSON-body (как в полном режиме), а
+        # _call_llm проверяет на отказ только GigaChat — не Yandex-fallback. Если в
+        # итоговом нарративе всё же проступил отказ модели, НЕ вставляем его в
+        # документ: откатываемся на исходный текст клиента (он детерминирован и
+        # заведомо не содержит отказа).
+        if _is_gigachat_refusal(polished):
+            logger.warning(
+                "hybrid_narrative_refusal: отказ модели в нарративе — откат на текст клиента"
+            )
+            polished = raw_narrative
+        else:
+            # Подстраховщик: YandexGPT мягко вычитывает ТОЛЬКО нарратив (творчество LLM).
+            # Python-секции (законы, расчёты, требования) детерминированы — их не трогаем.
+            # При обрезке/искажении остаётся версия GigaChat.
+            yandex_provider = _get_yandex_provider()
+            reviewed, yandex_ok = await yandex_provider.review(polished)
+            if yandex_ok:
+                polished = reviewed
     else:
         polished = raw_narrative
 
