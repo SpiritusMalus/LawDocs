@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { OFFER_EDITION } from "@/lib/legal-version";
 
 export const metadata = {
@@ -6,11 +5,63 @@ export const metadata = {
   robots: { index: false },
 };
 
-export default function OfferPage() {
+// Оферта меняется редко; ISR на час, чтобы не дёргать бэкенд на каждый рендер.
+export const revalidate = 3600;
+
+type Offer = {
+  version: string;
+  edition_human: string;
+  text_hash: string;
+  text: string;
+};
+
+// Единственный источник текста оферты — бэкенд (app/legal/offer/<version>.md), он же
+// хэширует его и штампует на заказ. Рендерим страницу ИЗ этого текста, поэтому
+// показанное и захэшированное не могут разойтись.
+async function fetchOffer(): Promise<Offer | null> {
+  const backendUrl = process.env.BACKEND_URL;
+  if (!backendUrl) return null;
+  try {
+    const res = await fetch(`${backendUrl}/api/v1/legal/offer`, {
+      next: { revalidate },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as Offer;
+  } catch {
+    return null;
+  }
+}
+
+// Лёгкий рендер канонического markdown оферты (## заголовки + абзацы). Полноценный
+// markdown-движок не нужен: текст состоит только из заголовков второго уровня и
+// абзацев. Ведущий `# …` (дублирует заголовок страницы) пропускаем.
+function renderOfferBody(text: string) {
+  const blocks = text.split(/\n{2,}/).map((b) => b.trim()).filter(Boolean);
+  return blocks.flatMap((block, i) => {
+    if (block.startsWith("# ")) return [];
+    if (block.startsWith("## ")) {
+      return [
+        <h2 key={i} className="text-xl font-semibold mt-8 mb-3">
+          {block.slice(3).trim()}
+        </h2>,
+      ];
+    }
+    return [
+      <p key={i} className="text-gray-700 leading-relaxed whitespace-pre-line">
+        {block}
+      </p>,
+    ];
+  });
+}
+
+export default async function OfferPage() {
+  const offer = await fetchOffer();
+  const editionHuman = offer?.edition_human ?? OFFER_EDITION.human;
+
   return (
     <article className="max-w-3xl mx-auto px-4 py-16 prose prose-gray">
       <h1 className="text-3xl font-bold mb-2">Договор-оферта</h1>
-      <p className="text-sm text-gray-400 mb-8">Редакция от {OFFER_EDITION.human}</p>
+      <p className="text-sm text-gray-400 mb-8">Редакция от {editionHuman}</p>
 
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-8 not-prose">
         <p className="font-semibold text-gray-800 mb-3">Главное для вас</p>
@@ -33,81 +84,20 @@ export default function OfferPage() {
         </div>
       </div>
 
-      <p className="text-gray-700 leading-relaxed">
-        Индивидуальный предприниматель Тихоненко Евгений Юрьевич (ИНН 504414138460,
-        ОГРНИП 326508100294665, далее — Исполнитель) предлагает любому дееспособному
-        физическому лицу (далее — Заказчик) заключить договор на условиях настоящей
-        публичной оферты.
-      </p>
-      <p className="text-gray-700 leading-relaxed">
-        Акцептом оферты является оплата услуги. С момента оплаты договор считается заключённым.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">1. Предмет договора</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Исполнитель обязуется на основании данных, предоставленных Заказчиком через форму
-        на сайте law-docs.ru, подготовить типовой юридический документ (претензию или жалобу)
-        и передать его Заказчику в электронном виде (форматы Word и PDF).
-      </p>
-      <p className="text-gray-700 leading-relaxed">
-        Услуга не является юридической консультацией. Документ формируется по типовому
-        шаблону с использованием технологий искусственного интеллекта и носит
-        информационный характер.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">2. Стоимость и порядок оплаты</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Стоимость одного документа — <strong>199 рублей</strong>. Оплата производится
-        онлайн картой или через СБП с использованием платёжного сервиса ЮKassa
-        (ООО НКО «ЮMoney», лицензия ЦБ РФ № 3510-К). Документ предоставляется
-        только после подтверждения оплаты.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">3. Права и обязанности сторон</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Исполнитель обязуется передать готовый документ на email Заказчика в течение
-        10 минут с момента подтверждения оплаты. В случае технической невозможности —
-        уведомить Заказчика и вернуть оплату.
-      </p>
-      <p className="text-gray-700 leading-relaxed">
-        Заказчик обязуется предоставить достоверные сведения при заполнении формы.
-        Исполнитель не несёт ответственности за последствия использования документа,
-        составленного на основе недостоверных данных.
-      </p>
-      <p className="text-gray-700 leading-relaxed">
-        Документ формируется по типовому шаблону и до подачи требует проверки
-        Заказчиком на соответствие его конкретной ситуации. Заказчик обязуется перед
-        использованием документа проверить корректность приведённых в нём сведений,
-        сумм и ссылок на нормы права, а при необходимости — обратиться за очной
-        юридической консультацией. Заказчик самостоятельно принимает решение о подаче
-        документа и несёт ответственность за такое решение.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">4. Возврат денежных средств</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Если подготовленный документ не соответствует ситуации, описанной Заказчиком,
-        Заказчик вправе запросить возврат в течение 7 календарных дней с момента
-        получения документа. Для этого необходимо написать на{" "}
-        <a href="mailto:lawdocsru@gmail.com" className="underline">lawdocsru@gmail.com</a>{" "}
-        с указанием номера заказа. Возврат осуществляется на карту, с которой была
-        произведена оплата, в течение 10 рабочих дней.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">5. Ответственность</h2>
-      <p className="text-gray-700 leading-relaxed">
-        Исполнитель не несёт ответственности за решения третьих лиц (организаций,
-        государственных органов) по результатам рассмотрения подготовленных документов.
-        Ответственность Исполнителя ограничена суммой оплаченной услуги.
-      </p>
-
-      <h2 className="text-xl font-semibold mt-8 mb-3">6. Реквизиты Исполнителя</h2>
-      <p className="text-gray-700">
-        Полные реквизиты — на странице{" "}
-        <Link href="/about" className="underline">О сервисе</Link>.
-      </p>
+      {offer ? (
+        renderOfferBody(offer.text)
+      ) : (
+        <p className="text-gray-700 leading-relaxed">
+          Текст оферты временно недоступен. Обновите страницу позже или напишите на{" "}
+          <a href="mailto:lawdocsru@gmail.com" className="underline">
+            lawdocsru@gmail.com
+          </a>
+          .
+        </p>
+      )}
 
       <div className="mt-8 pt-6 border-t border-gray-200 text-xs text-gray-500 not-prose">
-        <p>Редакция от {OFFER_EDITION.human}</p>
+        <p>Редакция от {editionHuman}</p>
         <p>Статус: Опубликована и действует</p>
         <p>Соответствие: ГК РФ · ФЗ «О защите прав потребителей»</p>
       </div>

@@ -52,6 +52,9 @@ class Order(Base):
     offer_accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     offer_accepted_ip: Mapped[str | None] = mapped_column(String(45), nullable=True)
     offer_version: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # SHA-256 канонического текста принятой редакции оферты (app/core/consent.py).
+    # Версия — это метка; хэш доказывает, КАКОЙ именно текст видел и принял Заказчик.
+    offer_text_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="orders")  # noqa: F821
     document: Mapped["Document | None"] = relationship("Document", back_populates="order", uselist=False)  # noqa: F821

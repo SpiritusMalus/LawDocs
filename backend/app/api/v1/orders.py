@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import assert_order_access, get_current_user, get_optional_user
 from app.core.config import settings
 from app.core.database import get_db
-from app.core.consent import CONSENT_VERSION
+from app.core.consent import CONSENT_TEXT_HASH, CONSENT_VERSION
 from app.core.enums import OrderStatus
 from app.core.limiter import _get_real_ip, limiter
 from app.core.security import (
@@ -98,6 +98,7 @@ async def init_order(
         offer_accepted_at=datetime.now(UTC),
         offer_accepted_ip=_get_real_ip(request),
         offer_version=CONSENT_VERSION,
+        offer_text_hash=CONSENT_TEXT_HASH,
     )
 
     # Authenticated flow: skip magic link
