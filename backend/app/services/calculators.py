@@ -24,8 +24,12 @@ _PENALTY_RATE_1PCT_PER_DAY = Decimal("0.01")   # 1%/день — ЗоЗПП (с�
 _PENALTY_RATE_0_5PCT_PER_DAY = Decimal("0.005")  # 0.5%/день — ЗоЗПП ст. 23.1 (не доставлено)
 _PENALTY_RATE_3PCT_PER_DAY = Decimal("0.03")   # 3%/день — ЗоЗПП ст. 28 п. 5 / ст. 31
 _CBR_COMPENSATION_DIVISOR = Decimal("150")     # 1/150 ставки ЦБ — ТК ст. 236 / ФЗ-214 ст. 6
-_AIRLINE_DELAY_MROT_FRACTION = Decimal("0.25")  # 25% МРОТ/час — Воздушный кодекс ст. 120
-_AIRLINE_DELAY_TICKET_CAP = Decimal("0.5")     # потолок 50% стоимости билета
+_AIRLINE_DELAY_FINE_FRACTION = Decimal("0.25")  # 25% базовой суммы/час — Воздушный кодекс ст. 120
+# База для штрафа по ст. 120 ВК — НЕ реальный МРОТ. Согласно ст. 5 ФЗ от 19.06.2000
+# № 82-ФЗ исчисление штрафов производится из базовой суммы 100 руб. (распространённая
+# ошибка — подставлять действующий МРОТ ~27 000 ₽, что завышает штраф в ~270 раз).
+_AIRLINE_DELAY_BASE_SUM = Decimal("100")
+_AIRLINE_DELAY_TICKET_CAP = Decimal("0.5")     # потолок 50% провозной платы — ст. 120 ВК
 
 
 _MONTHS_GENITIVE = [
@@ -1628,23 +1632,24 @@ def calculate_airline(form_data: dict) -> dict:
     amount_parts = []
     total = Decimal("0")
     if violation == "delay" and delay_hours > 0 and ticket > 0:
-        mrot = Decimal(settings.MROT)
-        per_hour = (mrot * _AIRLINE_DELAY_MROT_FRACTION).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        # ст. 120 ВК: 25% базовой суммы (100 руб., см. _AIRLINE_DELAY_BASE_SUM) за
+        # каждый час просрочки, но не более 50% провозной платы. Никакого
+        # дополнительного «штрафа 50% от билета» закон здесь не вводит — судебный
+        # штраф 50% по п. 6 ст. 13 ЗоЗПП присуждает суд от взысканной суммы, и он
+        # упомянут в просительной части, а не суммируется в требовании.
+        per_hour = (_AIRLINE_DELAY_BASE_SUM * _AIRLINE_DELAY_FINE_FRACTION).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
         delay_comp_raw = per_hour * Decimal(delay_hours)
         cap = (ticket * _AIRLINE_DELAY_TICKET_CAP).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
         delay_comp = min(delay_comp_raw, cap).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-        fine = cap
-        total += delay_comp + fine
+        total += delay_comp
         amount_parts.append(
-            f"компенсация за задержку {delay_hours} ч. (25% МРОТ × часы, "
+            f"штраф за просрочку доставки пассажира {delay_hours} ч. "
+            f"(25% базовой суммы 100 руб. за час по ст. 120 ВК, "
             f"не более 50% провозной платы): {_fmt(delay_comp)} руб."
         )
-        amount_parts.append(
-            f"штраф 50% от стоимости билета (ст. 28 ч. 5 ЗоЗПП): "
-            f"{_fmt(fine)} руб."
-        )
         data["calculated_delay_comp"] = _fmt(delay_comp)
-        data["calculated_fine"] = _fmt(fine)
     elif violation in ("cancellation", "refund_denied") and ticket > 0:
         total += ticket
         amount_parts.append(f"возврат стоимости билета: {_fmt(ticket)} руб.")

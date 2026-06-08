@@ -1,6 +1,4 @@
 """Tests for deterministic calculators in app/services/calculators.py."""
-from unittest.mock import patch
-
 import pytest
 
 from app.services.calculators import (
@@ -38,8 +36,10 @@ def _parse(value):
     return float(str(value).replace(" ", "").replace(" ", "").replace(",", "."))
 
 
-MROT = 27093
-PER_HOUR = round(MROT * 0.25, 2)
+# ст. 120 ВК: штраф = 25% базовой суммы (100 руб. по ст. 5 ФЗ-82), а НЕ реального
+# МРОТ. Базовая ставка штрафа — 25 руб./час.
+BASE_SUM = 100
+PER_HOUR = round(BASE_SUM * 0.25, 2)  # 25 руб./час
 
 
 def test_airline_no_delay_skips_calc():
@@ -48,19 +48,21 @@ def test_airline_no_delay_skips_calc():
 
 
 def test_airline_delay_formula_basic():
-    hours = 2
-    ticket = 1_000_000.0
+    hours = 5
+    ticket = 12000.0
     result = _airline("delay", delay_hours=hours, ticket_price=ticket)
+    # 25 руб. × 5 ч. = 125 руб. (потолок 50% билета = 6000 руб. не достигнут)
     expected = min(round(PER_HOUR * hours, 2), round(ticket * 0.5, 2))
-    assert _parse(result["calculated_delay_comp"]) == expected
+    assert _parse(result["calculated_delay_comp"]) == expected == 125.0
 
 
 def test_airline_delay_cap_applied():
-    hours = 100
-    ticket = 500.0
+    # Очень долгая просрочка: 25 руб./ч × 300 ч = 7500 руб., но потолок 50% билета.
+    hours = 300
+    ticket = 1000.0
     result = _airline("delay", delay_hours=hours, ticket_price=ticket)
     cap = round(ticket * 0.5, 2)
-    assert _parse(result["calculated_delay_comp"]) <= cap
+    assert _parse(result["calculated_delay_comp"]) == cap == 500.0
 
 
 def test_airline_delay_no_ticket_skips_calc():
@@ -68,13 +70,23 @@ def test_airline_delay_no_ticket_skips_calc():
     assert result.get("calculated_delay_comp") is None
 
 
-def test_airline_delay_uses_settings_mrot():
-    custom_mrot = 30000
-    with patch("app.services.calculators.settings") as mock_settings:
-        mock_settings.MROT = custom_mrot
-        result = _airline("delay", delay_hours=1, ticket_price=1_000_000.0)
-    expected = round(custom_mrot * 0.25, 2)
-    assert _parse(result["calculated_delay_comp"]) == expected
+def test_airline_delay_uses_statutory_base_not_real_mrot():
+    """Регресс-гард: штраф считается от базовой суммы 100 руб., а не реального МРОТ.
+
+    Раньше подставлялся settings.MROT (~27 000 ₽), завышая штраф в ~270 раз."""
+    hours = 4
+    result = _airline("delay", delay_hours=hours, ticket_price=1_000_000.0)
+    # Лимит билета (500 000) огромен, поэтому связывает именно базовая ставка.
+    assert _parse(result["calculated_delay_comp"]) == round(PER_HOUR * hours, 2) == 100.0
+
+
+def test_airline_delay_no_fabricated_fine():
+    """Не выдумываем второй «штраф 50% от билета»: в требовании только ст.120 ВК."""
+    result = _airline("delay", delay_hours=5, ticket_price=12000.0)
+    assert "calculated_fine" not in result
+    # Итог = только компенсация по ст.120, без добавочного 50% билета.
+    assert _parse(result["calculated_total"]) == _parse(result["calculated_delay_comp"]) == 125.0
+    assert "ст. 28" not in result["calculated_amount_section"]
 
 
 def test_airline_cancellation_no_delay_comp():
