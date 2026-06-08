@@ -62,19 +62,32 @@ def validate_store_address(config: SituationConfig, form_data: dict) -> None:
         raise ValueError("Укажите адрес магазина или его сайт — хотя бы одно поле.")
 
 
+# Дефолтный потолок для однострочных text-полей без явного max_len. Имена,
+# адреса, номера, периоды укладываются с большим запасом; кап отсекает мусорный
+# ввод задолго до глобального лимита 5000 (schemas/order.py). textarea-нарративы
+# здесь намеренно не ограничиваем — им нужна длина, их держит глобальный лимит.
+_DEFAULT_TEXT_MAX_LEN = 500
+
+
 def validate_lengths(config: SituationConfig, form_data: dict) -> None:
-    """Проверяет лимит длины (`max_len`) для полей ситуации. По выбору пользователя
+    """Проверяет лимит длины для полей ситуации. По выбору пользователя
     контролируем только длину, без проверки символов. Бросает ValueError при
     первом превышении.
+
+    Явный `max_len` поля имеет приоритет; для text-полей без него применяется
+    `_DEFAULT_TEXT_MAX_LEN`, чтобы новые поля не зависели от ручной простановки.
     """
     for step in config.wizard_steps:
         for field in step.fields:
-            if field.max_len is None:
-                continue
+            max_len = field.max_len
+            if max_len is None:
+                if field.type != "text":
+                    continue
+                max_len = _DEFAULT_TEXT_MAX_LEN
             value = form_data.get(field.id)
-            if isinstance(value, str) and len(value) > field.max_len:
+            if isinstance(value, str) and len(value) > max_len:
                 raise ValueError(
-                    f"Поле «{field.label}»: не более {field.max_len} символов."
+                    f"Поле «{field.label}»: не более {max_len} символов."
                 )
 
 
