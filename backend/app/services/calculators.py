@@ -150,14 +150,40 @@ def _required_decimal(data: dict, key: str) -> Decimal | None:
         raise CalculationError(f"поле {key!r}={raw!r} не парсится в число: {e}") from e
 
 
+def _money(data: dict, key: str, default: str = "0") -> Decimal:
+    """Денежное поле формы → Decimal; при пустом/битом значении — default (обычно 0).
+
+    Для полей, где отсутствие/мусор НЕ должны валить расчёт (он продолжается с 0).
+    Если же пустота должна тихо пропускать заказ, а мусор — падать, см.
+    _required_decimal (инвариант H2).
+    """
+    try:
+        return Decimal(str(data.get(key) or default))
+    except (InvalidOperation, ValueError, ArithmeticError):
+        return Decimal(default)
+
+
+def _init_sections(data: dict, *names: str) -> None:
+    """Инициализирует calculated_<name> пустой строкой — снимает повтор «лесов».
+
+    Калькулятор объявляет все свои секции одной строкой; те, что не заполнятся в
+    ветке, останутся "" (как и раньше при поштучной инициализации).
+    """
+    for name in names:
+        data[f"calculated_{name}"] = ""
+
+
 def calculate_ddu_delay(form_data: dict) -> dict:
     """Претензия за просрочку передачи квартиры по ДДУ."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     developer = str(data.get("developer_name") or "").strip()
     contract_number = str(data.get("contract_number") or "").strip()
@@ -347,12 +373,15 @@ _SHOP_LEGAL_FALLBACK = (
 def calculate_shop(form_data: dict) -> dict:
     """Претензия в магазин: неустойка 1%/день по ст. 23 ЗоЗПП."""
     data = dict(form_data)
-    data["calculated_penalty_section"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "penalty_section",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     store_name = str(data.get("store_name") or "").strip()
     product_name = str(data.get("product_name") or "").strip()
@@ -360,10 +389,7 @@ def calculate_shop(form_data: dict) -> dict:
     problem_type = str(data.get("problem_type") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
-    try:
-        price = Decimal(str(data.get("product_price") or "0"))
-    except Exception:
-        price = Decimal("0")
+    price = _money(data, "product_price")
 
     # Intro
     intro = "Мной приобретён товар"
@@ -487,13 +513,16 @@ _AUTO_REPAIR_DEMAND_SECTIONS = {
 def calculate_auto_repair(form_data: dict) -> dict:
     """Претензия в автосервис: ветки по violation_type (delay / bad_quality / overcharge)."""
     data = dict(form_data)
-    data["calculated_penalty_section"] = ""
-    data["calculated_overcharge_section"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "penalty_section",
+        "overcharge_section",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     violation = str(data.get("violation_type", ""))
     service_name = str(data.get("service_name") or "").strip()
@@ -502,10 +531,7 @@ def calculate_auto_repair(form_data: dict) -> dict:
     work_desc = str(data.get("work_desc") or "").strip()
     service_date = _ru_date(data.get("service_date"))
 
-    try:
-        price = Decimal(str(data.get("work_price") or "0"))
-    except Exception:
-        price = Decimal("0")
+    price = _money(data, "work_price")
 
     # Intro
     intro = f"Мной передан автомобиль {car_model}" if car_model else "Мной передан автомобиль"
@@ -685,23 +711,23 @@ _GYM_REFUND_LEGAL_DEFAULT = (
 def calculate_gym_refund(form_data: dict) -> dict:
     """Фитнес-клуб: возврат за неиспользованный период абонемента (ст. 32 ЗоЗПП)."""
     data = dict(form_data)
-    data["calculated_refund_section"] = ""
-    data["calculated_refund_amount"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "refund_section",
+        "refund_amount",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     club_name = str(data.get("club_name") or "").strip()
     purchase_date = _ru_date(data.get("purchase_date"))
     subscription_period = str(data.get("subscription_period") or "").strip()
     reason = str(data.get("reason") or "").strip()
 
-    try:
-        sub_price = Decimal(str(data.get("subscription_price") or "0"))
-    except Exception:
-        sub_price = Decimal("0")
+    sub_price = _money(data, "subscription_price")
 
     # Intro
     intro = f"Мной приобретён абонемент"
@@ -800,16 +826,19 @@ _DTP_OSAGO_VIOLATION_SECTIONS = {
 def calculate_dtp_osago(form_data: dict) -> dict:
     """Претензия в страховую по ОСАГО: пеня ст. 16.1 ч.21 ФЗ-40 + недоплата."""
     data = dict(form_data)
-    data["calculated_penalty_section"] = ""
-    data["calculated_underpayment_section"] = ""
-    data["calculated_claim_amount"] = ""
-    data["calculated_overdue_days"] = ""
-    data["calculated_penalty"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "penalty_section",
+        "underpayment_section",
+        "claim_amount",
+        "overdue_days",
+        "penalty",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     violation = str(data.get("violation_type", ""))
     insurance_company = str(data.get("insurance_company") or "").strip()
@@ -870,10 +899,7 @@ def calculate_dtp_osago(form_data: dict) -> dict:
     if damage is None:
         return data  # пользователь не заполнил сумму ущерба — тихий пропуск
 
-    try:
-        paid = Decimal(str(data.get("paid_amount") or "0"))
-    except Exception:
-        paid = Decimal("0")
+    paid = _money(data, "paid_amount")
 
     # Underpayment
     if violation == "underestimate":
@@ -995,13 +1021,16 @@ _EMPLOYER_LEGAL_DEFAULT = (
 def calculate_employer(form_data: dict) -> dict:
     """Претензия работодателю: компенсация 1/150 × ставки ЦБ за каждый день задержки (ст. 236 ТК РФ)."""
     data = dict(form_data)
-    data["calculated_compensation_section"] = ""
-    data["calculated_compensation"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "compensation_section",
+        "compensation",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     violation = str(data.get("violation_type") or "").strip()
     company_name = str(data.get("company_name") or "").strip()
@@ -1110,13 +1139,16 @@ _REPAIR_DEMAND_SECTIONS = {
 def calculate_repair(form_data: dict) -> dict:
     """Претензия подрядчику: неустойка 3%/день от даты обнаружения недостатков (ст. 28 ч. 5 ЗоЗПП)."""
     data = dict(form_data)
-    data["calculated_penalty_section"] = ""
-    data["calculated_penalty"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "penalty_section",
+        "penalty",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "amount_section",
+        "demand_section",
+    )
 
     contractor_name = str(data.get("contractor_name") or "").strip()
     work_type = str(data.get("work_type") or "").strip()
@@ -1127,10 +1159,7 @@ def calculate_repair(form_data: dict) -> dict:
     contractor_response = str(data.get("contractor_response") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
-    try:
-        price = Decimal(str(data.get("work_price") or "0"))
-    except Exception:
-        price = Decimal("0")
+    price = _money(data, "work_price")
 
     # Intro
     intro = "Между мной и"
@@ -1264,14 +1293,17 @@ _INSURANCE_VIOLATION_SECTIONS = {
 def calculate_insurance(form_data: dict) -> dict:
     """Претензия в страховую: недоплата + пеня 1%/день (ОСАГО ст. 16.1 ФЗ-40 / КАСКО ЗоЗПП ст. 28)."""
     data = dict(form_data)
-    data["calculated_underpayment_section"] = ""
-    data["calculated_penalty_section"] = ""
-    data["calculated_underpayment"] = ""
-    data["calculated_total"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "underpayment_section",
+        "penalty_section",
+        "underpayment",
+        "total",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "demand_section",
+    )
 
     policy_type = str(data.get("policy_type") or "").strip()
     incident_type = str(data.get("incident_type") or "").strip()
@@ -1311,10 +1343,7 @@ def calculate_insurance(form_data: dict) -> dict:
         )
         return data
 
-    try:
-        paid = Decimal(str(data.get("paid_amount") or "0"))
-    except Exception:
-        paid = Decimal("0")
+    paid = _money(data, "paid_amount")
 
     underpayment = max(actual - paid, Decimal("0"))
     if underpayment > 0:
@@ -1437,11 +1466,14 @@ _TELECOM_DEMAND_SECTIONS = {
 def calculate_telecom(form_data: dict) -> dict:
     """Претензия провайдеру: возврат пропорционально периоду отсутствия услуги (monthly_fee / 30 × дней)."""
     data = dict(form_data)
-    data["calculated_refund_section"] = ""
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_legal_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "refund_section",
+        "intro_section",
+        "violation_section",
+        "legal_section",
+        "demand_section",
+    )
 
     provider_name = str(data.get("provider_name") or "").strip()
     contract_number = str(data.get("contract_number") or "").strip()
@@ -1611,22 +1643,13 @@ def calculate_airline(form_data: dict) -> dict:
     flight_date = _ru_date(data.get("flight_date"))
     airline_name = str(data.get("airline") or "").strip()
 
-    try:
-        ticket = Decimal(str(data.get("ticket_price") or "0"))
-    except Exception:
-        ticket = Decimal("0")
+    ticket = _money(data, "ticket_price")
     try:
         delay_hours = int(str(data.get("delay_hours") or "0"))
     except Exception:
         delay_hours = 0
-    try:
-        extra = Decimal(str(data.get("extra_expenses") or "0"))
-    except Exception:
-        extra = Decimal("0")
-    try:
-        received = Decimal(str(data.get("received_compensation") or "0"))
-    except Exception:
-        received = Decimal("0")
+    extra = _money(data, "extra_expenses")
+    received = _money(data, "received_compensation")
 
     intro_parts = []
     if airline_name:
@@ -1751,10 +1774,7 @@ def calculate_court_order(form_data: dict) -> dict:
     objection_reason = str(data.get("objection_reason") or "").strip()
     additional = str(data.get("additional_desc") or "").strip()
 
-    try:
-        amount = Decimal(str(data.get("debt_amount") or "0"))
-    except Exception:
-        amount = Decimal("0")
+    amount = _money(data, "debt_amount")
 
     intro_parts = ["Судебный приказ"]
     if case_num:
@@ -1822,10 +1842,7 @@ def calculate_rental_deposit(form_data: dict) -> dict:
     contract_num = str(data.get("contract_number") or "").strip()
     deposit_reason = str(data.get("deposit_reason") or "").strip()
 
-    try:
-        deposit = Decimal(str(data.get("deposit_amount") or "0"))
-    except Exception:
-        deposit = Decimal("0")
+    deposit = _money(data, "deposit_amount")
 
     intro_parts = []
     if apartment:
@@ -1893,10 +1910,7 @@ def calculate_medical(form_data: dict) -> dict:
     treatment_d = _parse_date(treatment_date_raw)
     treatment_str = _fmt_date_ru(treatment_d) if treatment_d else treatment_date_raw
 
-    try:
-        paid_amount = Decimal(str(data.get("paid_amount") or "0"))
-    except Exception:
-        paid_amount = Decimal("0")
+    paid_amount = _money(data, "paid_amount")
 
     insurance_note = ""
     if insurance_type == "oms":
@@ -2006,14 +2020,8 @@ def calculate_marketplace(form_data: dict) -> dict:
     incident_d = _parse_date(incident_date_raw)
     incident_str = _fmt_date_ru(incident_d) if incident_d else incident_date_raw
 
-    try:
-        order_amount = Decimal(str(data.get("order_amount") or "0"))
-    except Exception:
-        order_amount = Decimal("0")
-    try:
-        withheld_amount = Decimal(str(data.get("withheld_amount") or "0"))
-    except Exception:
-        withheld_amount = Decimal("0")
+    order_amount = _money(data, "order_amount")
+    withheld_amount = _money(data, "withheld_amount")
 
     claim_amount = withheld_amount if withheld_amount > 0 else order_amount
 
@@ -2084,10 +2092,7 @@ def calculate_carsharing(form_data: dict) -> dict:
     trip_d = _parse_date(trip_date_raw)
     trip_str = _fmt_date_ru(trip_d) if trip_d else trip_date_raw
 
-    try:
-        claimed_amount = Decimal(str(data.get("claimed_amount") or "0"))
-    except Exception:
-        claimed_amount = Decimal("0")
+    claimed_amount = _money(data, "claimed_amount")
 
     intro_parts = [f"Каршеринговая компания: {company}"]
     if trip_str:
@@ -2164,10 +2169,7 @@ def calculate_neighbor_flood(form_data: dict) -> dict:
     incident_d = _parse_date(incident_date_raw)
     incident_str = _fmt_date_ru(incident_d) if incident_d else incident_date_raw
 
-    try:
-        damage_amount = Decimal(str(data.get("damage_amount") or "0"))
-    except Exception:
-        damage_amount = Decimal("0")
+    damage_amount = _money(data, "damage_amount")
 
     intro_parts = []
     if apartment:
@@ -2219,10 +2221,7 @@ def calculate_ddu_defects(form_data: dict) -> dict:
     transfer_d = _parse_date(transfer_date_raw)
     transfer_str = _fmt_date_ru(transfer_d) if transfer_d else transfer_date_raw
 
-    try:
-        defects_amount = Decimal(str(data.get("defects_amount") or "0"))
-    except Exception:
-        defects_amount = Decimal("0")
+    defects_amount = _money(data, "defects_amount")
 
     intro_parts = []
     if contract_num:
@@ -2282,14 +2281,8 @@ def calculate_online_course(form_data: dict) -> dict:
     refund_d = _parse_date(refund_request_date_raw)
     refund_str = _fmt_date_ru(refund_d) if refund_d else refund_request_date_raw
 
-    try:
-        course_price = Decimal(str(data.get("course_price") or "0"))
-    except Exception:
-        course_price = Decimal("0")
-    try:
-        claimed_amount = Decimal(str(data.get("claimed_amount") or "0"))
-    except Exception:
-        claimed_amount = Decimal("0")
+    course_price = _money(data, "course_price")
+    claimed_amount = _money(data, "claimed_amount")
 
     refund_amount = claimed_amount if claimed_amount > 0 else course_price
 
@@ -2365,14 +2358,8 @@ def calculate_tour_operator(form_data: dict) -> dict:
     departure_d = _parse_date(departure_date_raw)
     departure_str = _fmt_date_ru(departure_d) if departure_d else departure_date_raw
 
-    try:
-        tour_price = Decimal(str(data.get("tour_price") or "0"))
-    except Exception:
-        tour_price = Decimal("0")
-    try:
-        refunded_amount = Decimal(str(data.get("refunded_amount") or "0"))
-    except Exception:
-        refunded_amount = Decimal("0")
+    tour_price = _money(data, "tour_price")
+    refunded_amount = _money(data, "refunded_amount")
 
     refund_due = tour_price - refunded_amount if refunded_amount > 0 else tour_price
 
@@ -2444,10 +2431,7 @@ def calculate_bank(form_data: dict) -> dict:
     violation_d = _parse_date(violation_date_raw)
     violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
 
-    try:
-        amount = Decimal(str(data.get("amount") or "0"))
-    except Exception:
-        amount = Decimal("0")
+    amount = _money(data, "amount")
 
     intro_parts = [f"Банк: {bank}"]
     if contract_num:
@@ -2539,10 +2523,7 @@ def calculate_bank_block(form_data: dict) -> dict:
     violation_d = _parse_date(violation_date_raw)
     violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
 
-    try:
-        amount = Decimal(str(data.get("amount") or "0"))
-    except Exception:
-        amount = Decimal("0")
+    amount = _money(data, "amount")
 
     intro_parts = [f"Банк: {bank}"]
     if account_number:
@@ -2606,10 +2587,7 @@ def calculate_utility(form_data: dict) -> dict:
     violation_type = str(data.get("violation_type") or "").strip()
     demand = str(data.get("demand") or "").strip()
 
-    try:
-        disputed_amount = Decimal(str(data.get("disputed_amount") or "0"))
-    except Exception:
-        disputed_amount = Decimal("0")
+    disputed_amount = _money(data, "disputed_amount")
 
     intro_parts = [f"УК/ТСЖ: {company}"]
     if apartment:
@@ -2715,10 +2693,7 @@ def calculate_gibdd(form_data: dict) -> dict:
     violation_d = _parse_date(violation_date_raw)
     violation_str = _fmt_date_ru(violation_d) if violation_d else violation_date_raw
 
-    try:
-        amount = Decimal(str(data.get("amount") or "0"))
-    except Exception:
-        amount = Decimal("0")
+    amount = _money(data, "amount")
 
     intro_parts = []
     if fine_number:
@@ -2891,10 +2866,13 @@ def calculate_debt_collector(form_data: dict) -> dict:
 def calculate_mfo(form_data: dict) -> dict:
     """Претензия к МФО: излишки процентов при ставке > 1%/день (ФЗ №151 ст. 9)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "intro_section",
+        "violation_section",
+        "amount_section",
+        "demand_section",
+    )
 
     mfo_name = str(data.get("mfo_name") or "").strip()
     loan_amount_str = str(data.get("loan_amount") or "0")
@@ -2957,9 +2935,7 @@ def calculate_mfo(form_data: dict) -> dict:
 def calculate_gibdd_camera(form_data: dict) -> dict:
     """Претензия ГИБДД: срок обжалования 10 дней (КоАП ст. 30.3)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_deadline_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(data, "intro_section", "deadline_section", "demand_section")
 
     fine_date = _parse_date(data.get("fine_date"))
     fine_amount_str = str(data.get("fine_amount") or "0")
@@ -3022,10 +2998,13 @@ def calculate_gibdd_camera(form_data: dict) -> dict:
 def calculate_repair_apartment(form_data: dict) -> dict:
     """Претензия подрядчику за ремонт: неустойка 3%/день (ЗоЗПП ст. 28)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_penalty"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "intro_section",
+        "violation_section",
+        "penalty",
+        "demand_section",
+    )
 
     contractor_name = str(data.get("contractor_name") or "").strip()
     contract_date = _ru_date(data.get("contract_date"))
@@ -3084,9 +3063,7 @@ def calculate_repair_apartment(form_data: dict) -> dict:
 def calculate_online_shop_delivery(form_data: dict) -> dict:
     """Претензия магазину: неустойка 0.5%/день (не доставил) или 1%/день (не то) (ЗоЗПП ст. 23.1)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_penalty"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(data, "intro_section", "penalty", "demand_section")
 
     shop_name = str(data.get("shop_name") or "").strip()
     order_date = _ru_date(data.get("order_date"))
@@ -3151,9 +3128,7 @@ def calculate_online_shop_delivery(form_data: dict) -> dict:
 def calculate_education_refund(form_data: dict) -> dict:
     """Претензия школе: пропорциональный возврат за курсы (ЗоЗПП ст. 32)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(data, "intro_section", "amount_section", "demand_section")
 
     school_name = str(data.get("school_name") or "").strip()
     course_name = str(data.get("course_name") or "").strip()
@@ -3207,8 +3182,7 @@ def calculate_education_refund(form_data: dict) -> dict:
 def calculate_university_admission(form_data: dict) -> dict:
     """Претензия вузу: нарушение прав при поступлении (ФЗ №273 ст. 55)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(data, "intro_section", "demand_section")
 
     university_name = str(data.get("university_name") or "").strip()
     specialty = str(data.get("specialty") or "").strip()
@@ -3254,11 +3228,14 @@ def calculate_university_admission(form_data: dict) -> dict:
 def calculate_ip_employer(form_data: dict) -> dict:
     """Претензия ИП-работодателю: компенсация 1/150 × ставка ЦБ (ТК РФ ст. 236)."""
     data = dict(form_data)
-    data["calculated_intro_section"] = ""
-    data["calculated_violation_section"] = ""
-    data["calculated_compensation_section"] = ""
-    data["calculated_amount_section"] = ""
-    data["calculated_demand_section"] = ""
+    _init_sections(
+        data,
+        "intro_section",
+        "violation_section",
+        "compensation_section",
+        "amount_section",
+        "demand_section",
+    )
 
     employer_name = str(data.get("employer_name") or "").strip()
     employer_inn = str(data.get("employer_inn") or "").strip()
