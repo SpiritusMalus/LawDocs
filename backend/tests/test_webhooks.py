@@ -4,10 +4,12 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.document import Document
 from app.models.order import Order
+from app.models.payment_event import PaymentEvent
 from app.models.user import User
 
 
@@ -193,3 +195,87 @@ async def test_webhook_responds_before_generation_completes(
     assert resp.status_code == 200
     assert resp.json()["received"] is True
     mock_gen.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_webhook_records_payment_event(
+    client: AsyncClient, db_session: AsyncSession, user: User
+):
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA,
+        status="pending_payment", yookassa_payment_id="pay-event-010",
+    )
+    db_session.add(order)
+    await db_session.commit()
+
+    with patch("app.api.v1.webhooks.run_document_release", new_callable=AsyncMock):
+        await client.post(
+            "/api/v1/webhooks/yookassa",
+            content=_webhook_body("pay-event-010"),
+            headers={"Content-Type": "application/json", "x-real-ip": _YOOKASSA_IP},
+        )
+
+    events = (
+        await db_session.execute(
+            select(PaymentEvent).where(PaymentEvent.payment_id == "pay-event-010")
+        )
+    ).scalars().all()
+    assert len(events) == 1
+    assert events[0].outcome == "processed"
+    assert events[0].order_id == str(order.id)
+
+
+@pytest.mark.asyncio
+async def test_webhook_idempotent_release_once_on_duplicate(
+    client: AsyncClient, db_session: AsyncSession, user: User
+):
+    """Дубль-вебхук (ретрай ЮKassa): release запускается ровно один раз, в журнале
+    одна строка (UNIQUE payment_id+event_type)."""
+    order = Order(
+        user_id=user.id, situation_id="shop", form_data=FORM_DATA,
+        status="pending_payment", yookassa_payment_id="pay-idem-011",
+    )
+    db_session.add(order)
+    await db_session.commit()
+
+    with patch(
+        "app.api.v1.webhooks.run_document_release", new_callable=AsyncMock
+    ) as mock_release:
+        for _ in range(2):
+            resp = await client.post(
+                "/api/v1/webhooks/yookassa",
+                content=_webhook_body("pay-idem-011"),
+                headers={"Content-Type": "application/json", "x-real-ip": _YOOKASSA_IP},
+            )
+            assert resp.status_code == 200
+
+    mock_release.assert_awaited_once()
+    events = (
+        await db_session.execute(
+            select(PaymentEvent).where(PaymentEvent.payment_id == "pay-idem-011")
+        )
+    ).scalars().all()
+    assert len(events) == 1
+
+
+@pytest.mark.asyncio
+async def test_webhook_unmatched_payment_is_deadlettered(
+    client: AsyncClient, db_session: AsyncSession
+):
+    """payment_id без заказа → dead-letter: строка в журнале с order_id=NULL."""
+    with patch("app.api.v1.webhooks.run_document_release", new_callable=AsyncMock) as mock_release:
+        resp = await client.post(
+            "/api/v1/webhooks/yookassa",
+            content=_webhook_body("pay-orphan-012"),
+            headers={"Content-Type": "application/json", "x-real-ip": _YOOKASSA_IP},
+        )
+    assert resp.status_code == 200
+    mock_release.assert_not_awaited()
+
+    event = (
+        await db_session.execute(
+            select(PaymentEvent).where(PaymentEvent.payment_id == "pay-orphan-012")
+        )
+    ).scalar_one()
+    assert event.outcome == "unmatched"
+    assert event.order_id is None
