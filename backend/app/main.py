@@ -292,6 +292,22 @@ async def _data_retention_loop() -> None:
                 old_order_ids = [row[0] for row in old_order_ids_result.fetchall()]
 
                 if old_order_ids:
+                    # Сначала удаляем блобы из S3, ПОКА доступны ключи в Document:
+                    # после удаления строк ключи теряются → объекты осиротели бы
+                    # навсегда (S3 lifecycle — лишь backstop). См. docs/runbooks/disaster-recovery.md.
+                    from app.services.storage import delete_objects
+                    keys_result = await db.execute(
+                        select(
+                            Document.docx_key, Document.pdf_key,
+                            Document.instruction_pdf_key, Document.preview_keys,
+                        ).where(Document.order_id.in_(old_order_ids))
+                    )
+                    s3_keys: list[str] = []
+                    for docx_key, pdf_key, instruction_key, preview_keys in keys_result.all():
+                        s3_keys.extend([docx_key, pdf_key, instruction_key])
+                        s3_keys.extend(preview_keys or [])
+                    deleted_blobs = await delete_objects(s3_keys)
+
                     doc_result = await db.execute(
                         delete(Document).where(Document.order_id.in_(old_order_ids)).returning(Document.order_id)
                     )
@@ -309,6 +325,7 @@ async def _data_retention_loop() -> None:
                             "action": "data_retention_done",
                             "deleted_orders": deleted_orders,
                             "deleted_documents": deleted_docs,
+                            "deleted_blobs": deleted_blobs,
                             "cutoff": cutoff.isoformat(),
                         },
                     )
