@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -71,7 +73,7 @@ class Settings(BaseSettings):
 
     # Ключевая ставка ЦБ РФ (%) — обновлять при изменении (cbr.ru → «Ключевая ставка»)
     # Актуальная ставка: 21% (решение ЦБ от 25.10.2024, обновлено 2026-05-28)
-    CB_RATE_PERCENT: int = 21
+    CB_RATE_PERCENT: Decimal = Decimal("21")
 
     # Примечание: реального МРОТ здесь намеренно НЕТ. Штраф по ст. 120 Воздушного
     # кодекса считается НЕ от МРОТ, а от базовой суммы 100 руб. (ст. 5 ФЗ-82),

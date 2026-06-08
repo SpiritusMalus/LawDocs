@@ -8,7 +8,7 @@ Each calculator receives form_data and returns a new dict with injected
 import logging
 import re
 from datetime import date, datetime, timedelta
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
 from app.core.config import settings
 
@@ -111,9 +111,43 @@ def _sentence_case(s: str) -> str:
     return s[0].upper() + s[1:] if s else s
 
 
+def _cbr_compensation(base: Decimal, rate: Decimal, days: int) -> Decimal:
+    """Единая формула 1/150 ставки ЦБ: base × rate% / 150 × дни.
+
+    Одинаковая математика для ФЗ-214 ст. 6 ч. 2 (неустойка по ДДУ) и ст. 236 ТК РФ
+    (компенсация за задержку зарплаты). Не квантуется — округление на стороне вызова.
+    """
+    return base * rate / Decimal("100") / _CBR_COMPENSATION_DIVISOR * Decimal(days)
+
+
 def _ddu_neustoyka(price: Decimal, rate: Decimal, days: int) -> Decimal:
     """ФЗ-214 ст. 6 ч. 2: 1/150 ставки ЦБ × цена × дни (для граждан)."""
-    return price * rate / Decimal("100") / _CBR_COMPENSATION_DIVISOR * Decimal(days)
+    return _cbr_compensation(price, rate, days)
+
+
+class CalculationError(Exception):
+    """Расчёт сломался ПРИ наличии входных данных.
+
+    Это не «пользователь не заполнил поле» (тихий пропуск — ок), а битые данные/баг:
+    заказ нельзя отдавать с пустыми `calculated_*` суммами. Поднимается наверх, чтобы
+    генерация упала и сработал алерт, а не молча ушёл платный документ без расчёта.
+    """
+
+
+def _required_decimal(data: dict, key: str) -> Decimal | None:
+    """Парсит обязательное денежное поле формы.
+
+    Возвращает None, если поле не заполнено пользователем (ключа нет / пусто) —
+    вызывающий делает тихий `return data`. Если поле заполнено, но не парсится в
+    Decimal — это битые данные/баг, поднимаем CalculationError (а не молчим).
+    """
+    raw = data.get(key)
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return Decimal(str(raw))
+    except (InvalidOperation, ValueError, ArithmeticError) as e:
+        raise CalculationError(f"поле {key!r}={raw!r} не парсится в число: {e}") from e
 
 
 def calculate_ddu_delay(form_data: dict) -> dict:
@@ -180,13 +214,13 @@ def calculate_ddu_delay(form_data: dict) -> dict:
         "присуждённой потребителю."
     )
 
-    try:
-        price = Decimal(str(data["contract_price"]))
-        rate = Decimal(str(data["cb_rate"]))
-        neustoyka = _ddu_neustoyka(price, rate, delay_days)
-    except Exception as e:
-        logger.error("calculate_ddu_delay: failed to compute neustoyka: %s", e)
-        return data
+    price = _required_decimal(data, "contract_price")
+    if price is None:
+        return data  # пользователь не заполнил цену договора — тихий пропуск
+    # cb_rate — wizard-поле; если пусто, берём авто-подтянутую ставку ЦБ (M1: один
+    # источник правды, без ручного ввода и риска опечатки).
+    rate = _required_decimal(data, "cb_rate") or _get_cb_rate()
+    neustoyka = _ddu_neustoyka(price, rate, delay_days)
 
     data["calculated_delay_days"] = str(delay_days)
     data["calculated_neustoyka"] = _fmt(neustoyka)
@@ -233,14 +267,12 @@ def calculate_ddu_termination(form_data: dict) -> dict:
     if not paid:
         return data
     days_used = max((date.today() - paid).days, 0)
-    try:
-        price = Decimal(str(data["contract_price"]))
-        rate = Decimal(str(data["cb_rate"]))
-        interest = _ddu_neustoyka(price, rate, days_used)
-        total = price + interest
-    except Exception as e:
-        logger.error("calculate_ddu_termination: failed to compute interest: %s", e)
-        return data
+    price = _required_decimal(data, "contract_price")
+    if price is None:
+        return data  # пользователь не заполнил цену договора — тихий пропуск
+    rate = _required_decimal(data, "cb_rate") or _get_cb_rate()  # M1: авто-ставка, если пусто
+    interest = _ddu_neustoyka(price, rate, days_used)
+    total = price + interest
     data["calculated_days_used"] = str(days_used)
     data["calculated_interest"] = _fmt(interest)
     data["calculated_total_return"] = _fmt(total)
@@ -834,11 +866,9 @@ def calculate_dtp_osago(form_data: dict) -> dict:
         "выплаты, осуществлённой страховщиком в добровольном порядке."
     )
 
-    try:
-        damage = Decimal(str(data["damage_amount"]))
-    except Exception as e:
-        logger.error("calculate_dtp_osago: failed to parse damage_amount: %s", e)
-        return data
+    damage = _required_decimal(data, "damage_amount")
+    if damage is None:
+        return data  # пользователь не заполнил сумму ущерба — тихий пропуск
 
     try:
         paid = Decimal(str(data.get("paid_amount") or "0"))
@@ -1003,29 +1033,27 @@ def calculate_employer(form_data: dict) -> dict:
 
     last_paid = _parse_date(data.get("last_payment_date"))
     if not last_paid:
-        try:
-            debt = Decimal(str(data["debt_amount"]))
-            data["calculated_amount_section"] = f"Сумма задолженности: {_fmt(debt)} руб."
-            data["calculated_demand_section"] = (
-                f"На основании изложенного прошу выплатить задолженность в размере "
-                f"{_fmt(debt)} руб. в течение трёх рабочих дней с даты получения "
-                f"настоящей претензии. В случае неисполнения оставляю за собой право "
-                f"обратиться с жалобой в Государственную инспекцию труда "
-                f"(онлайнинспекция.рф) и с иском в суд."
-            )
-        except Exception as e:
-            logger.warning("calculate_employer: failed to build demand_section for unpaid debt: %s", e)
+        debt = _required_decimal(data, "debt_amount")
+        if debt is None:
+            return data  # пользователь не заполнил сумму долга — тихий пропуск
+        data["calculated_amount_section"] = f"Сумма задолженности: {_fmt(debt)} руб."
+        data["calculated_demand_section"] = (
+            f"На основании изложенного прошу выплатить задолженность в размере "
+            f"{_fmt(debt)} руб. в течение трёх рабочих дней с даты получения "
+            f"настоящей претензии. В случае неисполнения оставляю за собой право "
+            f"обратиться с жалобой в Государственную инспекцию труда "
+            f"(онлайнинспекция.рф) и с иском в суд."
+        )
         return data
 
     delay_days = max((date.today() - last_paid).days, 0)
 
-    try:
-        debt = Decimal(str(data["debt_amount"]))
-        compensation = debt * Decimal("1") / _CBR_COMPENSATION_DIVISOR * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
-        compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    except Exception as e:
-        logger.error("calculate_employer: failed to compute compensation: %s", e)
-        return data
+    debt = _required_decimal(data, "debt_amount")
+    if debt is None:
+        return data  # пользователь не заполнил сумму долга — тихий пропуск
+    compensation = _cbr_compensation(debt, _get_cb_rate(), delay_days).quantize(
+        Decimal("0.01"), rounding=ROUND_HALF_UP
+    )
 
     data["calculated_delay_days"] = str(delay_days)
     data["calculated_compensation"] = _fmt(compensation)
@@ -3277,8 +3305,9 @@ def calculate_ip_employer(form_data: dict) -> dict:
     # Compensation (similar to employer)
     if last_payment_date and salary_owed > 0:
         delay_days = max((date.today() - last_payment_date).days, 0)
-        compensation = salary_owed * Decimal("1") / _CBR_COMPENSATION_DIVISOR * _get_cb_rate() / Decimal("100") * Decimal(delay_days)
-        compensation = compensation.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        compensation = _cbr_compensation(salary_owed, _get_cb_rate(), delay_days).quantize(
+            Decimal("0.01"), rounding=ROUND_HALF_UP
+        )
 
         data["calculated_compensation"] = _fmt(compensation)
         total = salary_owed + compensation

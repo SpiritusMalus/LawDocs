@@ -327,7 +327,7 @@ async def lifespan(app: FastAPI):
                 f"⚠️ Ставка ЦБ изменилась: {settings.CB_RATE_PERCENT}% → {fetched_rate}%\n"
                 f"Обновите CB_RATE_PERCENT в .env и задеплойте."
             )
-        settings.CB_RATE_PERCENT = int(fetched_rate)
+        settings.CB_RATE_PERCENT = fetched_rate
         _cbr_logger.info(
             "cb_rate_loaded",
             extra={"action": "cb_rate_loaded", "rate": str(fetched_rate)},
