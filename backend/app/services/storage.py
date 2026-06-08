@@ -70,6 +70,40 @@ async def download_bytes(key: str) -> bytes:
     return response["Body"].read()
 
 
+async def delete_objects(keys: list[str]) -> int:
+    """Удаляет объекты из S3 пачками (batch API, до 1000 ключей за запрос).
+
+    Best-effort: ошибка не бросается наверх (вызывается из retention-loop, где
+    важнее довести удаление DB-строк; недоудалённые блобы подберёт S3 lifecycle).
+    Возвращает число успешно удалённых ключей.
+    """
+    keys = [k for k in keys if k]
+    if not keys:
+        return 0
+    loop = asyncio.get_running_loop()
+    client = _client()
+    deleted = 0
+    for start in range(0, len(keys), 1000):
+        chunk = keys[start : start + 1000]
+        try:
+            resp = await loop.run_in_executor(
+                None,
+                partial(
+                    client.delete_objects,
+                    Bucket=settings.S3_BUCKET,
+                    Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True},
+                ),
+            )
+            errors = resp.get("Errors", [])
+            deleted += len(chunk) - len(errors)
+            for err in errors:
+                logger.error("s3_delete_failed: %s %s", err.get("Key"), err.get("Message"))
+        except ClientError as e:
+            logger.error("s3_delete_batch_failed: %s", e)
+    logger.info("Deleted %d/%d objects from S3", deleted, len(keys))
+    return deleted
+
+
 async def get_presigned_url(key: str, expires: int = 300) -> str:
     """Возвращает временную ссылку на скачивание (по умолчанию 5 минут)."""
     loop = asyncio.get_running_loop()
