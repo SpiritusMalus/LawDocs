@@ -6,6 +6,20 @@ export function isValidEmail(value: string): boolean {
   return /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/.test(value);
 }
 
+/** Сообщение-плашка при попытке ввести Gmail. */
+export const GMAIL_BLOCKED_MESSAGE = "Извините, gmail запрещен в России для регистрации";
+
+// gmail.com и его историческое зеркало googlemail.com ведут в один и тот же
+// сервис Google — запрещаем оба домена.
+const BLOCKED_EMAIL_DOMAINS = ["gmail.com", "googlemail.com"];
+
+/** True если домен почты запрещён (Gmail и зеркала). */
+export function isBlockedEmailDomain(value: string): boolean {
+  const at = value.lastIndexOf("@");
+  if (at === -1) return false;
+  return BLOCKED_EMAIL_DOMAINS.includes(value.slice(at + 1).trim().toLowerCase());
+}
+
 /** Accepts +7XXXXXXXXXX, 8(999)123-45-67, etc. Min 7 digits total. */
 export function isValidPhone(value: string): boolean {
   if (!value || value.length > 20) return false;

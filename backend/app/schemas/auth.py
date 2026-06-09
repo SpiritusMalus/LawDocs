@@ -1,5 +1,6 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, Field, field_validator
 
+from app.core.validators import Email, reject_blocked_email
 from app.schemas.user import UserOut
 
 
@@ -36,6 +37,11 @@ class RecoverAccessRequest(BaseModel):
     email: str
     # recovery_password намеренно УБРАН: фраза не должна уходить на сервер.
     # Браузер получит зашифрованный blob и расшифрует его локально.
+
+    @field_validator("email")
+    @classmethod
+    def block_gmail(cls, v: str) -> str:
+        return reject_blocked_email(v)
 
 
 class RecoverAccessResponse(BaseModel):
@@ -93,7 +99,7 @@ class SetPasswordResponse(BaseModel):
 
 
 class PasswordLoginRequest(BaseModel):
-    email: EmailStr
+    email: Email
     password: str = Field(min_length=8, max_length=128)
 
 

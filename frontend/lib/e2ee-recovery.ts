@@ -2,6 +2,7 @@
 // Общая логика для страницы /recovery и инлайн-формы на странице заказа —
 // крипта живёт в одном месте, не дублируется.
 import { E2EEClient } from "@/lib/e2ee-client";
+import { GMAIL_BLOCKED_MESSAGE, isBlockedEmailDomain } from "@/lib/validators";
 
 /**
  * Восстанавливает доступ из ключ-файла (lawdocs-key.json).
@@ -46,6 +47,9 @@ export async function recoverViaKeyFile(file: File): Promise<void> {
  * Бросает Error с человекочитаемым текстом при любой проблеме.
  */
 export async function recoverViaPhrase(email: string, phrase: string): Promise<void> {
+  if (isBlockedEmailDomain(email.trim())) {
+    throw new Error(GMAIL_BLOCKED_MESSAGE);
+  }
   const res = await fetch("/api/auth/recover-access", {
     method: "POST",
     headers: { "Content-Type": "application/json" },

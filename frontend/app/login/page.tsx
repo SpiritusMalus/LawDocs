@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Loader2, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { GMAIL_BLOCKED_MESSAGE, isBlockedEmailDomain } from "@/lib/validators";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -13,8 +14,14 @@ export default function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (isBlockedEmailDomain(email.trim())) {
+      setError(GMAIL_BLOCKED_MESSAGE);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await fetch("/api/auth/magic-link", {
