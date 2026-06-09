@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Loader2, Mail } from "lucide-react";
 import { resendNotification } from "@/lib/api-client";
-import { isValidEmail } from "@/lib/validators";
+import { GMAIL_BLOCKED_MESSAGE, isBlockedEmailDomain, isValidEmail } from "@/lib/validators";
 
 // Блок «письмо ушло на <почту>» с возможностью исправить адрес и переслать.
 // Закрывает кейс «опечатался в почте → документ не пришёл»: форму не перезаполняем.
@@ -25,6 +25,10 @@ export function NotificationEmail({
     const trimmed = value.trim();
     if (!isValidEmail(trimmed)) {
       setError("Укажите корректный email-адрес.");
+      return;
+    }
+    if (isBlockedEmailDomain(trimmed)) {
+      setError(GMAIL_BLOCKED_MESSAGE);
       return;
     }
     setBusy(true);

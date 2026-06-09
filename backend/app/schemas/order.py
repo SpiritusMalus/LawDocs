@@ -1,7 +1,9 @@
 import json
 from datetime import datetime
 
-from pydantic import BaseModel, EmailStr, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
+
+from app.core.validators import Email
 
 _MAX_FIELD_VALUE_LEN = 5_000
 
@@ -16,7 +18,7 @@ def _validate_situation(value: str) -> str:
 
 
 class OrderInitRequest(BaseModel):
-    email: EmailStr
+    email: Email
     situation_id: str
     form_data: dict
     offer_accepted: bool
@@ -98,12 +100,12 @@ class PaymentOut(BaseModel):
 
 
 class OrderEmailUpdate(BaseModel):
-    email: EmailStr
+    email: Email
 
 
 class OrderResendRequest(BaseModel):
     # Опционально: если задан — сперва меняем адрес уведомлений, потом шлём письмо.
-    email: EmailStr | None = None
+    email: Email | None = None
 
 
 class OrderPreviewOut(BaseModel):

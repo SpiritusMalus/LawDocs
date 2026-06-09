@@ -1,8 +1,10 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
+
+from app.core.validators import Email
 
 
 class MagicLinkRequest(BaseModel):
-    email: EmailStr
+    email: Email
 
 
 class UserOut(BaseModel):

@@ -3,7 +3,7 @@
 import { cookies, headers } from "next/headers";
 import { rateLimit, pruneRateLimitBuckets } from "@/lib/rate-limit";
 import { SITUATIONS } from "@/lib/situations";
-import { isValidEmail, isValidPhone } from "@/lib/validators";
+import { GMAIL_BLOCKED_MESSAGE, isBlockedEmailDomain, isValidEmail, isValidPhone } from "@/lib/validators";
 import { validateOrderInitResponse } from "@/lib/api-schemas";
 
 export interface WizardState {
@@ -136,6 +136,9 @@ export async function submitWizard({
 
   if (!isValidEmail(email)) {
     return { status: "error", message: "Укажите корректный email-адрес (например ivan@mail.ru)." };
+  }
+  if (isBlockedEmailDomain(email)) {
+    return { status: "error", message: GMAIL_BLOCKED_MESSAGE };
   }
   if (!isValidPhone(phone)) {
     return { status: "error", message: "Укажите корректный номер телефона." };
